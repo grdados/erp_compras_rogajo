@@ -1,0 +1,550 @@
+﻿{% extends 'base.html' %}
+{% block title %}Faturamento | ERP Compras{% endblock %}
+{% block top_title %}Faturamento{% endblock %}
+{% block content %}
+<style>
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .fat-itens-table colgroup col:nth-child(1) { width: 26% !important; }
+    .fat-itens-table colgroup col:nth-child(2) { width: 12% !important; }
+    .fat-itens-table colgroup col:nth-child(3) { width: 14% !important; }
+    .fat-itens-table colgroup col:nth-child(4) { width: 14% !important; }
+    .fat-itens-table colgroup col:nth-child(5) { width: 14% !important; }
+    .fat-itens-table colgroup col:nth-child(6) { width: 16% !important; }
+    .fat-itens-table colgroup col:nth-child(7) { width: 4% !important; }
+  }
+
+  @media (max-width: 767px) {
+    .fat-itens-table { min-width: 100% !important; table-layout: auto !important; }
+    .fat-itens-table thead { display: none; }
+    .fat-itens-table tbody { display: block; }
+    .fat-itens-table .item-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      margin: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+    .fat-itens-table .item-row td { display: block; padding: 0; border: 0; }
+    .fat-itens-table .item-row td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .fat-itens-table .item-row td[data-label='Acoes'] { margin-top: 4px; }
+    .fat-itens-table .item-row td[data-label='Acoes']::before { margin-bottom: 6px; }
+    .fat-itens-table .item-row td[data-label='Acoes'] .ml-auto {
+      margin-left: 0 !important;
+      width: 100% !important;
+      justify-items: start !important;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+</style>
+
+<section class="space-y-5 text-[14px] font-normal">
+  <div>
+    <h2 class="text-[18px] font-bold text-slate-900">{% if modo_edicao %}Editar Nota{% else %}Nova Nota{% endif %}</h2>
+    <p class="text-slate-600">Dados da nota fiscal e produtos</p>
+  </div>
+
+  <form method="post" class="space-y-5" novalidate>
+    {% csrf_token %}
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h3 class="mb-3 text-[18px] font-bold text-slate-900">Dados da Nota Fiscal</h3>
+            <div class="grid gap-3 lg:grid-cols-5">
+        <div>
+          <label for="{{ form.data.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.data.label }}</label>
+          {{ form.data }}
+          {% if form.data.errors %}<p class="mt-1 text-xs text-red-600">{{ form.data.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.nota_fiscal.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.nota_fiscal.label }}</label>
+          {{ form.nota_fiscal }}
+          {% if form.nota_fiscal.errors %}<p class="mt-1 text-xs text-red-600">{{ form.nota_fiscal.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.serie.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.serie.label }}</label>
+          {{ form.serie }}
+          {% if form.serie.errors %}<p class="mt-1 text-xs text-red-600">{{ form.serie.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.safra.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.safra.label }}</label>
+          {{ form.safra }}
+          {% if form.safra.errors %}<p class="mt-1 text-xs text-red-600">{{ form.safra.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.produtor.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.produtor.label }}</label>
+          {{ form.produtor }}
+          {% if form.produtor.errors %}<p class="mt-1 text-xs text-red-600">{{ form.produtor.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="lg:col-span-2">
+          <label for="{{ form.pedido.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.pedido.label }}</label>
+          {{ form.pedido }}
+          <p class="mt-1 text-xs text-slate-500">Mostra apenas pedidos da Safra e Produtor selecionados.</p>
+          {% if form.pedido.errors %}<p class="mt-1 text-xs text-red-600">{{ form.pedido.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.fornecedor.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.fornecedor.label }}</label>
+          {{ form.fornecedor }}
+          {% if form.fornecedor.errors %}<p class="mt-1 text-xs text-red-600">{{ form.fornecedor.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.vencimento.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.vencimento.label }}</label>
+          {{ form.vencimento }}
+          {% if form.vencimento.errors %}<p class="mt-1 text-xs text-red-600">{{ form.vencimento.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.valor_total.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.valor_total.label }}</label>
+          {{ form.valor_total }}
+          {% if form.valor_total.errors %}<p class="mt-1 text-xs text-red-600">{{ form.valor_total.errors|join:', ' }}</p>{% endif %}
+        </div>
+      </div>
+      {% if form.non_field_errors %}<p class="mt-2 text-sm text-red-700">{{ form.non_field_errors|join:', ' }}</p>{% endif %}
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Produtos</h3>
+        <button id="add-item" type="button" class="rounded-lg bg-[#56d741] px-4 py-2 text-[14px] text-[#0d2f19]">+ Adicionar Item</button>
+      </div>
+
+      {{ formset.management_form }}
+
+      <div class="overflow-x-hidden rounded-lg border border-slate-200">
+        <table class="fat-itens-table w-full table-fixed text-left text-[14px]">
+          <colgroup>
+            <col style="width: 28%" />
+            <col style="width: 10%" />
+            <col style="width: 12%" />
+            <col style="width: 12%" />
+            <col style="width: 12%" />
+            <col style="width: 16%" />
+            <col style="width: 10%" />
+          </colgroup>
+          <thead class="bg-[#F1F3F4] text-slate-800">
+            <tr>
+              <th class="px-3 py-2">Produto</th>
+              <th class="px-3 py-2">Unidade</th>
+              <th class="px-3 py-2">Quantidade</th>
+              <th class="px-3 py-2">Preco</th>
+              <th class="px-3 py-2">Desconto</th>
+              <th class="px-3 py-2">Total Item</th>
+              <th class="w-[120px] px-3 py-2 text-right">Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="itens-body">
+            {% for item_form in formset %}
+              <tr class="item-row border-t border-slate-200">
+                <td data-label="Produto" class="px-3 py-2">{{ item_form.produto_cadastro }}{{ item_form.id }}</td>
+                <td data-label="Unidade" class="px-3 py-2">{{ item_form.unidade }}</td>
+                <td data-label="Quantidade" class="px-3 py-2">{{ item_form.quantidade }}</td>
+                <td data-label="Preco" class="px-3 py-2">{{ item_form.preco }}</td>
+                <td data-label="Desconto" class="px-3 py-2">{{ item_form.desconto }}</td>
+                <td data-label="Total Item" class="px-3 py-2">{{ item_form.total_item }}</td>
+                <td data-label="Acoes" class="px-3 py-2 text-right">
+                  <div class="ml-auto grid w-[160px] grid-cols-6 justify-items-end gap-1">
+                    <span class="hidden">{% if item_form.DELETE %}{{ item_form.DELETE }}{% endif %}</span>
+                    <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% if item_form.non_field_errors %}
+                <tr><td colspan="7" class="px-3 pb-2 text-xs text-red-600">{{ item_form.non_field_errors|join:', ' }}</td></tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if formset.non_form_errors %}
+      <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formset.non_form_errors|join:', ' }}</div>
+    {% endif %}
+
+    <div class="flex gap-3">
+      <button type="submit" class="rounded-lg bg-[#56d741] px-5 py-2 text-[14px] text-[#0d2f19]">Salvar</button>
+      <a href="{% url 'core:faturamento_list' %}" class="rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">Cancelar</a>
+    </div>
+  </form>
+</section>
+
+<template id="empty-form-template">
+  <tr class="item-row border-t border-slate-200">
+    <td data-label="Produto" class="px-3 py-2">__PRODUTO__ __ID__</td>
+    <td data-label="Unidade" class="px-3 py-2">__UNIDADE__</td>
+    <td data-label="Quantidade" class="px-3 py-2">__QTD__</td>
+    <td data-label="Preco" class="px-3 py-2">__PRECO__</td>
+    <td data-label="Desconto" class="px-3 py-2">__DESC__</td>
+    <td data-label="Total Item" class="px-3 py-2">__TOTAL__</td>
+    <td data-label="Acoes" class="px-3 py-2 text-right">
+      <div class="ml-auto grid w-[160px] grid-cols-6 justify-items-end gap-1">__DELETE__
+        <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+  </tr>
+</template>
+
+<script>
+(function(){
+  const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+  const tbody = document.getElementById('itens-body');
+  const addBtn = document.getElementById('add-item');
+  const template = document.getElementById('empty-form-template');
+
+  function parseNum(v){
+    let s = (v || '0').toString().trim();
+    if (!s) return 0;
+    // PT-BR: remove separador de milhar sempre (.) e troca decimal (, -> .)
+    s = s.replace(/\./g, '');
+    if (s.includes(',')) s = s.replace(',', '.');
+    const n = parseFloat(s);
+    return Number.isNaN(n) ? 0 : n;
+  }
+  function setBrValue(input, value, decimals){
+    if(!input) return;
+    const safe = Number.isFinite(value) ? value : 0;
+    const fixed = safe.toFixed(decimals);
+    const parts = fixed.split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (decimals > 0) {
+      input.value = `${intPart},${parts[1]}`;
+    } else {
+      input.value = intPart;
+    }
+  }
+
+  function recalcRow(row){
+    const qtd = row.querySelector('input[name$="-quantidade"]');
+    const preco = row.querySelector('input[name$="-preco"]');
+    const desc = row.querySelector('input[name$="-desconto"]');
+    const total = row.querySelector('input[name$="-total_item"]');
+    if(!qtd || !preco || !desc || !total) return;
+    const valor = parseNum(qtd.value) * parseNum(preco.value) - parseNum(desc.value);
+    setBrValue(total, valor, 2);
+  }
+
+  function recalcNotaTotal(){
+    let totalNota = 0;
+    tbody.querySelectorAll('.item-row').forEach((row)=>{
+      const del = row.querySelector('input[name$="-DELETE"]');
+      if (del && del.checked) return;
+      const total = row.querySelector('input[name$="-total_item"]');
+      totalNota += parseNum(total ? total.value : 0);
+    });
+    const totalInput = document.getElementById('id_valor_total');
+    if(totalInput) setBrValue(totalInput, totalNota, 2);
+  }
+
+  function bindRow(row){
+    ['quantidade','preco','desconto'].forEach((field)=>{
+      const input = row.querySelector(`input[name$="-${field}"]`);
+      if(input){
+        input.addEventListener('input', ()=>{ recalcRow(row); recalcNotaTotal(); });
+      }
+    });
+
+    const del = row.querySelector('input[name$="-DELETE"]');
+    if(del){ del.addEventListener('change', recalcNotaTotal); }
+
+    const removeBtn = row.querySelector('.remove-row');
+    if(removeBtn){
+      removeBtn.addEventListener('click', ()=>{
+        if(del){
+          del.checked = true;
+          row.style.display = 'none';
+        } else {
+          row.remove();
+          totalForms.value = String(Math.max(parseInt(totalForms.value || '1', 10) - 1, 0));
+        }
+        recalcNotaTotal();
+      });
+    }
+
+    recalcRow(row);
+    if (window.initInputMasks) window.initInputMasks(row);
+    if (window.initInputNormalizers) window.initInputNormalizers(row);
+    if (window.initDecimalMasks) window.initDecimalMasks(row);
+    if (window._fatAttachDeps) window._fatAttachDeps(row);
+  }
+
+  tbody.querySelectorAll('.item-row').forEach(bindRow);
+  recalcNotaTotal();
+
+  addBtn.addEventListener('click', ()=>{
+    const index = parseInt(totalForms.value || '0', 10);
+    const prefix = `itens-${index}`;
+
+    const produto = document.getElementById('id_itens-0-produto_cadastro');
+    const unidade = document.getElementById('id_itens-0-unidade');
+    const qtd = document.getElementById('id_itens-0-quantidade');
+    const preco = document.getElementById('id_itens-0-preco');
+    const desc = document.getElementById('id_itens-0-desconto');
+    const total = document.getElementById('id_itens-0-total_item');
+    const del = document.getElementById('id_itens-0-DELETE');
+    const hid = document.getElementById('id_itens-0-id');
+
+    const html = template.innerHTML
+      .replace('__PRODUTO__', produto ? produto.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__UNIDADE__', unidade ? unidade.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__QTD__', qtd ? qtd.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__PRECO__', preco ? preco.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__DESC__', desc ? desc.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__TOTAL__', total ? total.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__DELETE__', del ? `<span class="hidden">${del.outerHTML.replaceAll('itens-0', prefix)}</span>` : '')
+      .replace('__ID__', hid ? hid.outerHTML.replaceAll('itens-0', prefix) : '');
+
+    const wrapper = document.createElement('tbody');
+    wrapper.innerHTML = html.trim();
+    const row = wrapper.firstElementChild;
+    tbody.appendChild(row);
+    totalForms.value = String(index + 1);
+    bindRow(row);
+    recalcNotaTotal();
+  });
+  // Pedido -> filtra e preenche campos (Safra + Produtor)
+  const safraField = document.getElementById('id_safra');
+  const produtorField = document.getElementById('id_produtor');
+  const pedidoField = document.getElementById('id_pedido');
+  const fornecedorField = document.getElementById('id_fornecedor');
+  const vencimentoField = document.getElementById('id_vencimento');
+  const faturamentoId = "{{ form.instance.pk|default:'' }}";
+
+  const pedidosUrl = "{% url 'core:pedidos_por_safra_produtor' %}";
+  const pedidoDetalhesUrl = "{% url 'core:pedido_detalhes_para_faturamento' %}";
+
+  let itensPedidoMap = new Map(); // produto_id -> payload
+
+  function clearSelect(selectEl, placeholder){
+    if(!selectEl) return;
+    const ph = placeholder || '---------';
+    selectEl.innerHTML = '<option value="">' + ph + '</option>';
+  }
+
+    function brToNumberStr(v){
+    let s = (v || '').toString().trim();
+    if(!s) return '0';
+
+    // Se vier PT-BR (1.234,56): remove milhares (.) e troca decimal (, -> .)
+    if (s.includes(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+      return s;
+    }
+
+    // Se vier do backend (5.00000): trata '.' como separador decimal.
+    // Se vier com varios pontos (1.234.567.89), remove os milhares e mantém o ultimo como decimal.
+    const parts = s.split('.');
+    if (parts.length > 2) {
+      const dec = parts.pop();
+      s = parts.join('') + '.' + dec;
+    }
+
+    return s.replace(/[^\d.\-]/g, '');
+  }
+
+  function formatQtdBr(saldoStr){
+    const n = parseFloat(brToNumberStr(saldoStr || '0'));
+    if (!Number.isFinite(n)) return '0';
+    const fixed = Math.floor(n).toString();
+    return fixed.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  async function carregarPedidos(){
+    if(!pedidoField) return;
+    const currentPedido = pedidoField.value;
+    clearSelect(pedidoField, 'Selecione um pedido');
+    if(!safraField || !produtorField) return;
+    const safraId = safraField.value;
+    const produtorId = produtorField.value;
+    if(!safraId || !produtorId) return;
+
+    const url = pedidosUrl + '?safra_id=' + encodeURIComponent(safraId) + '&produtor_id=' + encodeURIComponent(produtorId);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    (data.items || []).forEach(function(p){
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.label;
+      pedidoField.appendChild(opt);
+    });
+    if(currentPedido) pedidoField.value = String(currentPedido);
+  }
+
+  function updateProdutoOptions(){
+    tbody.querySelectorAll('.item-row').forEach(function(row){
+      const sel = row.querySelector('select[name$="-produto_cadastro"]');
+      if(!sel) return;
+      const current = sel.value;
+      clearSelect(sel, '---------');
+
+      itensPedidoMap.forEach(function(it){
+        const opt = document.createElement('option');
+        opt.value = String(it.produto_id);
+        opt.textContent = it.produto_label + ' (Saldo: ' + formatQtdBr(it.saldo_qtd) + ')';
+        opt.dataset.saldo = it.saldo_qtd;
+        sel.appendChild(opt);
+      });
+
+      if(current){
+        sel.value = current;
+      }
+    });
+  }
+
+  function preencherLinhaPorProduto(row){
+    const sel = row.querySelector('select[name$="-produto_cadastro"]');
+    if(!sel) return;
+    const pid = sel.value;
+    const it = itensPedidoMap.get(String(pid));
+    if(!it) return;
+
+    const unidadeSel = row.querySelector('select[name$="-unidade"]');
+    if(unidadeSel && it.unidade_id){
+      unidadeSel.value = String(it.unidade_id);
+    }
+
+    const preco = row.querySelector('input[name$="-preco"]');
+    const desconto = row.querySelector('input[name$="-desconto"]');
+    if(preco){ setBrValue(preco, parseFloat(brToNumberStr(it.preco) || '0'), 5); }
+    if(desconto){ setBrValue(desconto, parseFloat(brToNumberStr(it.desconto) || '0'), 2); }
+
+    recalcRow(row);
+    recalcNotaTotal();
+  }
+
+  function enforceSaldo(row){
+    const sel = row.querySelector('select[name$="-produto_cadastro"]');
+    const qtd = row.querySelector('input[name$="-quantidade"]');
+    if(!sel || !qtd) return;
+
+    const pid = sel.value;
+    if(!pid) return;
+    const it = itensPedidoMap.get(String(pid));
+    if(!it) return;
+
+    const saldo = parseNum(it.saldo_qtd);
+    let soma = 0;
+    tbody.querySelectorAll('.item-row').forEach(function(r){
+      const del = r.querySelector('input[name$="-DELETE"]');
+      if (del && del.checked) return;
+      const s2 = r.querySelector('select[name$="-produto_cadastro"]');
+      if(!s2 || s2.value !== pid) return;
+      const q2 = r.querySelector('input[name$="-quantidade"]');
+      soma += parseNum(q2 ? q2.value : 0);
+    });
+
+    if (soma > saldo && saldo >= 0) {
+      const atual = parseNum(qtd.value);
+      const excesso = soma - saldo;
+      const novo = Math.max(0, atual - excesso);
+      setBrValue(qtd, novo, 0);
+      recalcRow(row);
+      recalcNotaTotal();
+    }
+  }
+
+  window._fatAttachDeps = function(row){
+    const sel = row.querySelector('select[name$="-produto_cadastro"]');
+    if(sel && sel.dataset.depsBound !== '1'){
+      sel.dataset.depsBound = '1';
+      sel.addEventListener('change', function(){ preencherLinhaPorProduto(row); enforceSaldo(row); });
+    }
+    const qtd = row.querySelector('input[name$="-quantidade"]');
+    if(qtd && qtd.dataset.depsBound !== '1'){
+      qtd.dataset.depsBound = '1';
+      qtd.addEventListener('input', function(){ enforceSaldo(row); });
+      qtd.addEventListener('blur', function(){ enforceSaldo(row); });
+    }
+  };
+
+  async function carregarDetalhesPedido(){
+    if(!pedidoField || !pedidoField.value){
+      if(fornecedorField) fornecedorField.value = '';
+      if(vencimentoField) vencimentoField.value = '';
+      itensPedidoMap = new Map();
+      updateProdutoOptions();
+      return;
+    }
+
+    let url = pedidoDetalhesUrl + '?pedido_id=' + encodeURIComponent(pedidoField.value);
+    if(faturamentoId){
+      url += '&exclude_faturamento_id=' + encodeURIComponent(faturamentoId);
+    }
+
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if(data.pedido){
+      if(fornecedorField && data.pedido.fornecedor_id){ fornecedorField.value = String(data.pedido.fornecedor_id); }
+      if(vencimentoField && data.pedido.vencimento){ vencimentoField.value = data.pedido.vencimento; }
+    }
+
+    itensPedidoMap = new Map();
+    (data.itens || []).forEach(function(it){
+      itensPedidoMap.set(String(it.produto_id), it);
+    });
+
+    updateProdutoOptions();
+
+    tbody.querySelectorAll('.item-row').forEach(function(row){
+      window._fatAttachDeps(row);
+      const sel = row.querySelector('select[name$="-produto_cadastro"]');
+      if(sel && sel.value){ preencherLinhaPorProduto(row); enforceSaldo(row); }
+    });
+  }
+
+  if(safraField){
+    safraField.addEventListener('change', async function(){
+      await carregarPedidos();
+      if(pedidoField) pedidoField.value = '';
+      await carregarDetalhesPedido();
+    });
+  }
+  if(produtorField){
+    produtorField.addEventListener('change', async function(){
+      await carregarPedidos();
+      if(pedidoField) pedidoField.value = '';
+      await carregarDetalhesPedido();
+    });
+  }
+  if(pedidoField){
+    pedidoField.addEventListener('change', carregarDetalhesPedido);
+  }
+
+  (async function initDeps(){
+    await carregarPedidos();
+    await carregarDetalhesPedido();
+  })();
+
+})();
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+

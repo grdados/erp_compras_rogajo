@@ -20,7 +20,7 @@ Base inicial do ERP de Gestao de Compras com:
 - Cadastros e modulos do ERP no Django Admin
 
 ## Variaveis de ambiente
-Copie `.env.example` para `.env` e preencha:
+Copie `.env.example` para `.env` e preencha:\n- Para rodar local sem Docker, mantenha `DATABASE_URL=sqlite:///db.sqlite3` (padrao).\n- Para rodar local com PostgreSQL no host, use `DATABASE_URL=postgres://postgres:postgres@localhost:5432/erp_compras`.\n- No Docker, o compose ja injeta `DATABASE_URL` com host `db` automaticamente.\n\nPreencha tambem:
 - `DATABASE_URL`
 - `STRIPE_PUBLIC_KEY`
 - `STRIPE_SECRET_KEY`

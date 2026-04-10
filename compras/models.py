@@ -1,6 +1,6 @@
 ﻿from django.db import models
 
-from cadastros.models import Cliente, Custo, Fornecedor, Produtor, Safra, Unidade
+from cadastros.models import Cliente, Custo, Fornecedor, Produto, Produtor, Safra, Unidade
 from core.models import TimestampedModel
 
 
@@ -9,7 +9,7 @@ class Planejamento(TimestampedModel):
     safra = models.ForeignKey(Safra, on_delete=models.PROTECT, related_name='planejamentos')
     custo = models.ForeignKey(Custo, on_delete=models.PROTECT, related_name='planejamentos')
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='planejamentos')
-    preco_produto = models.DecimalField(max_digits=14, decimal_places=2)
+    preco_produto = models.DecimalField(max_digits=14, decimal_places=5)
     vencimento = models.DateField()
     valor_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
@@ -26,7 +26,7 @@ class PlanejamentoItem(TimestampedModel):
     produto = models.CharField(max_length=120)
     quantidade = models.DecimalField(max_digits=14, decimal_places=3)
     unidade = models.ForeignKey(Unidade, on_delete=models.PROTECT)
-    preco = models.DecimalField(max_digits=14, decimal_places=2)
+    preco = models.DecimalField(max_digits=14, decimal_places=5)
     desconto = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     total_item = models.DecimalField(max_digits=14, decimal_places=2)
     custo_ha = models.DecimalField('Custo HA', max_digits=14, decimal_places=2, default=0)
@@ -35,16 +35,31 @@ class PlanejamentoItem(TimestampedModel):
         return f'{self.produto} - {self.planejamento_id}'
 
 
+class StatusPedidoCompra(models.TextChoices):
+    PENDENTE = 'PENDENTE', 'Pendente'
+    PARCIAL = 'PARCIAL', 'Parcial'
+    ENTREGUE = 'ENTREGUE', 'Entregue'
+    PG_PENDENTE = 'PG_PENDENTE', 'Pg-Pendente'
+    PG_PARCIAL = 'PG_PARCIAL', 'Pg-Parcial'
+    PG_ENTREGUE = 'PG_ENTREGUE', 'Pg-Entregue'
+
+
+
 class PedidoCompra(TimestampedModel):
     data = models.DateField()
     pedido = models.CharField(max_length=40, unique=True)
-    custo = models.ForeignKey(Custo, on_delete=models.PROTECT, related_name='pedidos_compra')
+    safra = models.ForeignKey(Safra, on_delete=models.PROTECT, related_name='pedidos_compra', null=True, blank=True)
+    custo = models.ForeignKey(Custo, on_delete=models.PROTECT, related_name='pedidos_compra', null=True, blank=True)
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='pedidos_compra')
     produtor = models.ForeignKey(Produtor, on_delete=models.PROTECT, related_name='pedidos_compra')
-    preco = models.DecimalField(max_digits=14, decimal_places=2)
-    produto = models.CharField(max_length=120)
+    fornecedor = models.ForeignKey(Fornecedor, on_delete=models.PROTECT, related_name='pedidos_compra', null=True, blank=True)
+    preco = models.DecimalField(max_digits=14, decimal_places=5, default=0)
+    produto = models.CharField(max_length=120, blank=True)
     vencimento = models.DateField()
     valor_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    saldo_faturar = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    pedido_pago = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=StatusPedidoCompra.choices, default=StatusPedidoCompra.PENDENTE)
 
     class Meta:
         ordering = ['-data', '-id']
@@ -57,12 +72,13 @@ class PedidoCompra(TimestampedModel):
 
 class PedidoCompraItem(TimestampedModel):
     pedido_compra = models.ForeignKey(PedidoCompra, on_delete=models.CASCADE, related_name='itens')
-    produto = models.CharField(max_length=120)
+    produto = models.CharField(max_length=120, blank=True)
+    produto_cadastro = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name='itens_pedido', null=True, blank=True)
     unidade = models.ForeignKey(Unidade, on_delete=models.PROTECT)
     quantidade = models.DecimalField(max_digits=14, decimal_places=3)
-    preco = models.DecimalField(max_digits=14, decimal_places=2)
+    preco = models.DecimalField(max_digits=14, decimal_places=5)
     desconto = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    total_item = models.DecimalField(max_digits=14, decimal_places=2)
+    total_item = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
     def __str__(self):
         return f'{self.produto} - {self.pedido_compra}'

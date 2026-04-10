@@ -1,42 +1,1301 @@
-﻿<!DOCTYPE html>
+﻿{% load static %}
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ERP Compras | RogaJo</title>
+    <title>Rogajo Consultoria Agronegócio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --brand-950: #04110c;
+        --brand-900: #0a1f16;
+        --brand-800: #123424;
+        --brand-700: #1e5b3b;
+        --brand-600: #2a7b4d;
+        --brand-500: #37a457;
+        --brand-300: #64d26f;
+        --brand-200: #bdf5c2;
+        --surface: rgba(255, 255, 255, 0.08);
+        --surface-strong: rgba(255, 255, 255, 0.12);
+        --stroke: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family:
+          'Inter',
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(100, 210, 111, 0.16),
+            transparent 22%
+          ),
+          radial-gradient(
+            circle at 85% 20%,
+            rgba(55, 164, 87, 0.12),
+            transparent 20%
+          ),
+          linear-gradient(180deg, #020806 0%, #06150f 40%, #020806 100%);
+        color: #fff;
+      }
+
+      body.menu-open {
+        overflow: hidden;
+      }
+
+      ::selection {
+        background: rgba(100, 210, 111, 0.28);
+        color: #fff;
+      }
+
+      .glass {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.1),
+          rgba(255, 255, 255, 0.05)
+        );
+        border: 1px solid var(--stroke);
+        backdrop-filter: blur(18px);
+      }
+
+      .section-shell {
+        position: relative;
+        isolation: isolate;
+      }
+
+      .section-shell::before {
+        content: '';
+        position: absolute;
+        inset: auto auto 10% -6%;
+        width: 260px;
+        height: 260px;
+        background: radial-gradient(
+          circle,
+          rgba(100, 210, 111, 0.14),
+          transparent 68%
+        );
+        filter: blur(12px);
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .gradient-title {
+        background: linear-gradient(
+          90deg,
+          #ffffff 0%,
+          #d7ffe0 44%,
+          #64d26f 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .hero-grid {
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: radial-gradient(
+          circle at center,
+          black 45%,
+          transparent 88%
+        );
+      }
+
+      .glow-brand {
+        box-shadow:
+          0 0 0 1px rgba(100, 210, 111, 0.12),
+          0 28px 90px rgba(0, 0, 0, 0.45),
+          0 0 80px rgba(55, 164, 87, 0.18);
+      }
+
+      .floating-orb {
+        position: absolute;
+        border-radius: 999px;
+        filter: blur(14px);
+        opacity: 0.6;
+        animation: floatOrb 8s ease-in-out infinite;
+      }
+
+      .floating-orb.delay-2 {
+        animation-delay: 1.6s;
+      }
+
+      .floating-orb.delay-3 {
+        animation-delay: 3s;
+      }
+
+      .hero-lines {
+        background: repeating-linear-gradient(
+          135deg,
+          rgba(100, 210, 111, 0.45) 0 1px,
+          rgba(100, 210, 111, 0) 1px 12px
+        );
+        opacity: 0.3;
+      }
+
+      .parallax-smooth {
+        will-change: transform;
+        transform-style: preserve-3d;
+        transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .nav-link {
+        position: relative;
+      }
+
+      .nav-link::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -8px;
+        width: 0;
+        height: 2px;
+        background: var(--brand-300);
+        transition: width 220ms ease;
+      }
+
+      .nav-link:hover::after,
+      .nav-link.active::after {
+        width: 100%;
+      }
+
+      .button-primary,
+      .button-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        border-radius: 1rem;
+        padding: 0.95rem 1.3rem;
+        font-weight: 600;
+        transition:
+          transform 220ms ease,
+          box-shadow 220ms ease,
+          background-color 220ms ease,
+          border-color 220ms ease;
+      }
+
+      .button-primary {
+        background: linear-gradient(
+          135deg,
+          #7ce487 0%,
+          #64d26f 40%,
+          #39a859 100%
+        );
+        color: #082012;
+        box-shadow: 0 14px 28px rgba(55, 164, 87, 0.28);
+      }
+
+      .button-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 32px rgba(55, 164, 87, 0.36);
+      }
+
+      .button-secondary {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: #e6f5eb;
+      }
+
+      .button-secondary:hover {
+        transform: translateY(-2px);
+        border-color: rgba(100, 210, 111, 0.35);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .badge-soft {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.08);
+        color: #ecfdf0;
+      }
+
+      .feature-card,
+      .metric-card,
+      .contact-card,
+      .service-card {
+        transition:
+          transform 240ms ease,
+          border-color 240ms ease,
+          box-shadow 240ms ease;
+      }
+
+      .feature-card:hover,
+      .metric-card:hover,
+      .contact-card:hover,
+      .service-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(100, 210, 111, 0.28);
+        box-shadow: 0 22px 48px rgba(0, 0, 0, 0.22);
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(26px);
+        transition:
+          opacity 700ms ease,
+          transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .reveal.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .map-shell {
+        min-height: 420px;
+      }
+
+      .hero-image-shell {
+        position: relative;
+        overflow: visible;
+        border-radius: 34px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: transparent;
+        box-shadow: 0 35px 90px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(100, 210, 111, 0.10);
+      }
+
+      .hero-image-shell::before {
+        content: '';
+        position: absolute;
+        inset: -18px;
+        border-radius: 44px;
+        background:
+          radial-gradient(
+            circle at 14% 22%,
+            rgba(255, 255, 255, 0.08),
+            transparent 26%
+          ),
+          radial-gradient(
+            circle at 82% 76%,
+            rgba(100, 210, 111, 0.16),
+            transparent 24%
+          ),
+          linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.34));
+        pointer-events: none;
+        filter: blur(16px);
+        opacity: 0.7;
+        z-index: -1;
+      }
+
+      .hero-handshake {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        z-index: 3;
+        width: clamp(120px, 24vw, 260px);
+        opacity: 0.95;
+        filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.28));
+      }
+
+      @keyframes floatOrb {
+        0%,
+        100% {
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+        50% {
+          transform: translate3d(0, -18px, 0) scale(1.04);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        .parallax-smooth,
+        .floating-orb,
+        .reveal {
+          transition: none !important;
+          animation: none !important;
+          transform: none !important;
+          opacity: 1 !important;
+        }
+      }
+    </style>
   </head>
-  <body class="min-h-screen bg-slate-950 text-slate-100">
-    <main class="relative isolate overflow-hidden">
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#34d399_0%,_transparent_35%),radial-gradient(circle_at_bottom_left,_#38bdf8_0%,_transparent_35%)] opacity-30"></div>
-      <div class="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-12">
-        <span class="mb-6 inline-flex w-fit rounded-full border border-emerald-300/40 bg-emerald-300/10 px-4 py-1 text-sm font-semibold text-emerald-200">ERP de Gestão de Compras</span>
-        <h1 class="max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
-          Controle total de compras, planejamento e faturamento do agronegócio.
-        </h1>
-        <p class="mt-6 max-w-2xl text-lg text-slate-300">
-          Plataforma para gestão de Safra, Pedido de Compra, Faturamento, Contas a Pagar, Cotação e Licenciamento.
-          Estruturada para perfis de Desenvolvedor, Cliente e Usuários.
-        </p>
-        <div class="mt-10 flex flex-wrap gap-4">
-          <a href="/admin/" class="rounded-xl bg-emerald-400 px-6 py-3 text-base font-bold text-slate-900 transition hover:bg-emerald-300">Acessar Painel Administrativo</a>
-          <a href="/accounts/login/" class="rounded-xl border border-slate-300/30 bg-slate-900/50 px-6 py-3 text-base font-semibold text-slate-100 transition hover:bg-slate-800">Entrar no Sistema</a>
-        </div>
-        <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <article class="rounded-2xl border border-slate-700 bg-slate-900/60 p-5">
-            <h2 class="text-lg font-bold">Cadastros Gerais</h2>
-            <p class="mt-2 text-sm text-slate-300">Safra, Cultura, Custo, Categoria, Unidade, Forma de Pagamento e Operações.</p>
-          </article>
-          <article class="rounded-2xl border border-slate-700 bg-slate-900/60 p-5">
-            <h2 class="text-lg font-bold">Módulos Operacionais</h2>
-            <p class="mt-2 text-sm text-slate-300">Planejamento, Pedido de Compra, Faturamento, Contas a Pagar e Cotação de Produtos.</p>
-          </article>
-          <article class="rounded-2xl border border-slate-700 bg-slate-900/60 p-5">
-            <h2 class="text-lg font-bold">Licença e Segurança</h2>
-            <p class="mt-2 text-sm text-slate-300">Gestão de licença por cliente com suporte a Stripe e banco Neon por ambiente.</p>
-          </article>
+  <body>
+    <header
+      class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#020806]/70 backdrop-blur-xl"
+    >
+      <div
+        class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8"
+      >
+        <a href="#hero" class="flex items-center gap-3">
+          <img
+            src="{% static 'img/rogajo-logo.jpeg' %}"
+            alt="Rogajo Consultoria"
+            class="h-10 w-auto"
+          />
+          <div class="hidden sm:block">
+            <div class="text-sm font-semibold text-white">
+              Rogajo Consultoria
+            </div>
+            <div class="text-xs text-white/60">
+              Gestão estratégica no agronegócio
+            </div>
+          </div>
+        </a>
+
+        <nav
+          class="hidden items-center gap-8 text-sm font-medium text-slate-200 md:flex"
+        >
+          <a href="#hero" class="nav-link active">Início</a>
+          <a href="#sobre" class="nav-link">Sobre</a>
+          <a href="#servicos" class="nav-link">Serviços</a>
+          <a href="#localizacao" class="nav-link">Localização</a>
+          <a href="#contato" class="nav-link">Contato</a>
+        </nav>
+
+        <div class="flex items-center gap-3">
+          {% if user.is_authenticated %}
+            <a href="/dashboard/" class="hidden md:flex">
+              <div class="hidden items-center gap-3 rounded-2xl border border-white/15 bg-white/5 px-3 py-2 text-white md:flex">
+              <div class="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-300)] text-sm font-bold text-[var(--brand-900)]">{{ user.username|slice:':1'|upper }}</div>
+              <div class="leading-tight">
+                <div class="text-sm font-semibold">{{ user.get_full_name|default:user.username }}</div>
+                <div class="text-xs text-white/60">{{ user.get_effective_role_display }}</div>
+              </div>
+            </div>
+            </a>
+            <a href="/dashboard/" class="hidden rounded-xl bg-[var(--brand-300)] px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(55,164,87,.30)] md:inline-flex">Painel</a>
+            <a href="/accounts/logout/" class="hidden rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-[var(--brand-300)]/35 hover:bg-white/10 md:inline-flex">Sair</a>
+          {% else %}
+            <a href="/accounts/login/" class="hidden rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-[var(--brand-300)]/35 hover:bg-white/10 md:inline-flex">Login</a>
+          {% endif %}
+          <button
+            id="menu-toggle"
+            type="button"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white md:hidden"
+            aria-label="Abrir menu"
+            aria-expanded="false"
+          >
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      <div
+        id="mobile-menu"
+        class="hidden border-t border-white/10 bg-[#04110c]/95 md:hidden"
+      >
+        <div class="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6">
+          <a
+            href="#hero"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5"
+            >Início</a
+          >
+          <a
+            href="#sobre"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5"
+            >Sobre</a
+          >
+          <a
+            href="#servicos"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5"
+            >Serviços</a
+          >
+          <a
+            href="#localizacao"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5"
+            >Localização</a
+          >
+          <a
+            href="#contato"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5"
+            >Contato</a
+          >
+          <a href="/accounts/login/" class="button-primary mt-2 text-sm"
+            >Acessar sistema</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section
+        id="hero"
+        class="section-shell relative overflow-hidden pt-28 sm:pt-32"
+      >
+        <div class="hero-grid absolute inset-0 opacity-80"></div>
+        <div
+          class="floating-orb left-[6%] top-28 h-28 w-28 bg-[rgba(100,210,111,.22)]"
+        ></div>
+        <div
+          class="floating-orb delay-2 right-[10%] top-36 h-40 w-40 bg-[rgba(42,123,77,.20)]"
+        ></div>
+        <div
+          class="floating-orb delay-3 bottom-16 left-[18%] h-24 w-24 bg-[rgba(255,255,255,.08)]"
+        ></div>
+
+        <div
+          class="relative mx-auto grid max-w-7xl items-center gap-14 px-4 pb-16 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:pb-24"
+        >
+          <div class="reveal">
+            <span
+              class="badge-soft inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/90 sm:text-sm"
+            >
+              <span class="h-2 w-2 rounded-full bg-[var(--brand-300)]"></span>
+              Consultoria em Agronegócio
+            </span>
+
+            <h1
+              class="mt-5 max-w-3xl text-3xl font-bold leading-[1.08] tracking-tight text-white sm:text-4xl lg:text-5xl"
+            >
+              Compras, negociação e controle com uma operação mais
+              <span class="gradient-title">estratégica, rápida e lucrativa</span
+              >.
+            </h1>
+
+            <p
+              class="mt-6 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base"
+            >
+              A Rogajo integra gestão de compras, visão financeira e
+              inteligência operacional para dar mais previsibilidade à safra,
+              reduzir desperdícios e acelerar a tomada de decisão.
+            </p>
+
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+              <a href="#contato" class="button-primary"
+                >Quero falar com a Rogajo</a
+              >
+</div>
+          </div>
+
+          <div class="relative reveal">
+            <div id="hero-card" class="glow-brand parallax-smooth relative">
+              <div
+                id="hero-lines"
+                class="hero-lines parallax-smooth pointer-events-none absolute -right-5 top-8 hidden h-[180px] w-[100px] md:block lg:-right-8 lg:h-[240px] lg:w-[140px]"
+              ></div>
+
+              <div
+                id="hero-frame"
+                class="hero-image-shell parallax-smooth relative min-h-[320px] sm:min-h-[420px] lg:min-h-[620px]"
+              >
+                <div
+                  class="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.22))]"
+                ></div>
+                <div
+                  class="relative z-[1] flex min-h-[320px] items-center justify-center px-3 py-6 sm:min-h-[420px] sm:px-6 lg:min-h-[620px] lg:px-8"
+                >
+                  <img
+                    id="hero-card-img"
+                    src="{% static 'img/hero-img.jpg' %}"
+                    alt="Gestão de compras no agronegócio"
+                    class="parallax-smooth block max-h-[620px] w-full rounded-[30px] ring-1 ring-white/10 shadow-[0_26px_70px_rgba(0,0,0,.42)] object-contain object-center"
+                  />
+                </div>
+
+                <svg
+                  viewBox="0 0 320 200"
+                  aria-hidden="true"
+                  class="hero-handshake parallax-smooth"
+                  id="hero-handshake"
+                >
+                  <defs>
+                    <linearGradient
+                      id="sleeveLeft"
+                      x1="24"
+                      y1="128"
+                      x2="110"
+                      y2="92"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0" stop-color="rgba(255,255,255,.16)" />
+                      <stop offset="1" stop-color="rgba(100,210,111,.30)" />
+                    </linearGradient>
+                    <linearGradient
+                      id="sleeveRight"
+                      x1="296"
+                      y1="128"
+                      x2="210"
+                      y2="92"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0" stop-color="rgba(255,255,255,.16)" />
+                      <stop offset="1" stop-color="rgba(100,210,111,.30)" />
+                    </linearGradient>
+                    <linearGradient
+                      id="handFill"
+                      x1="94"
+                      y1="92"
+                      x2="228"
+                      y2="146"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0" stop-color="rgba(255,255,255,.22)" />
+                      <stop offset="1" stop-color="rgba(100,210,111,.26)" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M22 136 L80 98 L108 118 L52 156 Z"
+                    fill="url(#sleeveLeft)"
+                    stroke="rgba(255,255,255,.18)"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M298 136 L240 98 L212 118 L268 156 Z"
+                    fill="url(#sleeveRight)"
+                    stroke="rgba(255,255,255,.18)"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M84 104 C104 89 126 85 145 94 L170 107 C177 111 181 118 180 126 C179 135 171 141 161 141 H134 C126 141 120 138 114 132 L96 119 C91 115 87 110 84 104 Z"
+                    fill="url(#handFill)"
+                    stroke="rgba(255,255,255,.30)"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M236 104 C216 89 194 85 175 94 L150 107 C143 111 139 118 140 126 C141 135 149 141 159 141 H186 C194 141 200 138 206 132 L224 119 C229 115 233 110 236 104 Z"
+                    fill="url(#handFill)"
+                    stroke="rgba(255,255,255,.30)"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M145 114 L159 126 L175 113"
+                    stroke="rgba(255,255,255,.55)"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M132 126 H188"
+                    stroke="rgba(100,210,111,.45)"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M138 136 H182"
+                    stroke="rgba(255,255,255,.26)"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <div
+              class="absolute -left-3 bottom-6 hidden max-w-[220px] glass p-4 text-white shadow-2xl md:block"
+            >
+              <div
+                class="text-xs font-semibold uppercase tracking-[0.16em] text-white/55"
+              >
+                Atendimento consultivo
+              </div>
+              <p class="mt-2 text-sm leading-6 text-white/80">
+                Mais proximidade com o produtor, melhor leitura de cenário e
+                decisões com foco em margem.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-shell py-8 sm:py-10">
+        <div
+          class="mx-auto grid max-w-7xl gap-4 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8"
+        >
+          <div class="feature-card glass reveal rounded-2xl p-5">
+            <div class="text-sm font-semibold text-[var(--brand-200)]">
+              Planejamento de compras
+            </div>
+            <p class="mt-2 text-sm leading-6 text-white/70">
+              Estruture calendário, demandas e prioridades para comprar melhor.
+            </p>
+          </div>
+          <div class="feature-card glass reveal rounded-2xl p-5">
+            <div class="text-sm font-semibold text-[var(--brand-200)]">
+              Negociação orientada
+            </div>
+            <p class="mt-2 text-sm leading-6 text-white/70">
+              Compare opções, reduza desperdício e avance com mais segurança.
+            </p>
+          </div>
+          <div class="feature-card glass reveal rounded-2xl p-5">
+            <div class="text-sm font-semibold text-[var(--brand-200)]">
+              Visão financeira
+            </div>
+            <p class="mt-2 text-sm leading-6 text-white/70">
+              Conecte compras, faturamento e execução com impacto real no caixa.
+            </p>
+          </div>
+          <div class="feature-card glass reveal rounded-2xl p-5">
+            <div class="text-sm font-semibold text-[var(--brand-200)]">
+              Acompanhamento próximo
+            </div>
+            <p class="mt-2 text-sm leading-6 text-white/70">
+              Atuação prática com suporte para operação e gestão diária.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="sobre"
+        class="section-shell bg-[#f4f7f5] py-20 text-slate-900 sm:py-24"
+      >
+        <div
+          class="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:px-8"
+        >
+          <div class="reveal">
+            <span
+              class="inline-flex rounded-full bg-[rgba(18,52,36,.07)] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-700)]/85"
+              >Sobre a Rogajo</span
+            >
+            <h2 class="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Consultoria que conecta estratégia, operação e resultado.
+            </h2>
+            <p class="mt-5 text-base leading-8 text-slate-600 sm:text-lg">
+              A Rogajo atua para melhorar processos de compras, reduzir atritos
+              entre áreas e fortalecer a tomada de decisão no agronegócio com
+              visão prática, humana e orientada por dados.
+            </p>
+            <div class="mt-8 grid gap-4 sm:grid-cols-2">
+              <div
+                class="service-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              >
+                <div class="text-sm font-bold text-[var(--brand-700)]">
+                  Inteligência operacional
+                </div>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Acompanhamento de indicadores, pedidos e fluxos que impactam a
+                  rotina.
+                </p>
+              </div>
+              <div
+                class="service-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              >
+                <div class="text-sm font-bold text-[var(--brand-700)]">
+                  Gestão de compras
+                </div>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Mais critério e previsibilidade para negociação, abastecimento
+                  e controle.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="reveal rounded-[32px] bg-gradient-to-br from-[var(--brand-900)] via-[var(--brand-800)] to-[var(--brand-700)] p-6 text-white shadow-[0_28px_70px_rgba(0,0,0,.22)] sm:p-8"
+          >
+            <div class="grid gap-5 sm:grid-cols-3">
+              <div class="rounded-2xl bg-white/10 p-5">
+                <div
+                  class="text-xs font-semibold uppercase tracking-[0.16em] text-white/55"
+                >
+                  Etapa 01
+                </div>
+                <div class="mt-3 text-xl font-bold">Diagnóstico</div>
+                <p class="mt-2 text-sm leading-6 text-white/70">
+                  Leitura do cenário, gargalos e oportunidades.
+                </p>
+              </div>
+              <div class="rounded-2xl bg-white/10 p-5">
+                <div
+                  class="text-xs font-semibold uppercase tracking-[0.16em] text-white/55"
+                >
+                  Etapa 02
+                </div>
+                <div class="mt-3 text-xl font-bold">Estratégia</div>
+                <p class="mt-2 text-sm leading-6 text-white/70">
+                  Definição de prioridades, processos e metas práticas.
+                </p>
+              </div>
+              <div class="rounded-2xl bg-white/10 p-5">
+                <div
+                  class="text-xs font-semibold uppercase tracking-[0.16em] text-white/55"
+                >
+                  Etapa 03
+                </div>
+                <div class="mt-3 text-xl font-bold">Execução</div>
+                <p class="mt-2 text-sm leading-6 text-white/70">
+                  Suporte próximo para consolidar melhoria contínua.
+                </p>
+              </div>
+            </div>
+            <div
+              class="mt-8 rounded-3xl border border-white/10 bg-black/15 p-6"
+            >
+              <div
+                class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-200)]"
+              >
+                Compromisso Rogajo
+              </div>
+              <p class="mt-3 text-lg leading-8 text-slate-100">
+                Entregar mais organização, mais clareza nas decisões e mais
+                força de execução para a operação do agro.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="servicos" class="section-shell py-20 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mx-auto max-w-3xl text-center">
+            <span
+              class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70"
+              >Soluções</span
+            >
+            <h2
+              class="mt-5 text-3xl font-semibold tracking-tight text-white sm:text-4xl"
+            >
+              Consultoria em agronegócio com gestão de compras inteligente e
+              cotações que reduzem custos no campo.
+            </h2>
+            <p class="mt-4 text-base leading-8 text-slate-300 sm:text-lg">
+              Apoiamos o produtor rural com análise de compras, comparação de
+              fornecedores e cotações estratégicas para negociar melhor, reduzir
+              desperdícios, ganhar eficiência operacional e potencializar o
+              resultado do seu negócio.
+            </p>
+          </div>
+
+          <div class="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <article class="service-card glass reveal rounded-3xl p-6">
+              <div
+                class="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--brand-200)]"
+              >
+                01
+              </div>
+              <h3 class="mt-4 text-xl font-bold text-white">
+                Gestão de compras
+              </h3>
+              <p class="mt-3 text-sm leading-7 text-white/70">
+                Organização de pedidos, cotações, critérios de compra e
+                acompanhamento operacional.
+              </p>
+            </article>
+            <article class="service-card glass reveal rounded-3xl p-6">
+              <div
+                class="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--brand-200)]"
+              >
+                02
+              </div>
+              <h3 class="mt-4 text-xl font-bold text-white">
+                Apoio à negociação
+              </h3>
+              <p class="mt-3 text-sm leading-7 text-white/70">
+                Suporte para decisões mais seguras, com leitura de cenário e
+                controle de custos.
+              </p>
+            </article>
+            <article class="service-card glass reveal rounded-3xl p-6">
+              <div
+                class="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--brand-200)]"
+              >
+                03
+              </div>
+              <h3 class="mt-4 text-xl font-bold text-white">
+                Visão financeira
+              </h3>
+              <p class="mt-3 text-sm leading-7 text-white/70">
+                Integração entre compra, faturamento e impacto no fluxo da
+                operação.
+              </p>
+            </article>
+            <article class="service-card glass reveal rounded-3xl p-6">
+              <div
+                class="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--brand-200)]"
+              >
+                04
+              </div>
+              <h3 class="mt-4 text-xl font-bold text-white">
+                Suporte consultivo
+              </h3>
+              <p class="mt-3 text-sm leading-7 text-white/70">
+                Atendimento próximo para transformar análise em execução
+                consistente.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="contato" class="section-shell py-20 sm:py-24">
+        <div
+          class="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[.9fr_1.1fr] lg:px-8"
+        >
+          <div class="reveal">
+            <span
+              class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70"
+              >Contato</span
+            >
+            <h2
+              class="mt-5 text-3xl font-semibold tracking-tight text-white sm:text-4xl"
+            >
+              Vamos desenhar uma operação de compras mais eficiente para o seu
+              negócio.
+            </h2>
+            <p
+              class="mt-5 max-w-xl text-base leading-8 text-slate-300 sm:text-lg"
+            >
+              Ao enviar a mensagem, o WhatsApp abre com o texto pronto para
+              agilizar o atendimento.
+            </p>
+          </div>
+
+          <div
+            class="glass reveal rounded-[28px] p-6 shadow-[0_25px_60px_rgba(0,0,0,.28)] sm:p-8"
+          >
+            <h3 class="text-xl font-bold text-white">Enviar mensagem</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-300">
+              Preencha os dados abaixo para iniciar o contato.
+            </p>
+
+            <form id="contato-form" class="mt-6 grid gap-4">
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-slate-200"
+                    >Nome</label
+                  >
+                  <input
+                    name="nome"
+                    required
+                    class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[var(--brand-300)]/35 focus:outline-none focus:ring-4 focus:ring-[var(--brand-300)]/12"
+                    placeholder="Seu nome"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-slate-200"
+                    >Empresa</label
+                  >
+                  <input
+                    name="empresa"
+                    class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[var(--brand-300)]/35 focus:outline-none focus:ring-4 focus:ring-[var(--brand-300)]/12"
+                    placeholder="Fazenda / Grupo / Empresa"
+                  />
+                </div>
+              </div>
+
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-slate-200"
+                    >Email</label
+                  >
+                  <input
+                    type="email"
+                    name="email"
+                    class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[var(--brand-300)]/35 focus:outline-none focus:ring-4 focus:ring-[var(--brand-300)]/12"
+                    placeholder="email@empresa.com"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-slate-200"
+                    >WhatsApp</label
+                  >
+                  <input
+                    name="telefone"
+                    class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[var(--brand-300)]/35 focus:outline-none focus:ring-4 focus:ring-[var(--brand-300)]/12"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-slate-200"
+                  >Mensagem</label
+                >
+                <textarea
+                  name="mensagem"
+                  rows="5"
+                  class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-[var(--brand-300)]/35 focus:outline-none focus:ring-4 focus:ring-[var(--brand-300)]/12"
+                  placeholder="Descreva rapidamente sua necessidade..."
+                ></textarea>
+              </div>
+
+              <button
+                type="submit"
+                class="button-primary mt-2 w-full sm:w-auto"
+              >
+                Enviar para WhatsApp
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="localizacao" class="section-shell relative py-20 sm:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal mb-8 max-w-2xl">
+            <span
+              class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70"
+              >Localização</span
+            >
+            <h2
+              class="mt-5 text-3xl font-semibold tracking-tight text-white sm:text-4xl"
+            >
+              Presença local com atendimento orientado para resultado.
+            </h2>
+          </div>
+          <div
+            class="map-shell glow-brand reveal overflow-hidden rounded-[28px] border border-white/10 bg-black/20"
+          >
+            <iframe
+              title="Mapa"
+              src="https://www.google.com/maps?q=R.%20Manoel%20Ribeiro%20da%20Rocha%2C%20574%20-%20Centro%2C%20Laguna%20Carap%C3%A3%20-%20MS%2C%2079920-000&output=embed"
+              class="h-[420px] w-full border-0 opacity-90 sm:h-[520px]"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <footer class="border-t border-white/10 bg-[#020806] text-slate-200">
+      <div
+        class="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8"
+      >
+        <div>
+          <img
+            src="{% static 'img/rogajo-logo.jpeg' %}"
+            alt="Rogajo"
+            class="h-12 w-auto"
+          />
+          <p class="mt-4 max-w-sm text-sm leading-7 text-slate-300">
+            Consultoria em agronegócio com foco em compras, execução operacional
+            e decisão orientada por dados.
+          </p>
+        </div>
+        <div>
+          <h4 class="text-base font-bold text-white">Atalhos</h4>
+          <ul class="mt-4 space-y-2 text-sm text-slate-300">
+            <li>
+              <a href="#hero" class="transition hover:text-[var(--brand-300)]"
+                >Início</a
+              >
+            </li>
+            <li>
+              <a href="#sobre" class="transition hover:text-[var(--brand-300)]"
+                >Sobre</a
+              >
+            </li>
+            <li>
+              <a
+                href="#servicos"
+                class="transition hover:text-[var(--brand-300)]"
+                >Serviços</a
+              >
+            </li>
+            <li>
+              <a
+                href="#contato"
+                class="transition hover:text-[var(--brand-300)]"
+                >Contato</a
+              >
+            </li>
+            <li>
+              <a
+                href="#localizacao"
+                class="transition hover:text-[var(--brand-300)]"
+                >Localização</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-base font-bold text-white">Contato</h4>
+          <ul class="mt-4 space-y-2 text-sm text-slate-300">
+            <li>(67) 99916-8049</li>
+            <li>RNFELISBERTO@GMAIL.COM</li>
+            <li>Laguna Carapã - MS</li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-white/10 bg-black/20">
+        <div
+          class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"
+        >
+          <div class="flex items-center gap-2">
+            <img
+              src="{% static 'img/rogajo-logo.jpeg' %}"
+              alt="Rogajo"
+              class="h-6 w-auto"
+            />
+            <span>© 2026 Rogajo. Todos os direitos reservados.</span>
+          </div>
+          <div class="flex justify-center">
+            <img
+              src="{% static 'img/grdados-bi.svg' %}"
+              alt="GR Dados"
+              class="h-6 w-auto opacity-90"
+            />
+          </div>
+          <div class="text-right">
+            GR Dados Business Intelligence | WhatsApp (67) 99916-8049
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var form = document.getElementById('contato-form');
+        if (!form) return;
+
+        var number = '556799168049';
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var data = new FormData(form);
+          var nome = (data.get('nome') || '').toString().trim();
+          var empresa = (data.get('empresa') || '').toString().trim();
+          var email = (data.get('email') || '').toString().trim();
+          var telefone = (data.get('telefone') || '').toString().trim();
+          var msg = (data.get('mensagem') || '').toString().trim();
+
+          var linhas = [];
+          linhas.push('Contato - ERP Compras (Rogajo)');
+          if (nome) linhas.push('Nome: ' + nome);
+          if (empresa) linhas.push('Empresa: ' + empresa);
+          if (email) linhas.push('Email: ' + email);
+          if (telefone) linhas.push('WhatsApp: ' + telefone);
+          if (msg) {
+            linhas.push('');
+            linhas.push(msg);
+          }
+
+          var text = encodeURIComponent(linhas.join('\n'));
+          var url = 'https://wa.me/' + number + '?text=' + text;
+          window.open(url, '_blank', 'noopener');
+        });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        function initMenu() {
+          var toggle = document.getElementById('menu-toggle');
+          var menu = document.getElementById('mobile-menu');
+          if (!toggle || !menu) return;
+
+          function closeMenu() {
+            menu.classList.add('hidden');
+            document.body.classList.remove('menu-open');
+            toggle.setAttribute('aria-expanded', 'false');
+          }
+
+          toggle.addEventListener('click', function () {
+            var hidden = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden');
+            document.body.classList.toggle('menu-open', hidden);
+            toggle.setAttribute('aria-expanded', hidden ? 'true' : 'false');
+          });
+
+          menu.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', closeMenu);
+          });
+        }
+
+        function initReveal() {
+          var items = document.querySelectorAll('.reveal');
+          if (!items.length) return;
+
+          var reduced = false;
+          try {
+            reduced =
+              window.matchMedia &&
+              window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          } catch (e) {}
+
+          if (reduced || !('IntersectionObserver' in window)) {
+            items.forEach(function (item) {
+              item.classList.add('is-visible');
+            });
+            return;
+          }
+
+          var observer = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add('is-visible');
+                  observer.unobserve(entry.target);
+                }
+              });
+            },
+            { threshold: 0.14 },
+          );
+
+          items.forEach(function (item) {
+            observer.observe(item);
+          });
+        }
+
+        function initHeroParallax() {
+          var card = document.getElementById('hero-card');
+          var frame = document.getElementById('hero-frame');
+          var img = document.getElementById('hero-card-img');
+          var lines = document.getElementById('hero-lines');
+          var handshake = document.getElementById('hero-handshake');
+          if (!card || !img || !frame) return;
+
+          var reduced = false;
+          try {
+            reduced =
+              window.matchMedia &&
+              window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          } catch (e) {}
+
+          var isTouch =
+            'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0;
+          if (reduced || isTouch) return;
+
+          var raf = null;
+          var state = { x: 0, y: 0 };
+
+          function apply() {
+            var x = state.x;
+            var y = state.y;
+            frame.style.transform =
+              'perspective(1200px) rotateX(' +
+              (-y * 5).toFixed(2) +
+              'deg) rotateY(' +
+              (x * 7).toFixed(2) +
+              'deg)';
+            img.style.transform =
+              'translate3d(' +
+              (x * 14).toFixed(2) +
+              'px,' +
+              (y * 12).toFixed(2) +
+              'px,0) scale(1.03)';
+            if (lines) {
+              lines.style.transform =
+                'translate3d(' +
+                (x * 18).toFixed(2) +
+                'px,' +
+                (y * 16).toFixed(2) +
+                'px,0)';
+            }
+            if (handshake) {
+              handshake.style.transform =
+                'translate3d(' +
+                (x * 10).toFixed(2) +
+                'px,' +
+                (y * 8).toFixed(2) +
+                'px,0) scale(1.02)';
+            }
+            raf = null;
+          }
+
+          function queue() {
+            if (raf) return;
+            raf = window.requestAnimationFrame(apply);
+          }
+
+          function onMove(e) {
+            var rect = card.getBoundingClientRect();
+            state.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+            state.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+            queue();
+          }
+
+          function reset() {
+            state.x = 0;
+            state.y = 0;
+            queue();
+            img.style.transform = 'translate3d(0,0,0) scale(1)';
+            frame.style.transform =
+              'perspective(1200px) rotateX(0deg) rotateY(0deg)';
+            if (lines) lines.style.transform = 'translate3d(0,0,0)';
+            if (handshake)
+              handshake.style.transform = 'translate3d(0,0,0) scale(1)';
+          }
+
+          card.addEventListener('mousemove', onMove);
+          card.addEventListener('mouseleave', reset);
+
+          window.addEventListener(
+            'scroll',
+            function () {
+              var rect = card.getBoundingClientRect();
+              var vh =
+                window.innerHeight || document.documentElement.clientHeight;
+              var progress = Math.max(
+                -1,
+                Math.min(1, (vh * 0.5 - rect.top) / vh),
+              );
+              card.style.transform =
+                'translate3d(0,' + (progress * 16).toFixed(2) + 'px,0)';
+            },
+            { passive: true },
+          );
+        }
+
+        function initActiveLinks() {
+          var sections = document.querySelectorAll('main section[id]');
+          var links = document.querySelectorAll('.nav-link');
+          if (
+            !sections.length ||
+            !links.length ||
+            !('IntersectionObserver' in window)
+          )
+            return;
+
+          var map = {};
+          links.forEach(function (link) {
+            var href = link.getAttribute('href');
+            if (href && href.charAt(0) === '#') map[href.slice(1)] = link;
+          });
+
+          var observer = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return;
+                links.forEach(function (link) {
+                  link.classList.remove('active');
+                });
+                var link = map[entry.target.id];
+                if (link) link.classList.add('active');
+              });
+            },
+            { threshold: 0.45 },
+          );
+
+          sections.forEach(function (section) {
+            observer.observe(section);
+          });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+          initMenu();
+          initReveal();
+          initHeroParallax();
+          initActiveLinks();
+        });
+      })();
+    </script>
   </body>
 </html>

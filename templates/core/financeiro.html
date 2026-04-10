@@ -1,0 +1,44 @@
+﻿{% extends 'base.html' %}
+{% block title %}Financeiro | ERP Compras{% endblock %}
+{% block content %}
+<section class="space-y-6">
+  <div class="rounded-3xl border border-slate-200 bg-white p-6">
+    <h1 class="text-3xl font-black">{{ titulo }}</h1>
+    <p class="mt-2 text-slate-600">Acompanhe faturamentos e situacao das contas a pagar.</p>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    <a href="/app/faturamentos/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10">CRUD Faturamentos</a>
+    <a href="/app/contas/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10">CRUD Contas a Pagar</a>
+  </div>
+
+  <article class="rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="text-lg font-bold">Faturamentos</h2>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500"><tr><th>Nota Fiscal</th><th>Data</th><th>Cliente</th><th>Vencimento</th><th>Valor</th></tr></thead>
+        <tbody>
+          {% for f in faturamentos %}
+            <tr class="border-t border-slate-200"><td class="py-2">{{ f.nota_fiscal }}</td><td>{{ f.data }}</td><td>{{ f.cliente }}</td><td>{{ f.vencimento }}</td><td>{{ f.valor_total }}</td></tr>
+          {% empty %}<tr><td class="py-3 text-slate-500" colspan="7">Sem faturamentos</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="text-lg font-bold">Contas a Pagar</h2>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500"><tr><th>Nota Fiscal</th><th>Origem</th><th>Cliente</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for c in contas %}
+            <tr class="border-t border-slate-200"><td class="py-2">{{ c.nota_fiscal }}</td><td>{{ c.get_origem_display|default:'-' }}</td><td>{{ c.cliente }}</td><td>{{ c.vencimento }}</td><td>{{ c.valor_total }}</td><td>{% if c.pago %}Pago{% else %}{{ c.get_status_display|default:'Pendente' }}{% endif %}</td><td><a href="{% url 'core:conta_detail' c.pk %}" class="rounded-md border border-sky-300 px-2 py-1 text-xs text-sky-700 hover:bg-sky-50">Detalhes</a></td></tr>
+          {% empty %}<tr><td class="py-3 text-slate-500" colspan="7">Sem contas</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}
+

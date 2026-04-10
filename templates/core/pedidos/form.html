@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% block title %}Pedido de Compra | ERP Compras{% endblock %}
+{% block top_title %}Pedido de Compra{% endblock %}
+{% block content %}
+<style>
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .pedido-itens-table colgroup col:nth-child(1) { width: 22% !important; }
+    .pedido-itens-table colgroup col:nth-child(2) { width: 12% !important; }
+    .pedido-itens-table colgroup col:nth-child(3) { width: 15% !important; }
+    .pedido-itens-table colgroup col:nth-child(4) { width: 15% !important; }
+    .pedido-itens-table colgroup col:nth-child(5) { width: 15% !important; }
+    .pedido-itens-table colgroup col:nth-child(6) { width: 15% !important; }
+    .pedido-itens-table colgroup col:nth-child(7) { width: 6% !important; }
+  }
+
+  @media (max-width: 767px) {
+    .pedido-itens-table {
+      min-width: 100% !important;
+      table-layout: auto !important;
+    }
+
+    .pedido-itens-table thead {
+      display: none;
+    }
+
+    .pedido-itens-table tbody {
+      display: block;
+    }
+
+    .pedido-itens-table .item-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      margin: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .pedido-itens-table .item-row td {
+      display: block;
+      padding: 0;
+      border: 0;
+    }
+
+    .pedido-itens-table .item-row td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+
+    .pedido-itens-table .item-row td[data-label='Acoes'] {
+      margin-top: 4px;
+    }
+
+    .pedido-itens-table .item-row td[data-label='Acoes']::before {
+      margin-bottom: 6px;
+    }
+
+    .pedido-itens-table .item-row td[data-label='Acoes'] .ml-auto {
+      margin-left: 0 !important;
+      width: 100% !important;
+      justify-items: start !important;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+</style>
+<section class="space-y-5 text-[14px] font-normal">
+  <div>
+    <h2 class="text-[18px] font-bold text-slate-900">{% if modo_edicao %}Editar Pedido{% else %}Novo Pedido{% endif %}</h2>
+    <p class="text-slate-600">Dados da nota e produtos do pedido de compra</p>
+  </div>
+
+  <form method="post" class="space-y-5" novalidate>
+    {% csrf_token %}
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h3 class="mb-3 text-[18px] font-bold text-slate-900">Dados da Nota</h3>
+      <div class="grid gap-3 lg:grid-cols-4">
+        <div class="lg:col-span-1">
+          <label for="{{ form.data.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.data.label }}</label>
+          {{ form.data }}
+          {% if form.data.errors %}<p class="mt-1 text-xs text-red-600">{{ form.data.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-1">
+          <label for="{{ form.pedido.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.pedido.label }}</label>
+          {{ form.pedido }}
+          {% if form.pedido.errors %}<p class="mt-1 text-xs text-red-600">{{ form.pedido.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-2">
+          <label for="{{ form.safra.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.safra.label }}</label>
+          {{ form.safra }}
+          {% if form.safra.errors %}<p class="mt-1 text-xs text-red-600">{{ form.safra.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="lg:col-span-1">
+          <label for="{{ form.cliente.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.cliente.label }}</label>
+          {{ form.cliente }}
+          {% if form.cliente.errors %}<p class="mt-1 text-xs text-red-600">{{ form.cliente.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-1">
+          <label for="{{ form.produtor.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.produtor.label }}</label>
+          {{ form.produtor }}
+          {% if form.produtor.errors %}<p class="mt-1 text-xs text-red-600">{{ form.produtor.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-1">
+          <label for="{{ form.fornecedor.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.fornecedor.label }}</label>
+          {{ form.fornecedor }}
+          {% if form.fornecedor.errors %}<p class="mt-1 text-xs text-red-600">{{ form.fornecedor.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-1">
+          <label for="{{ form.vencimento.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.vencimento.label }}</label>
+          {{ form.vencimento }}
+          {% if form.vencimento.errors %}<p class="mt-1 text-xs text-red-600">{{ form.vencimento.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-1">
+          <label for="{{ form.valor_total.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.valor_total.label }}</label>
+          {{ form.valor_total }}
+          {% if form.valor_total.errors %}<p class="mt-1 text-xs text-red-600">{{ form.valor_total.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="lg:col-span-1">
+          <label for="{{ form.pedido_pago.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.pedido_pago.label }}</label>
+          <div class="pt-2">{{ form.pedido_pago }}</div>
+          {% if form.pedido_pago.errors %}<p class="mt-1 text-xs text-red-600">{{ form.pedido_pago.errors|join:', ' }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Produtos</h3>
+        <button id="add-item" type="button" class="rounded-lg bg-[#56d741] px-4 py-2 text-[14px] text-[#0d2f19]">+ Adicionar Item</button>
+      </div>
+
+      {{ formset.management_form }}
+
+      <div class="overflow-x-hidden rounded-lg border border-slate-200">
+        <table class="pedido-itens-table w-full table-fixed text-left text-[14px]">
+          <colgroup>
+            <col style="width: 28%" />
+            <col style="width: 10%" />
+            <col style="width: 12%" />
+            <col style="width: 12%" />
+            <col style="width: 12%" />
+            <col style="width: 16%" />
+            <col style="width: 10%" />
+          </colgroup>
+          <thead class="bg-[#F1F3F4] text-slate-800">
+            <tr>
+              <th class="px-3 py-2">Produto</th>
+              <th class="px-3 py-2">Unidade</th>
+              <th class="px-3 py-2">Quantidade</th>
+              <th class="px-3 py-2">Preco</th>
+              <th class="px-3 py-2">Desconto</th>
+              <th class="px-3 py-2">Total Item</th>
+              <th class="w-[120px] px-3 py-2 text-right">Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="itens-body">
+            {% for item_form in formset %}
+              <tr class="item-row border-t border-slate-200">
+                <td data-label="Produto" class="px-3 py-2">{{ item_form.produto_cadastro }}{{ item_form.id }}</td>
+                <td data-label="Unidade" class="px-3 py-2">{{ item_form.unidade }}</td>
+                <td data-label="Quantidade" class="px-3 py-2">{{ item_form.quantidade }}</td>
+                <td data-label="Preco" class="px-3 py-2">{{ item_form.preco }}</td>
+                <td data-label="Desconto" class="px-3 py-2">{{ item_form.desconto }}</td>
+                <td data-label="Total Item" class="px-3 py-2">{{ item_form.total_item }}</td>
+                <td data-label="Acoes" class="px-3 py-2 text-right">
+                  <div class="ml-auto grid w-[160px] grid-cols-6 justify-items-end gap-1">
+                    <span class="hidden">{% if item_form.DELETE %}{{ item_form.DELETE }}{% endif %}</span>
+                    <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% if item_form.non_field_errors %}
+                <tr><td colspan="7" class="px-3 pb-2 text-xs text-red-600">{{ item_form.non_field_errors|join:', ' }}</td></tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if formset.non_form_errors %}
+      <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formset.non_form_errors|join:', ' }}</div>
+    {% endif %}
+
+    <div class="flex gap-3">
+      <button type="submit" class="rounded-lg bg-[#56d741] px-5 py-2 text-[14px] text-[#0d2f19]">Salvar</button>
+      <a href="{% url 'core:pedido_list' %}" class="rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">Cancelar</a>
+    </div>
+  </form>
+</section>
+
+<template id="empty-form-template">
+  <tr class="item-row border-t border-slate-200">
+    <td data-label="Produto" class="px-3 py-2">__PRODUTO__ __ID__</td>
+    <td data-label="Unidade" class="px-3 py-2">__UNIDADE__</td>
+    <td data-label="Quantidade" class="px-3 py-2">__QTD__</td>
+    <td data-label="Preco" class="px-3 py-2">__PRECO__</td>
+    <td data-label="Desconto" class="px-3 py-2">__DESC__</td>
+    <td data-label="Total Item" class="px-3 py-2">__TOTAL__</td>
+    <td data-label="Acoes" class="px-3 py-2 text-right">
+      <div class="ml-auto grid w-[160px] grid-cols-6 justify-items-end gap-1">__DELETE__
+        <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+  </tr>
+</template>
+
+<script>
+(function(){
+  const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+  const tbody = document.getElementById('itens-body');
+  const addBtn = document.getElementById('add-item');
+  const template = document.getElementById('empty-form-template');
+
+  function parseNum(v){
+    let s = (v || '0').toString().trim();
+    if (!s) return 0;
+    // PT-BR: remove separador de milhar sempre (.) e troca decimal (, -> .)
+    s = s.replace(/\./g, '');
+    if (s.includes(',')) s = s.replace(',', '.');
+    const n = parseFloat(s);
+    return Number.isNaN(n) ? 0 : n;
+  }
+  function setBrValue(input, value, decimals){
+    if(!input) return;
+    const safe = Number.isFinite(value) ? value : 0;
+    const fixed = safe.toFixed(decimals);
+    const parts = fixed.split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (decimals > 0) {
+      input.value = `${intPart},${parts[1]}`;
+    } else {
+      input.value = intPart;
+    }
+  }
+
+  function recalcRow(row){
+    const qtd = row.querySelector('input[name$="-quantidade"]');
+    const preco = row.querySelector('input[name$="-preco"]');
+    const desc = row.querySelector('input[name$="-desconto"]');
+    const total = row.querySelector('input[name$="-total_item"]');
+    if(!qtd || !preco || !desc || !total) return;
+    const valor = parseNum(qtd.value) * parseNum(preco.value) - parseNum(desc.value);
+    setBrValue(total, valor, 2);
+  }
+
+  function recalcPedidoTotal(){
+    let totalPedido = 0;
+    tbody.querySelectorAll('.item-row').forEach((row)=>{
+      const del = row.querySelector('input[name$="-DELETE"]');
+      if (del && del.checked) return;
+      const total = row.querySelector('input[name$="-total_item"]');
+      totalPedido += parseNum(total ? total.value : 0);
+    });
+    const totalInput = document.getElementById('id_valor_total');
+    if(totalInput) setBrValue(totalInput, totalPedido, 2);
+  }
+
+  function bindRow(row){
+    ['quantidade','preco','desconto'].forEach((field)=>{
+      const input = row.querySelector(`input[name$="-${field}"]`);
+      if(input){
+        input.addEventListener('input', ()=>{ recalcRow(row); recalcPedidoTotal(); });
+      }
+    });
+
+    const del = row.querySelector('input[name$="-DELETE"]');
+    if(del){ del.addEventListener('change', recalcPedidoTotal); }
+
+    const removeBtn = row.querySelector('.remove-row');
+    if(removeBtn){
+      removeBtn.addEventListener('click', ()=>{
+        if(del){
+          del.checked = true;
+          row.style.display = 'none';
+        } else {
+          row.remove();
+          totalForms.value = String(Math.max(parseInt(totalForms.value || '1', 10) - 1, 0));
+        }
+        recalcPedidoTotal();
+      });
+    }
+
+    recalcRow(row);
+    if (window.initInputMasks) window.initInputMasks(row);
+    if (window.initInputNormalizers) window.initInputNormalizers(row);
+    if (window.initDecimalMasks) window.initDecimalMasks(row);
+  }
+
+  tbody.querySelectorAll('.item-row').forEach(bindRow);
+  recalcPedidoTotal();
+
+  addBtn.addEventListener('click', ()=>{
+    const index = parseInt(totalForms.value || '0', 10);
+    const prefix = `itens-${index}`;
+
+    const produto = document.getElementById('id_itens-0-produto_cadastro');
+    const unidade = document.getElementById('id_itens-0-unidade');
+    const qtd = document.getElementById('id_itens-0-quantidade');
+    const preco = document.getElementById('id_itens-0-preco');
+    const desc = document.getElementById('id_itens-0-desconto');
+    const total = document.getElementById('id_itens-0-total_item');
+    const del = document.getElementById('id_itens-0-DELETE');
+    const hid = document.getElementById('id_itens-0-id');
+
+    const html = template.innerHTML
+      .replace('__PRODUTO__', produto ? produto.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__UNIDADE__', unidade ? unidade.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__QTD__', qtd ? qtd.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__PRECO__', preco ? preco.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__DESC__', desc ? desc.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__TOTAL__', total ? total.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__DELETE__', del ? `<span class=\"hidden\">${del.outerHTML.replaceAll('itens-0', prefix)}</span>` : '')
+      .replace('__ID__', hid ? hid.outerHTML.replaceAll('itens-0', prefix) : '');
+
+    const wrapper = document.createElement('tbody');
+    wrapper.innerHTML = html.trim();
+    const row = wrapper.firstElementChild;
+    tbody.appendChild(row);
+    totalForms.value = String(index + 1);
+    bindRow(row);
+    recalcPedidoTotal();
+  });
+
+  const clienteField = document.getElementById('id_cliente');
+  const produtorField = document.getElementById('id_produtor');
+
+  async function carregarProdutores(clienteId){
+    if(!produtorField) return;
+    produtorField.innerHTML = '<option value="">---------</option>';
+    if(!clienteId) return;
+
+    const resp = await fetch(`{% url 'core:produtores_por_cliente' %}?cliente_id=${clienteId}`);
+    const data = await resp.json();
+    (data.items || []).forEach((item)=>{
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.label || `${item.produtor} - ${item.fazenda || ''}`.trim();
+      produtorField.appendChild(opt);
+    });
+  }
+
+  if(clienteField){
+    clienteField.addEventListener('change', ()=>carregarProdutores(clienteField.value));
+    if(clienteField.value && !produtorField.value){ carregarProdutores(clienteField.value); }
+  }
+})();
+</script>
+{% endblock %}
+
+
+

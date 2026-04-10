@@ -1,36 +1,365 @@
-﻿<!DOCTYPE html>
-<html lang="pt-BR">
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}ERP Compras{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+        --bg-app: #f1f3f4;
+        --sidebar-top: #010b09;
+        --sidebar-bottom: #06301f;
+        --accent: #56d741;
+        --text-main: #0f172a;
+      }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
+      .ui-title { font-size: 18px; font-weight: 700; }
+      .ui-text { font-size: 12px; font-weight: 400; }
+      details > summary { list-style: none; }
+      details > summary::-webkit-details-marker { display: none; }
+      .menu-item { display: block; border-radius: 8px; padding: 10px 12px; color: #fff; }
+      .menu-item:hover { background: rgba(255,255,255,.1); }
+      .menu-item-active { background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+    </style>
   </head>
-  <body class="min-h-screen bg-slate-950 text-slate-100">
-    <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="/" class="text-lg font-extrabold tracking-wide">ERP Compras</a>
-        <nav class="flex items-center gap-3 text-sm">
-          {% if user.is_authenticated %}
-            <a href="/dashboard/" class="rounded-lg border border-slate-700 px-3 py-1 hover:bg-slate-800">Dashboard</a>
-            <a href="/licencas/renovar/" class="rounded-lg border border-emerald-500/40 px-3 py-1 text-emerald-300 hover:bg-emerald-500/10">Licenca</a>
-            <a href="/accounts/logout/" class="rounded-lg border border-slate-700 px-3 py-1 hover:bg-slate-800">Sair</a>
-          {% else %}
-            <a href="/accounts/login/" class="rounded-lg border border-slate-700 px-3 py-1 hover:bg-slate-800">Entrar</a>
-          {% endif %}
-        </nav>
-      </div>
-    </header>
-
-    <main class="mx-auto w-full max-w-6xl px-6 py-10">
-      {% if messages %}
-        <div class="mb-6 space-y-3">
-          {% for message in messages %}
-            <div class="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm">{{ message }}</div>
-          {% endfor %}
+  <body class="h-full min-h-screen overflow-x-hidden bg-[var(--bg-app)] text-[var(--text-main)]">
+    <div class="min-h-screen lg:flex">
+      {% if user.is_authenticated %}
+      <aside class="flex w-full flex-col border-b border-emerald-900/40 bg-gradient-to-b from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] text-white lg:min-h-screen lg:w-[286px] lg:border-b-0">
+        <div class="border-b border-emerald-400/70 px-3 py-2 h-[62px] flex items-center justify-center">
+          <a href="/dashboard/" class="inline-flex rounded-md border border-white/15 bg-white/5 p-1">
+            <img src="{% static 'img/rogajo-logo.jpeg' %}" alt="Rogajo" class="h-[40px] w-auto rounded" />
+          </a>
         </div>
+
+        <nav class="flex-1 space-y-1 px-3 py-2 text-[15px]">
+          <a href="/dashboard/" class="menu-item {% if request.path == '/dashboard/' %}menu-item-active{% endif %}">Dashboard</a>
+
+          <details class="rounded-lg" {% if '/app/pedidos/' in request.path or '/app/faturamentos/' in request.path %}open{% endif %}>
+            <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10 {% if '/app/pedidos/' in request.path or '/app/faturamentos/' in request.path %}bg-white/10{% endif %}">
+              <span>Compras</span>
+              <span class="text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+            </summary>
+            <div class="mt-1 space-y-1 pl-3 text-sm">
+              <a href="/app/pedidos/" class="menu-item py-1.5 {% if '/app/pedidos/' in request.path %}menu-item-active{% endif %}">Pedido</a>
+              <a href="/app/faturamentos/" class="menu-item py-1.5 {% if '/app/faturamentos/' in request.path %}menu-item-active{% endif %}">Faturamento</a>
+            </div>
+          </details>
+
+          <details class="rounded-lg" {% if '/app/contas/' in request.path or '/app/financeiro/' in request.path %}open{% endif %}>
+            <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10 {% if '/app/contas/' in request.path or '/app/financeiro/' in request.path %}bg-white/10{% endif %}">
+              <span>Financeiro</span>
+              <span class="text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+            </summary>
+            <div class="mt-1 space-y-1 pl-3 text-sm">
+              <a href="/app/contas/" class="menu-item py-1.5 {% if '/app/contas/' in request.path %}menu-item-active{% endif %}">Contas a Pagar</a>
+            </div>
+          </details>
+
+          {% if user.is_superuser or user.role == 'ADMIN' %}
+            <details class="rounded-lg" {% if '/app/safras/' in request.path or '/app/culturas/' in request.path or '/app/custos/' in request.path or '/app/categorias/' in request.path or '/app/unidades/' in request.path or '/app/formas-pagamento/' in request.path or '/app/operacoes/' in request.path or '/app/fornecedores/' in request.path or '/app/clientes/' in request.path or '/app/produtores/' in request.path or '/app/propriedades/' in request.path or '/app/produtos/' in request.path %}open{% endif %}>
+              <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10">
+                <span>Cadastros</span>
+                <span class="text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+              </summary>
+
+              <div class="mt-1 space-y-1 pl-3 text-sm">
+                <details class="rounded-lg">
+                  <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-emerald-100 hover:bg-white/10">
+                    <span>Gerais</span>
+                    <span class="text-sm font-semibold leading-none text-emerald-200">&#9662;</span>
+                  </summary>
+                  <div class="mt-1 space-y-1 pl-3 text-sm">
+                    <a href="/app/safras/" class="menu-item py-1.5 {% if '/app/safras/' in request.path %}menu-item-active{% endif %}">Safra</a>
+                    <a href="/app/culturas/" class="menu-item py-1.5 {% if '/app/culturas/' in request.path %}menu-item-active{% endif %}">Cultura</a>
+                    <a href="/app/custos/" class="menu-item py-1.5 {% if '/app/custos/' in request.path %}menu-item-active{% endif %}">Custo</a>
+                    <a href="/app/categorias/" class="menu-item py-1.5 {% if '/app/categorias/' in request.path %}menu-item-active{% endif %}">Categoria</a>
+                    <a href="/app/unidades/" class="menu-item py-1.5 {% if '/app/unidades/' in request.path %}menu-item-active{% endif %}">Unidade</a>
+                    <a href="/app/formas-pagamento/" class="menu-item py-1.5 {% if '/app/formas-pagamento/' in request.path %}menu-item-active{% endif %}">Forma Pagamento</a>
+                    <a href="/app/operacoes/" class="menu-item py-1.5 {% if '/app/operacoes/' in request.path %}menu-item-active{% endif %}">Operacao</a>
+                  </div>
+                </details>
+
+                <details class="rounded-lg">
+                  <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-emerald-100 hover:bg-white/10">
+                    <span>Administrativo</span>
+                    <span class="text-sm font-semibold leading-none text-emerald-200">&#9662;</span>
+                  </summary>
+                  <div class="mt-1 space-y-1 pl-3 text-sm">
+                    <a href="/app/fornecedores/" class="menu-item py-1.5 {% if '/app/fornecedores/' in request.path %}menu-item-active{% endif %}">Fornecedor</a>
+                    <a href="/app/clientes/" class="menu-item py-1.5 {% if '/app/clientes/' in request.path %}menu-item-active{% endif %}">Cliente</a>
+                    <a href="/app/produtores/" class="menu-item py-1.5 {% if '/app/produtores/' in request.path %}menu-item-active{% endif %}">Produtor</a>
+                    <a href="/app/propriedades/" class="menu-item py-1.5 {% if '/app/propriedades/' in request.path %}menu-item-active{% endif %}">Propriedade</a>
+                    <a href="/app/produtos/" class="menu-item py-1.5 {% if '/app/produtos/' in request.path %}menu-item-active{% endif %}">Produto</a>
+                    <a href="/admin/accounts/user/" class="menu-item py-1.5 {% if '/admin/accounts/user/' in request.path %}menu-item-active{% endif %}">Usuarios</a>
+                  </div>
+                </details>
+              </div>
+            </details>
+          {% endif %}
+
+          <a href="/app/licencas/" class="menu-item {% if '/app/licencas/' in request.path %}menu-item-active{% endif %}">Licenca</a>
+        </nav>
+
+        <div class="border-t border-emerald-900/40 p-4">
+          <div class="rounded-xl bg-white/10 px-3 py-3">
+            <p class="text-sm font-semibold">{{ user.get_effective_role_display }}</p>
+            <p class="text-xs text-emerald-100/80">{{ user.username }}</p>
+          </div>
+        </div>
+      </aside>
       {% endif %}
-      {% block content %}{% endblock %}
-    </main>
-  </body>
+
+      <div class="flex-1">
+        <header class="border-b border-emerald-900/40 bg-gradient-to-r from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] text-white">
+          <div class="flex h-[62px] items-center justify-between border-b border-emerald-400/70 px-8">
+            <h1 class="text-lg font-semibold">{% block top_title %}Painel Administrativo{% endblock %}</h1>
+            <div class="flex items-center gap-3">
+              {% if user.is_authenticated %}
+                <div class="hidden h-[42px] items-center gap-2 rounded-lg border border-emerald-200/40 bg-emerald-100/10 px-3 sm:flex">
+                  <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-emerald-950">{{ user.username|first|upper }}</span>
+                  <p class="text-sm font-semibold text-white">{{ user.username }}</p>
+                </div>
+                <a href="/accounts/logout/" class="inline-flex h-[42px] items-center rounded-lg border border-emerald-200/40 bg-white/10 px-4 text-sm font-medium text-white hover:bg-white/20">Sair</a>
+              {% else %}
+                <a href="/accounts/login/" class="rounded-lg border border-emerald-200/40 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20">Entrar</a>
+              {% endif %}
+            </div>
+          </div>
+        </header>
+
+        <main class="px-8 py-6">
+          {% if messages %}
+            <div class="mb-6 space-y-3">
+              {% for message in messages %}
+                <div class="rounded-xl border px-4 py-3 text-sm shadow-sm
+                  {% if 'success' in message.tags %}
+                    border-emerald-300 bg-emerald-50 text-emerald-900
+                  {% elif 'error' in message.tags %}
+                    border-red-300 bg-red-50 text-red-900
+                  {% elif 'warning' in message.tags %}
+                    border-amber-300 bg-amber-50 text-amber-900
+                  {% else %}
+                    border-sky-300 bg-sky-50 text-sky-900
+                  {% endif %}
+                ">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+    <script>
+    (function () {
+      function digits(value) {
+        return (value || '').replace(/\D/g, '');
+      }
+
+      function formatCPF(value) {
+        const v = digits(value).slice(0, 11);
+        if (v.length <= 3) return v;
+        if (v.length <= 6) return v.slice(0, 3) + '.' + v.slice(3);
+        if (v.length <= 9) return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
+        return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
+      }
+
+      function formatCNPJ(value) {
+        const v = digits(value).slice(0, 14);
+        if (v.length <= 2) return v;
+        if (v.length <= 5) return v.slice(0, 2) + '.' + v.slice(2);
+        if (v.length <= 8) return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5);
+        if (v.length <= 12) return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8);
+        return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8, 12) + '-' + v.slice(12);
+      }
+
+      function formatCEP(value) {
+        const v = digits(value).slice(0, 8);
+        if (v.length <= 5) return v;
+        return v.slice(0, 5) + '-' + v.slice(5);
+      }
+
+      function formatContato(value) {
+        const v = digits(value).slice(0, 11);
+        if (v.length <= 2) return v;
+        if (v.length <= 6) return '(' + v.slice(0, 2) + ') ' + v.slice(2);
+        if (v.length <= 10) return '(' + v.slice(0, 2) + ') ' + v.slice(2, 6) + '-' + v.slice(6);
+        return '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+      }
+
+      function formatByMask(value, mask) {
+        if (mask === 'cpf') return formatCPF(value);
+        if (mask === 'cnpj') return formatCNPJ(value);
+        if (mask === 'cep') return formatCEP(value);
+        if (mask === 'contato') return formatContato(value);
+        if (mask === 'cpf_cnpj') {
+          const only = digits(value);
+          return only.length <= 11 ? formatCPF(only) : formatCNPJ(only);
+        }
+        return value;
+      }
+
+      function bindMask(input) {
+        const mask = input.getAttribute('data-mask');
+        if (!mask) return;
+
+        const apply = function () {
+          input.value = formatByMask(input.value, mask);
+        };
+
+        input.addEventListener('input', apply);
+        input.addEventListener('blur', apply);
+        apply();
+      }
+
+      function removeAccents(value) {
+        return (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
+
+      function capitalizeWords(value) {
+        return (value || '').split(' ').map(function (part) {
+          if (!part) return '';
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        }).join(' ');
+      }
+
+      function bindNormalizer(input) {
+        const apply = function () {
+          input.value = capitalizeWords(removeAccents(input.value));
+        };
+
+        input.addEventListener('input', apply);
+        input.addEventListener('blur', apply);
+        apply();
+      }
+
+      function formatThousands(numberStr) {
+        const clean = (numberStr || '').replace(/^0+(\d)/, '$1');
+        if (!clean) return '0';
+        return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      }
+
+      function formatDecimalBR(value, decimals) {
+        const raw = (value || '').toString().trim();
+        if (!raw) return '';
+
+        if (decimals > 0) {
+          if (raw.includes(',')) {
+            const parts = raw.split(',');
+            const intPart = (parts[0] || '').replace(/\D/g, '') || '0';
+            const decPart = ((parts[1] || '').replace(/\D/g, '')).slice(0, decimals).padEnd(decimals, '0');
+            return formatThousands(intPart) + ',' + decPart;
+          }
+
+          const intPart = raw.replace(/\D/g, '') || '0';
+          return formatThousands(intPart) + ',' + '0'.repeat(decimals);
+        }
+
+        const intPart = raw.replace(/\D/g, '') || '0';
+        return formatThousands(intPart);
+      }
+
+      function bindDecimalInput(input) {
+        if (input.dataset.decimalBound === '1') return;
+        input.dataset.decimalBound = '1';
+
+        const decimals = parseInt(input.getAttribute('data-decimals') || '2', 10);
+
+        // While typing: keep only digits and an optional comma, without padding/auto-zeros.
+        // On blur: apply full PT-BR formatting (thousands + decimal padding).
+        const onInput = function () {
+          let raw = (input.value || '').toString();
+          raw = raw.replace(/[^\d,]/g, '');
+
+          const parts = raw.split(',');
+          const intPart = (parts[0] || '').replace(/^0+(\d)/, '$1');
+
+          if (decimals <= 0) {
+            input.value = intPart;
+            return;
+          }
+
+          let decPart = parts.length > 1 ? (parts[1] || '') : '';
+          decPart = decPart.replace(/[^\d]/g, '').slice(0, decimals);
+
+          if (parts.length > 1) {
+            input.value = intPart + ',' + decPart;
+          } else {
+            input.value = intPart;
+          }
+        };
+
+        const onBlur = function () {
+          input.value = formatDecimalBR(input.value, decimals);
+        };
+
+        input.addEventListener('input', onInput);
+        input.addEventListener('blur', onBlur);
+        onBlur();
+      }
+
+      function convertDecimalForSubmit(input) {
+        const decimals = parseInt(input.getAttribute('data-decimals') || '2', 10);
+        const raw = (input.value || '').trim();
+        if (!raw) return;
+
+        if (decimals > 0) {
+          input.value = raw.replace(/\./g, '').replace(',', '.');
+        } else {
+          input.value = raw.replace(/\./g, '');
+        }
+      }
+
+      function bindDecimalSubmitOnForm(form) {
+        if (form.dataset.decimalSubmitBound === '1') return;
+        form.dataset.decimalSubmitBound = '1';
+
+        form.addEventListener('submit', function () {
+          form.querySelectorAll('input[data-decimal-br="1"]').forEach(convertDecimalForSubmit);
+        });
+      }
+
+      function initMasks(root) {
+        (root || document).querySelectorAll('input[data-mask]').forEach(bindMask);
+      }
+
+      function initNormalizers(root) {
+        (root || document).querySelectorAll('input[data-normalize="text"], textarea[data-normalize="text"]').forEach(bindNormalizer);
+      }
+
+      function initDecimalMasks(root) {
+        const scope = root || document;
+        scope.querySelectorAll('input[data-decimal-br="1"]').forEach(bindDecimalInput);
+
+        if (scope.tagName === 'FORM') {
+          bindDecimalSubmitOnForm(scope);
+        } else {
+          scope.querySelectorAll('form').forEach(bindDecimalSubmitOnForm);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        initMasks(document);
+        initNormalizers(document);
+        initDecimalMasks(document);
+      });
+
+      window.initInputMasks = initMasks;
+      window.initInputNormalizers = initNormalizers;
+      window.initDecimalMasks = initDecimalMasks;
+    })();
+  </script>
+
+</body>
 </html>
+
+
+
+

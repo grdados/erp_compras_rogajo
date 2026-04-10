@@ -1,0 +1,550 @@
+﻿{% extends 'base.html' %}
+{% load core_extras %}
+{% block title %}Contas a Pagar | ERP Compras{% endblock %}
+{% block top_title %}Contas a Pagar{% endblock %}
+{% block content %}
+<section class="space-y-5 text-[14px] font-normal">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 class="text-[18px] font-bold text-slate-900">Contas a Pagar</h2>
+      <p class="text-slate-600">Faturas geradas por pedidos e faturamentos</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="toggle-filtros" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100" aria-expanded="false">
+        <span class="inline-flex h-5 w-5 items-center justify-center">
+          <svg id="icon-eye-open-contas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="icon-eye-closed-contas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="hidden h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.58 10.58A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A9.8 9.8 0 0 1 12 4.5c6 0 9.75 7.5 9.75 7.5a18.3 18.3 0 0 1-3.02 4.14"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.14 6.14A18.4 18.4 0 0 0 2.25 12S6 19.5 12 19.5c1.05 0 2.02-.18 2.91-.51"/></svg>
+        </span>
+        <span>Filtros</span>
+      </button>
+      <button id="open-pagamento" type="button" class="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-emerald-800 hover:bg-emerald-100">
+        Registrar pagamento
+      </button>
+      <button id="open-estorno" type="button" class="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-red-800 hover:bg-red-100">
+        Estornar pagamento
+      </button>
+      <a target="_blank" href="{% url 'core:conta_report_analitico' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Relatorio analitico</a>
+      <a target="_blank" href="{% url 'core:conta_report_resumido' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Relatorio resumido</a>
+      <a href="{% url create_url_name %}" class="rounded-lg bg-[#56d741] px-4 py-2 text-[#0d2f19]">+ Nova Fatura</a>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div id="filtros-wrap" class="{% if request.GET %}{% else %}hidden{% endif %}">
+    <form method="get" class="grid gap-3 lg:grid-cols-4">
+      <div class="lg:col-span-2">
+        <label class="mb-1 block text-slate-600">Busca</label>
+        <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar nota, cliente, pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Status</label>
+        <select name="status" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          {% for v,l in op_status %}
+            <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Safra</label>
+        <select name="safra" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <option value="" {% if not filtro_safra %}selected{% endif %}>Todas</option>
+          {% for s in safras %}
+            <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Cliente</label>
+        <select name="cliente" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <option value="" {% if not filtro_cliente %}selected{% endif %}>Todos</option>
+          {% for c in clientes %}
+            <option value="{{ c.pk }}" {% if filtro_cliente|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.cliente }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Produtor</label>
+        <select name="produtor" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <option value="" {% if not filtro_produtor %}selected{% endif %}>Todos</option>
+          {% for p in produtores %}
+            <option value="{{ p.pk }}" {% if filtro_produtor|add:'' == p.pk|add:'' %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Fornecedor</label>
+        <select name="fornecedor" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <option value="" {% if not filtro_fornecedor %}selected{% endif %}>Todos</option>
+          {% for f in fornecedores %}
+            <option value="{{ f.pk }}" {% if filtro_fornecedor|add:'' == f.pk|add:'' %}selected{% endif %}>{{ f.fornecedor }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Pedido</label>
+        <input type="text" name="pedido" value="{{ filtro_pedido }}" placeholder="Ex: 2026" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Nota Fiscal</label>
+        <input type="text" name="nota_fiscal" value="{{ filtro_nota_fiscal }}" placeholder="NF..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Vencimento de</label>
+        <input type="date" name="venc_ini" value="{{ filtro_venc_ini }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Vencimento ate</label>
+        <input type="date" name="venc_fim" value="{{ filtro_venc_fim }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+      </div>
+      <div class="flex items-end gap-2 lg:col-span-4">
+        <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+        <a href="{% url 'core:conta_list' %}" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
+        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
+      </div>
+    </form>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-sky-700">Valor Faturado</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10M7 17h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_faturado|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-indigo-700">A Pagar</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 10h10"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_a_pagar|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-red-700">Vencido</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16h.01"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 2h4l8 20H2L10 2z"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_vencido|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-emerald-700">Pago</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7 10 17l-5-5"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_pago|decimal_br:2 }}</div>
+      </div>
+    </div>
+
+    <form id="lote-form" method="post" action="{% url 'core:conta_pagar_lote' %}">
+      {% csrf_token %}
+      <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-left text-[14px] whitespace-nowrap">
+          <thead>
+            <tr class="bg-[#F1F3F4] text-slate-800 border-b border-slate-200">
+              <th class="w-10 px-3 py-3 font-normal text-center">
+                <input id="select-all" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+              </th>
+              <th class="px-3 py-3 font-normal">Nota Fiscal</th>
+              <th class="px-3 py-3 font-normal">Origem</th>
+              <th class="px-3 py-3 font-normal">Safra</th>
+              <th class="px-3 py-3 font-normal">Cliente</th>
+              <th class="px-3 py-3 font-normal">Produtor</th>
+              <th class="px-3 py-3 font-normal">Fornecedor</th>
+              <th class="px-3 py-3 font-normal">Pedido</th>
+              <th class="px-3 py-3 font-normal">Vencimento</th>
+              <th class="px-3 py-3 font-normal">Atraso</th>
+              <th class="px-3 py-3 font-normal">Valor</th>
+              <th class="px-3 py-3 font-normal">Saldo</th>
+              <th class="px-3 py-3 font-normal">Status</th>
+              <th class="w-[180px] px-3 py-3 font-normal text-center">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obj in object_list %}
+              <tr class="border-t border-slate-200 bg-white hover:bg-slate-50">
+                <td class="px-3 py-2.5 text-center">
+                  <input type="checkbox" name="conta_ids" value="{{ obj.pk }}" class="conta-checkbox h-4 w-4 rounded border-slate-300" />
+                </td>
+                <td class="px-3 py-2.5 text-slate-700">{{ obj.nota_fiscal }}</td>
+                <td class="px-3 py-2.5 text-slate-700">{{ obj.get_origem_display }}</td>
+                <td class="px-3 py-2.5 text-slate-700">{% if obj.safra %}{{ obj.safra.safra }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700">{{ obj.cliente }}</td>
+                <td class="px-3 py-2.5 text-slate-700">{% if obj.produtor %}{{ obj.produtor }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700">{% if obj.fornecedor %}{{ obj.fornecedor }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700">{% if obj.pedido %}{{ obj.pedido.pedido }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700">{{ obj.vencimento|date:"d/m/Y" }}</td>
+                <td class="px-3 py-2.5 text-slate-700">{% if obj.dias_atraso %}<span class="inline-flex rounded-md bg-red-50 px-2 py-1 font-bold text-red-900 ring-1 ring-red-200">{{ obj.dias_atraso }}d</span>{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700">{{ obj.valor_total|decimal_br:2 }}</td>
+                <td class="px-3 py-2.5 text-slate-700">{{ obj.saldo_aberto|decimal_br:2 }}</td>
+                <td class="px-3 py-2.5">
+                  {% if obj.status_efetivo == 'VENCIDO' %}
+                    <span class="inline-flex rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-900 ring-1 ring-red-200">{{ obj.status_label }}</span>
+                  {% elif obj.status_efetivo == 'PAGO' %}
+                    <span class="inline-flex rounded-md bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-900 ring-1 ring-emerald-200">{{ obj.status_label }}</span>
+                  {% elif obj.status_efetivo == 'PARCIAL' %}
+                    <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 text-sm font-bold text-amber-900 ring-1 ring-amber-200">{{ obj.status_label }}</span>
+                  {% else %}
+                    <span class="inline-flex rounded-md bg-sky-50 px-2 py-1 text-sm font-bold text-sky-900 ring-1 ring-sky-200">{{ obj.status_label }}</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2.5">
+  <div class="mx-auto grid w-[210px] grid-cols-6 justify-items-center gap-2">
+    <a target="_blank" href="{% url 'core:conta_report_resumo' obj.pk %}" title="Relatorio" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v4h4"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h8M8 16h8"/>
+      </svg>
+    </a>
+    <a href="{% url 'core:conta_detail' obj.pk %}" title="Detalhes" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sky-300 text-sky-700 hover:bg-sky-50">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/>
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    </a>
+
+        {% if obj.status_efetivo == 'PAGO' %}
+      <button type="button" data-id="{{ obj.pk }}" title="Estornar" class="row-estornar inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 9h10a6 6 0 0 1 0 12h-2"/>
+        </svg>
+      </button>
+    {% else %}
+      <span title="Editar e excluir desabilitados em Contas a Pagar" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V8a4 4 0 0 0-8 0v3"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 11h10v9H7z"/>
+        </svg>
+      </span>
+    {% endif %}
+  </div>
+</td>
+              </tr>
+            {% empty %}
+              <tr><td class="px-3 py-6 text-center text-slate-400" colspan="14">Sem contas a pagar.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+
+    <div class="mt-3 text-slate-500">Total: {{ total_registros }} registro(s)</div>
+  </div>
+
+  {% if is_paginated %}
+    <div class="flex flex-wrap items-center justify-center gap-2">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">Anterior</a>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+          <span class="rounded-md bg-[var(--accent)] px-3 py-1 text-emerald-950">{{ num }}</span>
+        {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+          <a href="?page={{ num }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">Proxima</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<div id="estorno-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-xl">
+      <div class="flex items-center justify-between bg-gradient-to-r from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] px-4 py-3 text-white">
+        <h3 class="text-[16px] font-bold">Estornar Pagamento</h3>
+        <button type="button" class="close-estorno-modal inline-flex h-9 items-center rounded-md border border-white/20 bg-white/10 px-3 text-[14px] hover:bg-white/20">Fechar</button>
+      </div>
+
+      <form id="estorno-form" method="post" action="{% url 'core:conta_estornar_lote' %}">
+        {% csrf_token %}
+        <div class="p-4 space-y-4">
+          <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+            Estorno remove todos os pagamentos das faturas selecionadas e reabre o saldo.
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-left text-[14px] whitespace-nowrap">
+              <thead class="bg-[#F1F3F4] text-slate-800">
+                <tr class="border-b border-slate-200">
+                  <th class="px-3 py-2 font-normal">Documento</th>
+                  <th class="px-3 py-2 font-normal">Cliente</th>
+                  <th class="px-3 py-2 font-normal">Vencimento</th>
+                  <th class="px-3 py-2 font-normal">Saldo</th>
+                  <th class="px-3 py-2 font-normal">Status</th>
+                </tr>
+              </thead>
+              <tbody id="estorno-itens">
+                <tr><td class="px-3 py-6 text-slate-500" colspan="5">Selecione faturas na lista e clique em Estornar pagamento.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <button type="submit" class="rounded-lg bg-red-600 px-5 py-2 text-[14px] text-white">Confirmar Estorno</button>
+            <button type="button" class="close-estorno-modal rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">Cancelar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="pagamento-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-xl">
+      <div class="flex items-center justify-between bg-gradient-to-r from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] px-4 py-3 text-white">
+        <h3 class="text-[16px] font-bold">Registrar Pagamento</h3>
+        <button type="button" class="close-pagamento-modal inline-flex h-9 items-center rounded-md border border-white/20 bg-white/10 px-3 text-[14px] hover:bg-white/20">Fechar</button>
+      </div>
+
+      <form id="pagamento-form" method="post" action="{% url 'core:conta_pagar_lote' %}">
+        {% csrf_token %}
+        <div class="p-4 space-y-4">
+          <div class="grid gap-3 md:grid-cols-3">
+            <div>
+              <label class="mb-1 block text-slate-600">Data</label>
+              <input type="date" name="pag_data" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+            </div>
+            <div>
+              <label class="mb-1 block text-slate-600">Forma Pagamento</label>
+              <select name="pag_forma" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+                <option value="PIX">Pix</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="BOLETO">Boleto</option>
+                <option value="CARTAO">Cartao</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-slate-600">Observacao</label>
+              <input type="text" name="pag_obs" placeholder="Opcional" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-left text-[14px] whitespace-nowrap">
+              <thead class="bg-[#F1F3F4] text-slate-800">
+                <tr class="border-b border-slate-200">
+                  <th class="px-3 py-2 font-normal">Documento</th>
+                  <th class="px-3 py-2 font-normal">Cliente</th>
+                  <th class="px-3 py-2 font-normal">Vencimento</th>
+                  <th class="px-3 py-2 font-normal">Saldo</th>
+                  <th class="px-3 py-2 font-normal">Valor Pago</th>
+                  <th class="px-3 py-2 font-normal">Desconto</th>
+                  <th class="px-3 py-2 font-normal">Acrescimo</th>
+                </tr>
+              </thead>
+              <tbody id="pagamento-itens">
+                <tr><td class="px-3 py-6 text-slate-500" colspan="7">Selecione faturas na lista e clique em Registrar pagamento.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <button type="submit" class="rounded-lg bg-[#56d741] px-5 py-2 text-[14px] text-[#0d2f19]">Salvar Pagamento</button>
+            <button type="button" class="close-pagamento-modal rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">Cancelar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const openBtn = document.getElementById('open-pagamento');
+  const modal = document.getElementById('pagamento-modal');
+  const tbody = document.getElementById('pagamento-itens');
+  const selectAll = document.getElementById('select-all');
+
+  const openEstornoBtn = document.getElementById('open-estorno');
+  const estornoModal = document.getElementById('estorno-modal');
+  const estornoTbody = document.getElementById('estorno-itens');
+
+  function getSelectedIds(){
+    return Array.from(document.querySelectorAll('.conta-checkbox:checked')).map(cb => cb.value);
+  }
+
+  function formatPtBr(num, decimals){
+    const n = Number(num || 0);
+    const fixed = n.toFixed(decimals);
+    const parts = fixed.split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return decimals > 0 ? (intPart + ',' + parts[1]) : intPart;
+  }
+
+  async function loadItens(ids){
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td class="px-3 py-6 text-slate-500" colspan="7">Carregando...</td></tr>';
+    const resp = await fetch('{% url "core:contas_selecionadas" %}?ids=' + ids.join(','));
+    const data = await resp.json();
+    const items = data.items || [];
+    if(!items.length){
+      tbody.innerHTML = '<tr><td class="px-3 py-6 text-slate-500" colspan="7">Nenhuma fatura selecionada.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    items.forEach(it => {
+      const saldo = parseFloat((it.saldo || '0').toString());
+      const tr = document.createElement('tr');
+      tr.className = 'border-t border-slate-200';
+      tr.innerHTML = `
+        <td class="px-3 py-2.5 text-slate-700">
+          <input type="hidden" name="conta_ids" value="${it.id}" />
+          <div class="font-semibold">${it.nota_fiscal || '-'}</div>
+          <div class="text-xs text-slate-500">${it.pedido ? ('Pedido: ' + it.pedido) : ''}</div>
+        </td>
+        <td class="px-3 py-2.5 text-slate-700">${it.cliente || '-'}</td>
+        <td class="px-3 py-2.5 text-slate-700">${it.vencimento || '-'}</td>
+        <td class="px-3 py-2.5 text-slate-700">${formatPtBr(saldo, 2)}</td>
+        <td class="px-3 py-2.5">
+          <input data-decimal-br="1" data-decimals="2" inputmode="numeric" autocomplete="off" name="valor_bruto_${it.id}" value="${formatPtBr(saldo, 2)}" class="w-full min-w-0 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800" />
+        </td>
+        <td class="px-3 py-2.5">
+          <input data-decimal-br="1" data-decimals="2" inputmode="numeric" autocomplete="off" name="desconto_${it.id}" value="0,00" class="w-full min-w-0 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800" />
+        </td>
+        <td class="px-3 py-2.5">
+          <input data-decimal-br="1" data-decimals="2" inputmode="numeric" autocomplete="off" name="acrescimo_${it.id}" value="0,00" class="w-full min-w-0 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800" />
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    if (window.initDecimalMasks) window.initDecimalMasks(document.getElementById('pagamento-form'));
+  }
+
+  async function loadEstorno(ids){
+    if(!estornoTbody) return;
+    estornoTbody.innerHTML = '<tr><td class="px-3 py-6 text-slate-500" colspan="5">Carregando...</td></tr>';
+    const resp = await fetch('{% url "core:contas_selecionadas" %}?ids=' + ids.join(','));
+    const data = await resp.json();
+    const items = data.items || [];
+    if(!items.length){
+      estornoTbody.innerHTML = '<tr><td class="px-3 py-6 text-slate-500" colspan="5">Nenhuma fatura selecionada.</td></tr>';
+      return;
+    }
+
+    estornoTbody.innerHTML = '';
+    items.forEach(it => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-t border-slate-200';
+      tr.innerHTML = `
+        <td class="px-3 py-2.5 text-slate-700">
+          <input type="hidden" name="conta_ids" value="${it.id}" />
+          <div class="font-semibold">${it.nota_fiscal || '-'}</div>
+          <div class="text-xs text-slate-500">${it.pedido ? ('Pedido: ' + it.pedido) : ''}</div>
+        </td>
+        <td class="px-3 py-2.5 text-slate-700">${it.cliente || '-'}</td>
+        <td class="px-3 py-2.5 text-slate-700">${it.vencimento || '-'}</td>
+        <td class="px-3 py-2.5 text-slate-700">${it.saldo || '0'}</td>
+        <td class="px-3 py-2.5">${it.status_label || it.status || ''}</td>
+      `;
+      estornoTbody.appendChild(tr);
+    });
+  }
+
+  function openEstorno(){
+    const ids = getSelectedIds();
+    if(!ids.length){
+      alert('Selecione ao menos uma fatura para estornar.');
+      return;
+    }
+    if(!estornoModal) return;
+    estornoModal.classList.remove('hidden');
+    loadEstorno(ids);
+  }
+
+  function closeEstorno(){
+    if(!estornoModal) return;
+    estornoModal.classList.add('hidden');
+  }
+
+  function openModal(){
+    const ids = getSelectedIds();
+    if(!ids.length){
+      alert('Selecione ao menos uma fatura para pagamento.');
+      return;
+    }
+    modal.classList.remove('hidden');
+    loadItens(ids);
+  }
+
+  function closeModal(){
+    modal.classList.add('hidden');
+  }
+
+  if(openBtn) openBtn.addEventListener('click', openModal);
+  if (document.querySelectorAll('.row-estornar').length) {
+    document.querySelectorAll('.row-estornar').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const id = btn.getAttribute('data-id');
+        const cb = document.querySelector('.conta-checkbox[value="' + id + '"]');
+        if (cb) cb.checked = true;
+        openEstorno();
+      });
+    });
+  }
+  if(openEstornoBtn) openEstornoBtn.addEventListener('click', openEstorno);
+
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.close-pagamento-modal')){ e.preventDefault(); closeModal(); }
+    if(modal && !modal.classList.contains('hidden')){
+      if(e.target === modal || e.target === modal.firstElementChild){ closeModal(); }
+    }
+    if(estornoModal && !estornoModal.classList.contains('hidden')){
+      if(e.target === estornoModal || e.target === estornoModal.firstElementChild){ closeEstorno(); }
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') { closeModal(); closeEstorno(); }
+  });
+
+  if (selectAll) {
+    const checkboxes = Array.from(document.querySelectorAll('.conta-checkbox'));
+    selectAll.addEventListener('change', function(){
+      checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
+    });
+  }
+
+  const toggleFiltros = document.getElementById('toggle-filtros');
+  const filtrosWrap = document.getElementById('filtros-wrap');
+  const eyeOpen = document.getElementById('icon-eye-open-contas');
+  const eyeClosed = document.getElementById('icon-eye-closed-contas');
+  if (toggleFiltros && filtrosWrap) {
+    function setState(isOpen){
+      if(isOpen){
+        filtrosWrap.classList.remove('hidden');
+        if(eyeOpen) eyeOpen.classList.add('hidden');
+        if(eyeClosed) eyeClosed.classList.remove('hidden');
+        toggleFiltros.setAttribute('aria-expanded','true');
+      } else {
+        filtrosWrap.classList.add('hidden');
+        if(eyeOpen) eyeOpen.classList.remove('hidden');
+        if(eyeClosed) eyeClosed.classList.add('hidden');
+        toggleFiltros.setAttribute('aria-expanded','false');
+      }
+    }
+
+    setState({% if request.GET %}true{% else %}false{% endif %});
+    toggleFiltros.addEventListener('click', function(){
+      setState(filtrosWrap.classList.contains('hidden'));
+    });
+  }
+})();
+</script>
+{% endblock %}

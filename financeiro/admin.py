@@ -12,7 +12,7 @@ class FaturamentoItemInline(admin.TabularInline):
 class FaturamentoAdmin(admin.ModelAdmin):
     list_display = ('nota_fiscal', 'data', 'pedido', 'cliente', 'produtor', 'vencimento', 'valor_total')
     list_filter = ('cliente', 'produtor')
-    search_fields = ('nota_fiscal',)
+    search_fields = ('nota_fiscal', 'cliente__cliente', 'pedido__pedido')
     inlines = [FaturamentoItemInline]
 
 
@@ -23,7 +23,7 @@ def marcar_como_pago(modeladmin, request, queryset):
 
 @admin.register(ContaPagar)
 class ContaPagarAdmin(admin.ModelAdmin):
-    list_display = ('nota_fiscal', 'data', 'cliente', 'produtor', 'vencimento', 'valor_total', 'pago')
-    list_filter = ('pago', 'cliente', 'vencimento')
-    search_fields = ('nota_fiscal',)
+    list_display = ('nota_fiscal', 'origem', 'status', 'data', 'cliente', 'pedido', 'faturamento', 'vencimento', 'valor_total', 'saldo_aberto', 'pago')
+    list_filter = ('origem', 'status', 'pago', 'cliente', 'vencimento')
+    search_fields = ('nota_fiscal', 'cliente__cliente', 'pedido__pedido')
     actions = [marcar_como_pago]
