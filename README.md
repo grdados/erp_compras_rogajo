@@ -51,3 +51,36 @@ Exemplo com Stripe CLI:
 - Dashboard: `http://localhost:8000/dashboard/`
 - Renovacao de licenca: `http://localhost:8000/licencas/renovar/`
 - Admin: `http://localhost:8000/admin/`
+
+## Deploy no Render (backend completo)
+1. Suba este repo no GitHub.
+2. No Render: `New +` -> `Web Service` -> conecte o repo.
+3. O Render vai ler `render.yaml` automaticamente.
+4. Configure variaveis obrigatorias no service:
+   - `SECRET_KEY`
+   - `DATABASE_URL` (Neon Postgres)
+   - `ALLOWED_HOSTS` (inclua seu dominio Render)
+   - `CSRF_TRUSTED_ORIGINS` (ex: `https://seu-app.onrender.com`)
+   - Stripe: `STRIPE_PUBLIC_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_SEMESTRAL`, `STRIPE_PRICE_ID_ANUAL`
+5. Faça deploy e teste:
+   - `/`
+   - `/accounts/login/`
+   - `/dashboard/`
+
+## Deploy no Vercel (teste rapido com Django serverless)
+1. No Vercel: `Add New Project` -> selecione este mesmo repo.
+2. O projeto ja possui:
+   - `vercel.json`
+   - `api/index.py`
+3. Defina Environment Variables no Vercel:
+   - `SECRET_KEY`
+   - `DEBUG=False`
+   - `DATABASE_URL` (Neon)
+   - `ALLOWED_HOSTS=.vercel.app`
+   - `CSRF_TRUSTED_ORIGINS=https://*.vercel.app`
+   - Stripe (mesmas chaves do Render, se quiser testar checkout)
+4. Deploy.
+
+Observacao:
+- Para homologacao com mais estabilidade (jobs, uploads, webhook Stripe), prefira o Render.
+- Vercel aqui fica como ambiente de teste rapido.
