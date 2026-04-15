@@ -3,6 +3,11 @@
 {% block title %}Safras | ERP Compras{% endblock %}
 {% block top_title %}Safras{% endblock %}
 {% block content %}
+<style>
+  @media (max-width: 1100px) {
+    .safra-col { min-width: 132px; }
+  }
+</style>
 <section class="space-y-5 text-[14px] font-normal">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
@@ -16,7 +21,7 @@
     <form method="get" class="grid gap-3 sm:grid-cols-[1fr_auto]">
       <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar safra..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-[14px] font-normal" />
       <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-[14px] font-normal text-slate-700 hover:bg-slate-100">Filtrar</button>
-      {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
+      {% if current_sort %}<input type="hidden" name="o" value="{{ current_sort }}" />{% endif %}
     </form>
 
     <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
@@ -24,24 +29,24 @@
         <thead>
           <tr class="bg-[#F1F3F4] text-slate-800 border-b border-slate-200">
             {% for column in columns %}
-              <th class="px-3 py-3 text-[14px] font-normal">
+              <th class="px-3 py-3 text-[14px] font-normal {% if forloop.first %}safra-col{% endif %}">
                 <a href="?{{ column.sort_query }}" class="inline-flex items-center gap-1 hover:text-slate-900">
                   {{ column.label }}
                   {% if column.is_active %}<span>{% if column.is_desc %}&darr;{% else %}&uarr;{% endif %}</span>{% endif %}
                 </a>
               </th>
             {% endfor %}
-            <th class="w-[230px] px-3 py-3 text-[14px] font-normal text-right">Acoes</th>
+            <th class="px-3 py-3 text-[14px] font-normal text-right">Acoes</th>
           </tr>
         </thead>
         <tbody>
           {% for obj in object_list %}
             <tr class="border-t border-slate-200 bg-white hover:bg-slate-50">
               {% for column in columns %}
-                <td class="px-3 py-2.5 text-[14px] font-normal text-slate-700">{{ obj|attr:column.field }}</td>
+                <td class="px-3 py-2.5 text-[14px] font-normal text-slate-700 {% if forloop.first %}safra-col{% endif %}">{{ obj|attr:column.field }}</td>
               {% endfor %}
               <td class="px-3 py-2.5">
-                <div class="ml-auto grid w-[210px] grid-cols-6 justify-items-end gap-1">
+                <div class="ml-auto inline-flex items-center justify-end gap-1">
                   <a href="?edit={{ obj.pk }}" title="Editar" aria-label="Editar" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.1 2.1 0 0 1 2.97 2.97L8.67 17.618l-4.16 1.19 1.19-4.16L16.862 3.487Z"/>

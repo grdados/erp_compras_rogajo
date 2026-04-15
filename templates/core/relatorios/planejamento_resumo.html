@@ -1,0 +1,99 @@
+{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Planejamento - A4{% endblock %}
+{% block header_title %}PLANEJAMENTO{% endblock %}
+
+{% block content %}
+  <style>
+    .hdr-row { width:100%; border:0.5px solid #cbd5e1; padding:16px; margin-top:18px; }
+    .hdr-grid { display:grid; grid-template-columns: 2.1fr 1.4fr 1.1fr 1.1fr 1.0fr 1.2fr; gap:18px; align-items:start; }
+    .lbl { font-size:10px; color:#111827; }
+    .val { font-size:14px; font-weight:700; line-height:1.15; }
+    .items { margin-top:22px; }
+    table.a4 { width:100%; border-collapse:collapse; table-layout:fixed; }
+    table.a4 thead th { background:#f1f3f4; font-size:10px; font-weight:700; padding:8px 6px; }
+    table.a4 tbody td { padding:8px 6px; font-size:10px; }
+    table.a4 tbody tr { border-bottom: 0.5px solid #111827; }
+    table.a4 tfoot td { background:#f1f3f4; font-size:12px; font-weight:700; padding:10px 6px; }
+    .r { text-align:right; }
+    .c { text-align:center; }
+    .ellipsis { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  </style>
+
+  <div class="hdr-row">
+    <div class="hdr-grid">
+      <div>
+        <div class="lbl">Cliente</div>
+        <div class="val">{{ planejamento.cliente.cliente }}</div>
+      </div>
+      <div>
+        <div class="lbl">Safra</div>
+        <div class="val">{{ planejamento.safra.safra }}</div>
+      </div>
+      <div>
+        <div class="lbl">Vencimento</div>
+        <div class="val">{{ planejamento.vencimento|date:'d/m/Y' }}</div>
+      </div>
+      <div>
+        <div class="lbl">Preco Produto</div>
+        <div class="val">{{ planejamento.preco_produto|decimal_br:2 }}</div>
+      </div>
+      <div>
+        <div class="lbl">Custo</div>
+        <div class="val">{{ planejamento.custo.nome }}</div>
+      </div>
+      <div>
+        <div class="lbl">Valor Total</div>
+        <div class="val">{{ planejamento.valor_total|decimal_br:2 }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="items">
+    <table class="a4">
+      <colgroup>
+        <col style="width:11%">
+        <col style="width:39%">
+        <col style="width:13%">
+        <col style="width:12%">
+        <col style="width:12%">
+        <col style="width:13%">
+        <col style="width:10%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="c">Area</th>
+          <th class="c">Produto</th>
+          <th class="c">Unidade</th>
+          <th class="c">Quantidade</th>
+          <th class="c">Preco</th>
+          <th class="c">Valor Total</th>
+          <th class="c">sc/ha</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in itens %}
+          <tr>
+            <td class="r">{{ it.area_ha|decimal_br:1 }}</td>
+            <td class="ellipsis">{% if it.produto_cadastro %}{{ it.produto_cadastro.nome }}{% else %}{{ it.produto }}{% endif %}</td>
+            <td class="c">{% if it.unidade.unidade_abreviado %}{{ it.unidade.unidade_abreviado }}{% else %}{{ it.unidade }}{% endif %}</td>
+            <td class="r">{{ it.quantidade|decimal_br:0 }}</td>
+            <td class="r">{{ it.preco|decimal_br:2 }}</td>
+            <td class="r">{{ it.total_item|decimal_br:2 }}</td>
+            <td class="r">{{ it.sc_ha_report|decimal_br:1 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="c" style="padding:24px 8px; color:#64748b;">Sem itens.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4"></td>
+          <td class="r">Total ...:</td>
+          <td class="r">{{ total_valor|decimal_br:2 }}</td>
+          <td class="r">{{ total_sc_ha|decimal_br:1 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+{% endblock %}

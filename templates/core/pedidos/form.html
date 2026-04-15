@@ -109,7 +109,19 @@
         </div>
         <div class="lg:col-span-1">
           <label for="{{ form.fornecedor.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.fornecedor.label }}</label>
-          {{ form.fornecedor }}
+          <div class="relative has-inner-btn">
+            {{ form.fornecedor }}
+            <button
+              type="button"
+              data-crud-popup-url="/app/fornecedores/?novo=1"
+              title="Cadastrar Fornecedor"
+              class="inner-btn text-slate-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+          </div>
           {% if form.fornecedor.errors %}<p class="mt-1 text-xs text-red-600">{{ form.fornecedor.errors|join:', ' }}</p>{% endif %}
         </div>
         <div class="lg:col-span-1">
@@ -140,7 +152,7 @@
       {{ formset.management_form }}
 
       <div class="overflow-x-hidden rounded-lg border border-slate-200">
-        <table class="pedido-itens-table w-full table-fixed text-left text-[14px]">
+        <table class="pedido-itens-table tbl-hover tbl-dense w-full table-fixed text-left">
           <colgroup>
             <col style="width: 28%" />
             <col style="width: 10%" />
@@ -158,20 +170,48 @@
               <th class="px-3 py-2">Preco</th>
               <th class="px-3 py-2">Desconto</th>
               <th class="px-3 py-2">Total Item</th>
-              <th class="w-[120px] px-3 py-2 text-right">Acoes</th>
+              <th class="w-[60px] px-2 py-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody id="itens-body">
             {% for item_form in formset %}
               <tr class="item-row border-t border-slate-200">
-                <td data-label="Produto" class="px-3 py-2">{{ item_form.produto_cadastro }}{{ item_form.id }}</td>
-                <td data-label="Unidade" class="px-3 py-2">{{ item_form.unidade }}</td>
+                <td data-label="Produto" class="px-3 py-2">
+                  <div class="relative has-inner-btn has-inner-btn-sm">
+                    {{ item_form.produto_cadastro }}{{ item_form.id }}
+                    <button
+                      type="button"
+                      data-crud-popup-url="/app/produtos/?novo=1"
+                      title="Cadastrar Produto"
+                      class="inner-btn text-slate-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+                <td data-label="Unidade" class="px-3 py-2">
+                  <div class="relative has-inner-btn has-inner-btn-sm">
+                    {{ item_form.unidade }}
+                    <button
+                      type="button"
+                      data-crud-popup-url="/app/unidades/?novo=1"
+                      title="Cadastrar Unidade"
+                      class="inner-btn text-slate-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
                 <td data-label="Quantidade" class="px-3 py-2">{{ item_form.quantidade }}</td>
                 <td data-label="Preco" class="px-3 py-2">{{ item_form.preco }}</td>
                 <td data-label="Desconto" class="px-3 py-2">{{ item_form.desconto }}</td>
                 <td data-label="Total Item" class="px-3 py-2">{{ item_form.total_item }}</td>
-                <td data-label="Acoes" class="px-3 py-2 text-right">
-                  <div class="ml-auto grid w-[160px] grid-cols-6 justify-items-end gap-1">
+                <td data-label="Acoes" class="actions-cell">
+                  <div class="actions-wrap">
                     <span class="hidden">{% if item_form.DELETE %}{{ item_form.DELETE }}{% endif %}</span>
                     <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
@@ -206,14 +246,28 @@
 
 <template id="empty-form-template">
   <tr class="item-row border-t border-slate-200">
-    <td data-label="Produto" class="px-3 py-2">__PRODUTO__ __ID__</td>
-    <td data-label="Unidade" class="px-3 py-2">__UNIDADE__</td>
+    <td data-label="Produto" class="px-3 py-2">
+      <div class="relative has-inner-btn has-inner-btn-sm">
+        __PRODUTO__ __ID__
+        <button type="button" data-crud-popup-url="/app/produtos/?novo=1" title="Cadastrar Produto" class="inner-btn text-slate-700">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </td>
+    <td data-label="Unidade" class="px-3 py-2">
+      <div class="relative has-inner-btn has-inner-btn-sm">
+        __UNIDADE__
+        <button type="button" data-crud-popup-url="/app/unidades/?novo=1" title="Cadastrar Unidade" class="inner-btn text-slate-700">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </td>
     <td data-label="Quantidade" class="px-3 py-2">__QTD__</td>
     <td data-label="Preco" class="px-3 py-2">__PRECO__</td>
     <td data-label="Desconto" class="px-3 py-2">__DESC__</td>
     <td data-label="Total Item" class="px-3 py-2">__TOTAL__</td>
-    <td data-label="Acoes" class="px-3 py-2 text-right">
-      <div class="ml-auto grid w-[160px] grid-cols-6 justify-items-end gap-1">__DELETE__
+    <td data-label="Acoes" class="actions-cell">
+      <div class="actions-wrap">__DELETE__
         <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
@@ -233,13 +287,25 @@
   const tbody = document.getElementById('itens-body');
   const addBtn = document.getElementById('add-item');
   const template = document.getElementById('empty-form-template');
+  let lastOptionsRefreshAt = 0;
 
   function parseNum(v){
     let s = (v || '0').toString().trim();
     if (!s) return 0;
-    // PT-BR: remove separador de milhar sempre (.) e troca decimal (, -> .)
-    s = s.replace(/\./g, '');
-    if (s.includes(',')) s = s.replace(',', '.');
+    // Accept both "pt-BR" (1.234,56) and backend dot-decimal (1234.56 / 3.50000000)
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+
+    if (hasComma && hasDot) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (hasComma) {
+      s = s.replace(',', '.');
+    } else if (hasDot) {
+      const dotCount = (s.match(/\./g) || []).length;
+      const simpleDotDecimal = dotCount === 1 && /^\d+\.\d+$/.test(s);
+      if (!simpleDotDecimal) s = s.replace(/\./g, '');
+    }
+
     const n = parseFloat(s);
     return Number.isNaN(n) ? 0 : n;
   }
@@ -349,6 +415,7 @@
 
   async function carregarProdutores(clienteId){
     if(!produtorField) return;
+    const current = produtorField.value;
     produtorField.innerHTML = '<option value="">---------</option>';
     if(!clienteId) return;
 
@@ -360,12 +427,80 @@
       opt.textContent = item.label || `${item.produtor} - ${item.fazenda || ''}`.trim();
       produtorField.appendChild(opt);
     });
+
+    if(current){
+      produtorField.value = String(current);
+      if(produtorField.value !== String(current)) produtorField.value = '';
+    }
   }
 
   if(clienteField){
     clienteField.addEventListener('change', ()=>carregarProdutores(clienteField.value));
     if(clienteField.value && !produtorField.value){ carregarProdutores(clienteField.value); }
   }
+
+  async function refreshSelectOptions(select, url){
+    if(!select) return;
+    const current = select.value;
+    const hadPlaceholder = (select.options.length > 0 && select.options[0].value === '');
+    const placeholderText = hadPlaceholder ? select.options[0].textContent : '---------';
+
+    const resp = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+    const data = await resp.json();
+
+    select.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = placeholderText;
+    select.appendChild(opt0);
+
+    (data.items || []).forEach((it)=>{
+      const opt = document.createElement('option');
+      opt.value = String(it.id);
+      opt.textContent = it.label || it.nome || String(it.id);
+      select.appendChild(opt);
+    });
+
+    if(current){
+      select.value = current;
+      if(select.value !== current) select.value = '';
+    }
+  }
+
+  async function refreshAllSelects(){
+    const now = Date.now();
+    if(now - lastOptionsRefreshAt < 1200) return;
+    lastOptionsRefreshAt = now;
+
+    try{
+      await Promise.all([
+        refreshSelectOptions(document.getElementById('id_safra'), "{% url 'core:options_safras' %}"),
+        refreshSelectOptions(document.getElementById('id_cliente'), "{% url 'core:options_clientes' %}"),
+        refreshSelectOptions(document.getElementById('id_fornecedor'), "{% url 'core:options_fornecedores' %}"),
+      ]);
+
+      if(clienteField && clienteField.value){
+        await carregarProdutores(clienteField.value);
+      }
+
+      // refresh item selects (produto/unidade)
+      const rows = tbody ? Array.from(tbody.querySelectorAll('.item-row')) : [];
+      for(const row of rows){
+        const prod = row.querySelector('select[name$=\"-produto_cadastro\"]');
+        const uni = row.querySelector('select[name$=\"-unidade\"]');
+        if(prod) await refreshSelectOptions(prod, "{% url 'core:options_produtos' %}");
+        if(uni) await refreshSelectOptions(uni, "{% url 'core:options_unidades' %}");
+      }
+    }catch(e){
+      // ignore
+    }
+  }
+
+  // Expose hook for popup saved events (base.html)
+  window.__crudRefreshAllSelects = refreshAllSelects;
+
+  window.addEventListener('focus', refreshAllSelects);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAllSelects(); });
 })();
 </script>
 {% endblock %}

@@ -160,8 +160,6 @@ class Propriedade(TimestampedModel):
         return f'{self.propriedade} - {self.produtor}'
 
 
-
-
 class Produto(TimestampedModel):
     nome = models.CharField('Nome', max_length=160)
     nome_abreviado = models.CharField('Nome Abreviado', max_length=80, blank=True)

@@ -56,13 +56,24 @@ from .views import (
     OperacaoDeleteView,
     OperacaoListView,
     OperacaoUpdateView,
+
+    PlanejamentoCreateView,
+    PlanejamentoDeleteView,
+    PlanejamentoListView,
+    PlanejamentoReportAnaliticoView,
+    PlanejamentoReportResumoView,
+    PlanejamentoUpdateView,
+    PlanejamentoModalDetailView,
+    
     PedidoCompraCreateView,
     PedidoCompraDeleteView,
     PedidoCompraListView,
     PedidoCompraReportAnaliticoView,
+    PedidoCompraReportResumidoView,
     PedidoCompraReportResumoView,
     PedidoCompraUpdateView,
     PedidoCompraModalDetailView,
+    
     ProdutoCreateView,
     ProdutoDeleteView,
     ProdutoListView,
@@ -89,10 +100,19 @@ from .views import (
     conta_pagar_estornar_lote,
     contas_selecionadas,
     dashboard,
+    dashboard_report_economia,
+    backup_page,
+    backup_download,
     financeiro_page,
     landing_page,
     licencas_page,
     produtores_por_cliente,
+    options_produtos,
+    options_unidades,
+    options_safras,
+    options_custos,
+    options_clientes,
+    options_fornecedores,
     pedidos_por_safra_produtor,
     pedido_detalhes_para_faturamento,
 )
@@ -102,6 +122,9 @@ app_name = 'core'
 urlpatterns = [
     path('', landing_page, name='landing_page'),
     path('dashboard/', dashboard, name='dashboard'),
+    path('dashboard/relatorios/economia/', dashboard_report_economia, name='dashboard_report_economia'),
+    path('app/backup/', backup_page, name='backup_page'),
+    path('app/backup/baixar/<int:pk>/', backup_download, name='backup_download'),
     path('app/cadastros/', cadastros_page, name='cadastros_page'),
     path('app/compras/', compras_page, name='compras_page'),
     path('app/financeiro/', financeiro_page, name='financeiro_page'),
@@ -167,15 +190,32 @@ urlpatterns = [
     path('app/produtos/<int:pk>/editar/', ProdutoUpdateView.as_view(), name='produto_update'),
     path('app/produtos/<int:pk>/excluir/', ProdutoDeleteView.as_view(), name='produto_delete'),
 
+    path('app/planejamento/', PlanejamentoListView.as_view(), name='planejamento_list'),
+    path('app/planejamento/novo/', PlanejamentoCreateView.as_view(), name='planejamento_create'),
+    path('app/planejamento/<int:pk>/editar/', PlanejamentoUpdateView.as_view(), name='planejamento_update'),
+    path('app/planejamento/<int:pk>/detalhes/', PlanejamentoModalDetailView.as_view(), name='planejamento_detail_modal'),
+    path('app/planejamento/<int:pk>/excluir/', PlanejamentoDeleteView.as_view(), name='planejamento_delete'),
+    path('app/planejamento/relatorios/analitico/', PlanejamentoReportAnaliticoView.as_view(), name='planejamento_report_analitico'),
+    path('app/planejamento/<int:pk>/relatorios/resumo/', PlanejamentoReportResumoView.as_view(), name='planejamento_report_resumo'),
+
     path('app/pedidos/', PedidoCompraListView.as_view(), name='pedido_list'),
     path('app/pedidos/novo/', PedidoCompraCreateView.as_view(), name='pedido_create'),
     path('app/pedidos/<int:pk>/editar/', PedidoCompraUpdateView.as_view(), name='pedido_update'),
     path('app/pedidos/<int:pk>/detalhes/', PedidoCompraModalDetailView.as_view(), name='pedido_detail_modal'),
     path('app/pedidos/<int:pk>/excluir/', PedidoCompraDeleteView.as_view(), name='pedido_delete'),
     path('app/pedidos/relatorios/analitico/', PedidoCompraReportAnaliticoView.as_view(), name='pedido_report_analitico'),
+    path('app/pedidos/relatorios/resumido/', PedidoCompraReportResumidoView.as_view(), name='pedido_report_resumido'),
     path('app/pedidos/<int:pk>/relatorios/resumo/', PedidoCompraReportResumoView.as_view(), name='pedido_report_resumo'),
 
     path('app/pedidos/produtores-por-cliente/', produtores_por_cliente, name='produtores_por_cliente'),
+
+    # Options (AJAX) - refresh selects without reloading page
+    path('app/options/produtos/', options_produtos, name='options_produtos'),
+    path('app/options/unidades/', options_unidades, name='options_unidades'),
+    path('app/options/safras/', options_safras, name='options_safras'),
+    path('app/options/custos/', options_custos, name='options_custos'),
+    path('app/options/clientes/', options_clientes, name='options_clientes'),
+    path('app/options/fornecedores/', options_fornecedores, name='options_fornecedores'),
 
     path('app/faturamentos/pedidos-por-safra-produtor/', pedidos_por_safra_produtor, name='pedidos_por_safra_produtor'),
     path('app/faturamentos/pedido-detalhes/', pedido_detalhes_para_faturamento, name='pedido_detalhes_para_faturamento'),
@@ -215,6 +255,7 @@ urlpatterns = [
     path('app/licencas/vinculos/<int:pk>/editar/', PerfilUsuarioLicencaUpdateView.as_view(), name='licenca_vinculo_update'),
     path('app/licencas/vinculos/<int:pk>/excluir/', PerfilUsuarioLicencaDeleteView.as_view(), name='licenca_vinculo_delete'),
 ]
+
 
 
 

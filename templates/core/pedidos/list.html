@@ -5,71 +5,180 @@
 {% block content %}
 <section class="space-y-5 text-[14px] font-normal">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h2 class="text-[18px] font-bold text-slate-900">Pedidos</h2>
-      <p class="text-slate-500">Gestao de pedidos cadastrados</p>
-    </div>
-    <div class="flex flex-wrap items-center justify-end gap-2">
-      <a href="{% url 'core:pedido_create' %}" class="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] text-emerald-950 shadow-sm hover:brightness-95">+ Novo Pedido</a>
-      <a target="_blank" href="{% url 'core:pedido_report_analitico' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-[14px] text-slate-700 shadow-sm hover:bg-slate-100">Relatorio analitico</a>
-    </div>
+      <div>
+        <h2 class="text-[18px] font-bold text-slate-900">Pedidos</h2>
+        <p class="text-slate-600">Gestao de pedidos cadastrados</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="toggle-filtros-ped" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100" aria-expanded="false">
+          <span class="inline-flex h-5 w-5 items-center justify-center">
+            <svg id="icon-eye-open-ped" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="icon-eye-closed-ped" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="hidden h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.58 10.58A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A9.8 9.8 0 0 1 12 4.5c6 0 9.75 7.5 9.75 7.5a18.3 18.3 0 0 1-3.02 4.14"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.14 6.14A18.4 18.4 0 0 0 2.25 12S6 19.5 12 19.5c1.05 0 2.02-.18 2.91-.51"/></svg>
+          </span>
+          <span>Filtros</span>
+        </button>
+        <a href="{% url 'core:pedido_create' %}" class="rounded-lg bg-[#56d741] px-4 py-2 text-[#0d2f19]">+ Novo Pedido</a>
+        <a target="_blank" href="{% url 'core:pedido_report_resumido' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Relatorio resumido</a>
+        <a target="_blank" href="{% url 'core:pedido_report_analitico' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Relatorio analitico</a>
+      </div>
   </div>
 
   <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-    <form method="get" class="grid gap-3 sm:grid-cols-[1fr_auto]">
-      <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-[14px]" />
-      <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-[14px] text-slate-700 hover:bg-slate-100">Filtrar</button>
-      {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
-    </form>
+    <div id="pedido-filtros" class="hidden">
+      <div class="grid gap-3 lg:grid-cols-4">
+        <div class="lg:col-span-2">
+          <label class="mb-1 block text-slate-600">Busca</label>
+          <input type="text" name="q" form="filtros" value="{{ current_q }}" placeholder="Buscar pedido, cliente, produtor..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Safra</label>
+          <select name="safra" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_safra %}selected{% endif %}>Todas</option>
+            {% for s in safras %}
+              <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Cliente</label>
+          <select name="cliente" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_cliente %}selected{% endif %}>Todos</option>
+            {% for c in clientes %}
+              <option value="{{ c.pk }}" {% if filtro_cliente|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.cliente }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Produtor</label>
+          <select name="produtor" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_produtor %}selected{% endif %}>Todos</option>
+            {% for p in produtores %}
+              <option value="{{ p.pk }}" {% if filtro_produtor|add:'' == p.pk|add:'' %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Fornecedor</label>
+          <select name="fornecedor" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_fornecedor %}selected{% endif %}>Todos</option>
+            {% for f in fornecedores %}
+              <option value="{{ f.pk }}" {% if filtro_fornecedor|add:'' == f.pk|add:'' %}selected{% endif %}>{{ f.fornecedor }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Status</label>
+          <select name="status" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_status %}selected{% endif %}>Todos</option>
+            {% for v,l in status_choices %}
+              <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Pedido</label>
+          <input type="text" name="pedido" form="filtros" value="{{ filtro_pedido }}" placeholder="Ex: 2026" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Vencimento de</label>
+          <input type="date" name="venc_ini" form="filtros" value="{{ filtro_venc_ini }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Vencimento ate</label>
+          <input type="date" name="venc_fim" form="filtros" value="{{ filtro_venc_fim }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div class="flex items-end gap-2 lg:col-span-4">
+          <form id="filtros" method="get" autocomplete="off"></form>
+          <input type="hidden" name="show_filters" value="1" form="filtros" />
+          <button type="submit" name="apply" value="1" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+          <a href="{% url 'core:pedido_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
+          {% if current_sort %}<input type="hidden" name="sort" form="filtros" value="{{ current_sort }}" />{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-sky-700">Nº Pedidos</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2Z"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_pedidos }}</div>
+      </div>
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-indigo-700">Quantidade</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_quantidade|decimal_br:0 }}</div>
+      </div>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-amber-700">Preco Medio</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-900">
+            <span class="text-[14px] font-bold leading-none">R$</span>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_preco_medio|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-emerald-700">Total Pedidos</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7 10 17l-5-5"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_pedidos|decimal_br:2 }}</div>
+      </div>
+    </div>
 
     <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-      <table class="w-full text-left text-[14px] whitespace-nowrap">
+      <table class="w-full table-fixed text-left text-[14px] whitespace-nowrap">
         <thead>
           <tr class="bg-[#F1F3F4] text-slate-800 border-b border-slate-200">
-            <th class="px-3 py-3 font-normal">Pedido</th>
-            <th class="px-3 py-3 font-normal">Data</th>
-            <th class="px-3 py-3 font-normal">Safra</th>
-            <th class="px-3 py-3 font-normal">Cliente</th>
-            <th class="px-3 py-3 font-normal">Produtor</th>
-            <th class="px-3 py-3 font-normal">Fornecedor</th>
-            <th class="px-3 py-3 font-normal">Vencimento</th>
-            <th class="px-3 py-3 font-normal">Status</th>
-            <th class="px-3 py-3 font-normal">Saldo</th>
-            <th class="px-3 py-3 font-normal">Total</th>
-            <th class="w-[230px] px-3 py-3 font-normal text-center">Acoes</th>
+            <th class="w-[120px] px-3 py-3 font-normal">Status</th>
+            <th class="sticky left-0 z-10 w-[90px] bg-[#F1F3F4] px-3 py-3 font-normal">Pedido</th>
+            <th class="hidden w-[120px] px-3 py-3 font-normal lg:table-cell">Safra</th>
+            <th class="w-[260px] px-3 py-3 font-normal">Produtor</th>
+            <th class="w-[170px] px-3 py-3 font-normal">Fornecedor</th>
+            <th class="w-[120px] px-3 py-3 font-normal">Vencimento</th>
+            <th class="hidden w-[120px] px-3 py-3 font-normal xl:table-cell">Saldo</th>
+            <th class="w-[120px] px-3 py-3 font-normal">Total</th>
+            <th class="sticky right-0 z-10 w-[210px] bg-[#F1F3F4] px-3 py-3 font-normal text-center">Acoes</th>
           </tr>
         </thead>
         <tbody>
           {% for obj in object_list %}
-            <tr class="border-t border-slate-200 bg-white hover:bg-slate-50">
-              <td class="px-3 py-2.5">
-                <span class="inline-flex rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-900 ring-1 ring-emerald-200">{{ obj.pedido }}</span>
-              </td>
-              <td class="px-3 py-2.5 text-slate-700">{{ obj.data|date:"d/m/Y" }}</td>
-              <td class="px-3 py-2.5 text-slate-700">{% if obj.safra %}{{ obj.safra.safra }}{% else %}-{% endif %}</td>
-              <td class="px-3 py-2.5 text-slate-700">{{ obj.cliente }}</td>
-              <td class="px-3 py-2.5 text-slate-700">{{ obj.produtor.produtor }}{% if obj.produtor.fazenda %} - {{ obj.produtor.fazenda }}{% endif %}</td>
-              <td class="px-3 py-2.5 text-slate-700">{% if obj.fornecedor %}{{ obj.fornecedor.fornecedor }}{% else %}-{% endif %}</td>
-              <td class="px-3 py-2.5">
-                <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-900 ring-1 ring-amber-200">{{ obj.vencimento|date:"d/m/Y" }}</span>
-              </td>
+            <tr class="group border-t border-slate-200 bg-white hover:bg-slate-50">
               <td class="px-3 py-2.5">
                 {% with st=obj.status %}
                   {% if st == 'ENTREGUE' or st == 'PG_ENTREGUE' %}
-                    <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900">{{ obj.get_status_display }}</span>
+                    <span class="inline-flex rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-900 ring-1 ring-emerald-200">{{ obj.get_status_display }}</span>
                   {% elif st == 'PARCIAL' or st == 'PG_PARCIAL' %}
-                    <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">{{ obj.get_status_display }}</span>
+                    <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-900 ring-1 ring-amber-200">{{ obj.get_status_display }}</span>
                   {% else %}
-                    <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900">{{ obj.get_status_display }}</span>
+                    <span class="inline-flex rounded-md bg-sky-50 px-2 py-1 font-bold text-sky-900 ring-1 ring-sky-200">{{ obj.get_status_display }}</span>
                   {% endif %}
                 {% endwith %}
               </td>
-              <td class="px-3 py-2.5 text-slate-700">{{ obj.saldo_faturar|decimal_br:2 }}</td>
-              <td class="px-3 py-2.5 text-slate-700">{{ obj.valor_total|decimal_br:2 }}</td>
+              <td class="sticky left-0 z-10 bg-white px-3 py-2.5 group-hover:bg-slate-50">
+                <span class="inline-flex rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-900 ring-1 ring-emerald-200">{{ obj.pedido }}</span>
+              </td>
+              <td class="hidden px-3 py-2.5 text-slate-700 lg:table-cell">{% if obj.safra %}{{ obj.safra.safra }}{% else %}-{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700 truncate" title="{{ obj.produtor.produtor }}{% if obj.produtor.fazenda %} - {{ obj.produtor.fazenda }}{% endif %}">{{ obj.produtor.produtor }}{% if obj.produtor.fazenda %} - {{ obj.produtor.fazenda }}{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700 truncate" title="{% if obj.fornecedor %}{{ obj.fornecedor.fornecedor }}{% else %}-{% endif %}">{% if obj.fornecedor %}{{ obj.fornecedor.fornecedor }}{% else %}-{% endif %}</td>
               <td class="px-3 py-2.5">
+                <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-900 ring-1 ring-amber-200">{{ obj.vencimento|date:"d/m/Y" }}</span>
+              </td>
+              <td class="hidden px-3 py-2.5 text-slate-700 xl:table-cell">{{ obj.saldo_faturar|decimal_br:2 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ obj.valor_total|decimal_br:2 }}</td>
+              <td class="sticky right-0 z-10 bg-white px-3 py-2.5 group-hover:bg-slate-50">
   {% with st=obj.status %}
-  {% if st == 'ENTREGUE' or st == 'PG_ENTREGUE' %}
-  <div class="mx-auto grid w-[210px] grid-cols-6 justify-items-center gap-1">
+  <div class="mx-auto grid w-[200px] grid-cols-6 justify-items-center gap-1">
     <a target="_blank" href="{% url 'core:pedido_report_resumo' obj.pk %}" title="Relatorio" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
         <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>
@@ -130,18 +239,34 @@
           </a>
         {% endif %}
       {% else %}
-        <a href="{% url delete_url_name obj.pk %}" title="Excluir" onclick="return confirm('Excluir este pedido?')" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
-          </svg>
-        </a>
+        {% if st == 'PENDENTE' %}
+          <button
+            type="button"
+            title="Excluir"
+            class="open-pedido-delete inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50"
+            data-url="{% url delete_url_name obj.pk %}"
+            data-impact="{% if obj.has_nf_aberta %}ATENCAO: existem notas fiscais/faturas vinculadas. Ao excluir o pedido, todas as notas e faturas vinculadas serao excluidas.{% else %}Excluir este pedido pendente? Essa acao nao pode ser desfeita.{% endif %}"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+            </svg>
+          </button>
+        {% else %}
+          <a href="{% url delete_url_name obj.pk %}" title="Excluir" onclick="return confirm('Excluir este pedido?')" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+            </svg>
+          </a>
+        {% endif %}
       {% endif %}
     {% endif %}
   </div>
-  {% endif %}
   {% endwith %}
 </td>
             </tr>
@@ -189,10 +314,35 @@
   </div>
 </div>
 
+<div id="pedido-delete-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-xl">
+      <div class="flex items-center justify-between bg-gradient-to-r from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] px-4 py-3 text-white">
+        <h3 class="text-[16px] font-bold">Excluir Pedido</h3>
+        <button type="button" class="close-pedido-delete inline-flex h-9 items-center rounded-md border border-white/20 bg-white/10 px-3 text-[14px] hover:bg-white/20">Fechar</button>
+      </div>
+      <div class="p-4 text-[14px] text-slate-700">
+        <p id="pedido-delete-msg" class="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
+          Excluir este pedido? Essa acao nao pode ser desfeita.
+        </p>
+        <form id="pedido-delete-form" method="post" action="" class="mt-4 flex flex-wrap items-center justify-end gap-2">
+          {% csrf_token %}
+          <button type="button" class="close-pedido-delete rounded-md border border-slate-300 bg-white px-4 py-2 text-[14px]">Cancelar</button>
+          <button type="submit" class="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-[14px] font-semibold text-red-700 hover:bg-red-100">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const modal = document.getElementById('pedido-modal');
   const body = document.getElementById('pedido-modal-body');
+  const delModal = document.getElementById('pedido-delete-modal');
+  const delForm = document.getElementById('pedido-delete-form');
+  const delMsg = document.getElementById('pedido-delete-msg');
 
   function openModal(url){
     if(!modal || !body) return;
@@ -209,11 +359,30 @@
     modal.classList.add('hidden');
   }
 
+  function openDeleteModal(url, msg){
+    if(!delModal || !delForm) return;
+    delModal.classList.remove('hidden');
+    delForm.setAttribute('action', url || '');
+    if(delMsg) delMsg.textContent = msg || 'Excluir este pedido? Essa acao nao pode ser desfeita.';
+  }
+
+  function closeDeleteModal(){
+    if(!delModal) return;
+    delModal.classList.add('hidden');
+  }
+
   document.addEventListener('click', function(e){
     const btn = e.target.closest('.open-pedido-modal');
     if(btn){
       e.preventDefault();
       openModal(btn.getAttribute('data-url'));
+      return;
+    }
+
+    const delBtn = e.target.closest('.open-pedido-delete');
+    if(delBtn){
+      e.preventDefault();
+      openDeleteModal(delBtn.getAttribute('data-url'), delBtn.getAttribute('data-impact'));
       return;
     }
 
@@ -223,15 +392,62 @@
       return;
     }
 
+    if(e.target.closest('.close-pedido-delete')){
+      e.preventDefault();
+      closeDeleteModal();
+      return;
+    }
+
     if(modal && !modal.classList.contains('hidden')){
       if(e.target === modal || e.target === modal.firstElementChild){
         closeModal();
       }
     }
+
+    if(delModal && !delModal.classList.contains('hidden')){
+      if(e.target === delModal || e.target === delModal.firstElementChild){
+        closeDeleteModal();
+      }
+    }
   });
 
   document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') closeModal();
+    if(e.key === 'Escape'){
+      closeModal();
+      closeDeleteModal();
+    }
+  });
+})();
+</script>
+
+<script>
+(function(){
+  const btn = document.getElementById('toggle-filtros-ped');
+  const wrap = document.getElementById('pedido-filtros');
+  const eyeOpen = document.getElementById('icon-eye-open-ped');
+  const eyeClosed = document.getElementById('icon-eye-closed-ped');
+  if(!btn || !wrap) return;
+
+  const params = new URLSearchParams(window.location.search || '');
+  const shouldOpen = params.get('show_filters') === '1' || params.get('apply') === '1';
+
+  function setState(isOpen){
+    if(isOpen){
+      wrap.classList.remove('hidden');
+      if(eyeOpen) eyeOpen.classList.add('hidden');
+      if(eyeClosed) eyeClosed.classList.remove('hidden');
+      btn.setAttribute('aria-expanded','true');
+    } else {
+      wrap.classList.add('hidden');
+      if(eyeOpen) eyeOpen.classList.remove('hidden');
+      if(eyeClosed) eyeClosed.classList.add('hidden');
+      btn.setAttribute('aria-expanded','false');
+    }
+  }
+
+  setState(shouldOpen);
+  btn.addEventListener('click', function(){
+    setState(wrap.classList.contains('hidden'));
   });
 })();
 </script>

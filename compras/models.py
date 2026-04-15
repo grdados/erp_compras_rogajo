@@ -23,7 +23,9 @@ class Planejamento(TimestampedModel):
 class PlanejamentoItem(TimestampedModel):
     planejamento = models.ForeignKey(Planejamento, on_delete=models.CASCADE, related_name='itens')
     area_ha = models.DecimalField('Area HA', max_digits=12, decimal_places=2)
-    produto = models.CharField(max_length=120)
+    # New: prefer selecting from cadastro de produtos (keeps legacy "produto" text for older rows).
+    produto_cadastro = models.ForeignKey(Produto, on_delete=models.PROTECT, null=True, blank=True, related_name='itens_planejamento')
+    produto = models.CharField(max_length=120, blank=True)
     quantidade = models.DecimalField(max_digits=14, decimal_places=3)
     unidade = models.ForeignKey(Unidade, on_delete=models.PROTECT)
     preco = models.DecimalField(max_digits=14, decimal_places=5)
@@ -32,7 +34,15 @@ class PlanejamentoItem(TimestampedModel):
     custo_ha = models.DecimalField('Custo HA', max_digits=14, decimal_places=2, default=0)
 
     def __str__(self):
-        return f'{self.produto} - {self.planejamento_id}'
+        nome = ''
+        if self.produto_cadastro_id:
+            try:
+                nome = self.produto_cadastro.nome
+            except Exception:
+                nome = ''
+        if not nome:
+            nome = self.produto or '-'
+        return f'{nome} - {self.planejamento_id}'
 
 
 class StatusPedidoCompra(models.TextChoices):

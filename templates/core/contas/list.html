@@ -3,13 +3,14 @@
 {% block title %}Contas a Pagar | ERP Compras{% endblock %}
 {% block top_title %}Contas a Pagar{% endblock %}
 {% block content %}
-<section class="space-y-5 text-[14px] font-normal">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h2 class="text-[18px] font-bold text-slate-900">Contas a Pagar</h2>
-      <p class="text-slate-600">Faturas geradas por pedidos e faturamentos</p>
-    </div>
-    <div class="flex items-center gap-2">
+<section class="text-[14px] font-normal">
+  <div class="panel-wrap space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-[18px] font-bold text-slate-900">Contas a Pagar</h2>
+        <p class="text-slate-600">Faturas geradas por pedidos e faturamentos</p>
+      </div>
+      <div class="flex items-center gap-2">
       <button id="toggle-filtros" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100" aria-expanded="false">
         <span class="inline-flex h-5 w-5 items-center justify-center">
           <svg id="icon-eye-open-contas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -26,12 +27,12 @@
       <a target="_blank" href="{% url 'core:conta_report_analitico' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Relatorio analitico</a>
       <a target="_blank" href="{% url 'core:conta_report_resumido' %}{% if report_query %}?{{ report_query }}{% endif %}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Relatorio resumido</a>
       <a href="{% url create_url_name %}" class="rounded-lg bg-[#56d741] px-4 py-2 text-[#0d2f19]">+ Nova Fatura</a>
+      </div>
     </div>
-  </div>
 
-  <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-    <div id="filtros-wrap" class="{% if request.GET %}{% else %}hidden{% endif %}">
-    <form method="get" class="grid gap-3 lg:grid-cols-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm max-h-[800px] overflow-hidden">
+      <div id="filtros-wrap" class="{% if request.GET %}{% else %}hidden{% endif %}">
+      <form method="get" class="grid gap-3 lg:grid-cols-4">
       <div class="lg:col-span-2">
         <label class="mb-1 block text-slate-600">Busca</label>
         <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar nota, cliente, pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
@@ -105,81 +106,81 @@
     </div>
 
     <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+      <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
         <div class="flex items-start justify-between">
           <div class="text-sky-700">Valor Faturado</div>
-          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+          <div class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10M7 17h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/></svg>
           </div>
         </div>
-        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_faturado|decimal_br:2 }}</div>
+        <div class="mt-1 text-[18px] font-bold text-slate-900">{{ card_total_faturado|decimal_br:2 }}</div>
       </div>
-      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3">
         <div class="flex items-start justify-between">
           <div class="text-indigo-700">A Pagar</div>
-          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+          <div class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 10h10"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/></svg>
           </div>
         </div>
-        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_a_pagar|decimal_br:2 }}</div>
+        <div class="mt-1 text-[18px] font-bold text-slate-900">{{ card_total_a_pagar|decimal_br:2 }}</div>
       </div>
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+      <div class="rounded-xl border border-red-200 bg-red-50 p-3">
         <div class="flex items-start justify-between">
           <div class="text-red-700">Vencido</div>
-          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-900">
+          <div class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-red-900">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16h.01"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 2h4l8 20H2L10 2z"/></svg>
           </div>
         </div>
-        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_vencido|decimal_br:2 }}</div>
+        <div class="mt-1 text-[18px] font-bold text-slate-900">{{ card_total_vencido|decimal_br:2 }}</div>
       </div>
-      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
         <div class="flex items-start justify-between">
           <div class="text-emerald-700">Pago</div>
-          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900">
+          <div class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7 10 17l-5-5"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/></svg>
           </div>
         </div>
-        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_total_pago|decimal_br:2 }}</div>
+        <div class="mt-1 text-[18px] font-bold text-slate-900">{{ card_total_pago|decimal_br:2 }}</div>
       </div>
     </div>
 
     <form id="lote-form" method="post" action="{% url 'core:conta_pagar_lote' %}">
       {% csrf_token %}
-      <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-        <table class="w-full text-left text-[14px] whitespace-nowrap">
+      <div class="mt-4 max-h-[420px] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 lg:max-h-[calc(800px-280px)]">
+        <table class="w-full table-fixed text-left text-[14px] whitespace-nowrap">
           <thead>
             <tr class="bg-[#F1F3F4] text-slate-800 border-b border-slate-200">
-              <th class="w-10 px-3 py-3 font-normal text-center">
+              <th class="sticky left-0 z-10 w-10 bg-[#F1F3F4] px-3 py-3 font-normal text-center">
                 <input id="select-all" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
               </th>
               <th class="px-3 py-3 font-normal">Nota Fiscal</th>
-              <th class="px-3 py-3 font-normal">Origem</th>
+              <th class="hidden 2xl:table-cell px-3 py-3 font-normal">Origem</th>
               <th class="px-3 py-3 font-normal">Safra</th>
               <th class="px-3 py-3 font-normal">Cliente</th>
               <th class="px-3 py-3 font-normal">Produtor</th>
               <th class="px-3 py-3 font-normal">Fornecedor</th>
-              <th class="px-3 py-3 font-normal">Pedido</th>
+              <th class="hidden 2xl:table-cell px-3 py-3 font-normal">Pedido</th>
               <th class="px-3 py-3 font-normal">Vencimento</th>
               <th class="px-3 py-3 font-normal">Atraso</th>
               <th class="px-3 py-3 font-normal">Valor</th>
               <th class="px-3 py-3 font-normal">Saldo</th>
               <th class="px-3 py-3 font-normal">Status</th>
-              <th class="w-[180px] px-3 py-3 font-normal text-center">Acoes</th>
+              <th class="sticky right-0 z-10 w-[180px] bg-[#F1F3F4] px-3 py-3 font-normal text-center">Acoes</th>
             </tr>
           </thead>
           <tbody>
             {% for obj in object_list %}
-              <tr class="border-t border-slate-200 bg-white hover:bg-slate-50">
-                <td class="px-3 py-2.5 text-center">
+              <tr class="group border-t border-slate-200 bg-white hover:bg-slate-50">
+                <td class="sticky left-0 z-10 bg-white px-3 py-2.5 text-center group-hover:bg-slate-50">
                   <input type="checkbox" name="conta_ids" value="{{ obj.pk }}" class="conta-checkbox h-4 w-4 rounded border-slate-300" />
                 </td>
-                <td class="px-3 py-2.5 text-slate-700">{{ obj.nota_fiscal }}</td>
-                <td class="px-3 py-2.5 text-slate-700">{{ obj.get_origem_display }}</td>
-                <td class="px-3 py-2.5 text-slate-700">{% if obj.safra %}{{ obj.safra.safra }}{% else %}-{% endif %}</td>
-                <td class="px-3 py-2.5 text-slate-700">{{ obj.cliente }}</td>
-                <td class="px-3 py-2.5 text-slate-700">{% if obj.produtor %}{{ obj.produtor }}{% else %}-{% endif %}</td>
-                <td class="px-3 py-2.5 text-slate-700">{% if obj.fornecedor %}{{ obj.fornecedor }}{% else %}-{% endif %}</td>
-                <td class="px-3 py-2.5 text-slate-700">{% if obj.pedido %}{{ obj.pedido.pedido }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700 truncate" title="{{ obj.nota_fiscal }}">{{ obj.nota_fiscal }}</td>
+                <td class="hidden 2xl:table-cell px-3 py-2.5 text-slate-700">{{ obj.get_origem_display }}</td>
+                <td class="px-3 py-2.5 text-slate-700 truncate" title="{% if obj.safra %}{{ obj.safra.safra }}{% endif %}">{% if obj.safra %}{{ obj.safra.safra }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700 truncate" title="{{ obj.cliente }}">{{ obj.cliente }}</td>
+                <td class="px-3 py-2.5 text-slate-700 truncate" title="{% if obj.produtor %}{{ obj.produtor }}{% endif %}">{% if obj.produtor %}{{ obj.produtor }}{% else %}-{% endif %}</td>
+                <td class="px-3 py-2.5 text-slate-700 truncate" title="{% if obj.fornecedor %}{{ obj.fornecedor }}{% endif %}">{% if obj.fornecedor %}{{ obj.fornecedor }}{% else %}-{% endif %}</td>
+                <td class="hidden 2xl:table-cell px-3 py-2.5 text-slate-700">{% if obj.pedido %}{{ obj.pedido.pedido }}{% else %}-{% endif %}</td>
                 <td class="px-3 py-2.5 text-slate-700">{{ obj.vencimento|date:"d/m/Y" }}</td>
                 <td class="px-3 py-2.5 text-slate-700">{% if obj.dias_atraso %}<span class="inline-flex rounded-md bg-red-50 px-2 py-1 font-bold text-red-900 ring-1 ring-red-200">{{ obj.dias_atraso }}d</span>{% else %}-{% endif %}</td>
                 <td class="px-3 py-2.5 text-slate-700">{{ obj.valor_total|decimal_br:2 }}</td>
@@ -195,7 +196,7 @@
                     <span class="inline-flex rounded-md bg-sky-50 px-2 py-1 text-sm font-bold text-sky-900 ring-1 ring-sky-200">{{ obj.status_label }}</span>
                   {% endif %}
                 </td>
-                <td class="px-3 py-2.5">
+                <td class="sticky right-0 z-10 bg-white px-3 py-2.5 group-hover:bg-slate-50">
   <div class="mx-auto grid w-[210px] grid-cols-6 justify-items-center gap-2">
     <a target="_blank" href="{% url 'core:conta_report_resumo' obj.pk %}" title="Relatorio" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
@@ -237,26 +238,27 @@
       </div>
     </form>
 
-    <div class="mt-3 text-slate-500">Total: {{ total_registros }} registro(s)</div>
-  </div>
-
-  {% if is_paginated %}
-    <div class="flex flex-wrap items-center justify-center gap-2">
-      {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">Anterior</a>
-      {% endif %}
-      {% for num in page_obj.paginator.page_range %}
-        {% if num == page_obj.number %}
-          <span class="rounded-md bg-[var(--accent)] px-3 py-1 text-emerald-950">{{ num }}</span>
-        {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
-          <a href="?page={{ num }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">{{ num }}</a>
-        {% endif %}
-      {% endfor %}
-      {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">Proxima</a>
-      {% endif %}
+      <div class="mt-3 text-slate-500">Total: {{ total_registros }} registro(s)</div>
     </div>
-  {% endif %}
+
+    {% if is_paginated %}
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">Anterior</a>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if num == page_obj.number %}
+            <span class="rounded-md bg-[var(--accent)] px-3 py-1 text-emerald-950">{{ num }}</span>
+          {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+            <a href="?page={{ num }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if pagination_query %}&{{ pagination_query }}{% endif %}" class="rounded-md border border-slate-300 bg-white px-3 py-1">Proxima</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
 </section>
 
 <div id="estorno-modal" class="fixed inset-0 z-50 hidden">

@@ -17,7 +17,7 @@ from cadastros.models import (
     Safra,
     Unidade,
 )
-from compras.models import CotacaoProduto, PedidoCompra, PedidoCompraItem
+from compras.models import CotacaoProduto, Planejamento, PlanejamentoItem, PedidoCompra, PedidoCompraItem
 from financeiro.models import ContaPagar, Faturamento, FaturamentoItem
 from licencas.models import Licenca, PerfilUsuarioLicenca
 
@@ -188,6 +188,12 @@ class ProdutorForm(StyledModelForm):
         model = Produtor
         fields = ['cliente', 'produtor', 'ie', 'cpf', 'fazenda', 'cidade', 'uf', 'ha', 'status']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Permitir cadastrar Produtor sem Cliente (pedido do usuário).
+        if 'cliente' in self.fields:
+            self.fields['cliente'].required = False
+
 
 class PropriedadeForm(StyledModelForm):
     class Meta:
@@ -199,6 +205,61 @@ class ProdutoForm(StyledModelForm):
     class Meta:
         model = Produto
         fields = ['nome', 'nome_abreviado', 'npk', 'variedade', 'custo', 'categoria', 'status']
+
+
+class PlanejamentoForm(StyledModelForm):
+    class Meta:
+        model = Planejamento
+        fields = ['data', 'safra', 'custo', 'cliente', 'preco_produto', 'vencimento', 'valor_total']
+        widgets = {'data': forms.DateInput(), 'vencimento': forms.DateInput()}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['valor_total'].required = False
+        self.fields['valor_total'].initial = 0
+        self.initial.setdefault('valor_total', 0)
+        # Lock this field: it is calculated from items.
+        self.fields['valor_total'].disabled = True
+        self.fields['valor_total'].widget.attrs.update({'readonly': 'readonly'})
+
+
+class PlanejamentoItemForm(StyledModelForm):
+    class Meta:
+        model = PlanejamentoItem
+        fields = ['area_ha', 'produto_cadastro', 'quantidade', 'unidade', 'preco', 'desconto', 'total_item', 'custo_ha']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Calculated fields
+        for fname in ['total_item', 'custo_ha']:
+            if fname in self.fields:
+                self.fields[fname].required = False
+                self.fields[fname].disabled = True
+                self.fields[fname].widget.attrs.update({'readonly': 'readonly'})
+
+        # UX labels
+        if 'produto_cadastro' in self.fields:
+            self.fields['produto_cadastro'].label = 'Produto'
+        if 'unidade' in self.fields:
+            # Compact label (e.g., KG, LT)
+            self.fields['unidade'].label_from_instance = lambda obj: (obj.unidade_abreviado or obj.nome)
+
+        # Decimal masks (PT-BR) + display defaults
+        if 'area_ha' in self.fields:
+            self.fields['area_ha'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '1', 'placeholder': '0,0'})
+        if 'quantidade' in self.fields:
+            # Allow up to 2 decimals; UI will show integer when not focused (JS).
+            self.fields['quantidade'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0'})
+        if 'preco' in self.fields:
+            # Show and input with 2 decimals (UI is cleaner in the grid).
+            self.fields['preco'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
+        if 'desconto' in self.fields:
+            self.fields['desconto'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
+        if 'total_item' in self.fields:
+            self.fields['total_item'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
+        if 'custo_ha' in self.fields:
+            # Sacas/HA shown with 1 decimal (JS).
+            self.fields['custo_ha'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '1', 'placeholder': '0,0'})
 
 
 class PedidoCompraForm(StyledModelForm):
@@ -265,6 +326,13 @@ class CotacaoProdutoForm(StyledModelForm):
         model = CotacaoProduto
         fields = ['data', 'safra', 'fornecedor', 'vencimento', 'produto', 'unidade', 'valor_total']
         widgets = {'data': forms.DateInput(), 'vencimento': forms.DateInput()}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Naming: in UI this is the "Preco" for the quoted product.
+        if 'valor_total' in self.fields:
+            self.fields['valor_total'].label = 'Preco'
+            self.fields['valor_total'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
 
 
 class FaturamentoForm(StyledModelForm):

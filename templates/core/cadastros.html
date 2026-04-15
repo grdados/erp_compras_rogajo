@@ -1,17 +1,34 @@
-﻿{% extends 'base.html' %}
-{% block title %}Cadastros | ERP Compras{% endblock %}
+﻿{% extends 'base.html' %} {% block title %}Cadastros | ERP Compras{% endblock %}
 {% block content %}
 <section class="space-y-6">
   <div class="rounded-3xl border border-slate-200 bg-white p-6">
     <h1 class="text-3xl font-black">{{ titulo }}</h1>
-    <p class="mt-2 text-slate-600">Visao rapida dos principais registros base do sistema.</p>
+    <p class="mt-2 text-slate-600">
+      Visão rápida dos principais registros base do sistema.
+    </p>
   </div>
 
   <div class="grid gap-3 sm:grid-cols-4">
-    <a href="/app/safras/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10">CRUD Safras</a>
-    <a href="/app/clientes/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10">CRUD Clientes</a>
-    <a href="/app/fornecedores/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10">CRUD Fornecedores</a>
-    <a href="/app/produtores/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10">CRUD Produtores</a>
+    <a
+      href="/app/safras/"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10"
+      >CRUD Safras</a
+    >
+    <a
+      href="/app/clientes/"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10"
+      >CRUD Clientes</a
+    >
+    <a
+      href="/app/fornecedores/"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10"
+      >CRUD Fornecedores</a
+    >
+    <a
+      href="/app/produtores/"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10"
+      >CRUD Produtores</a
+    >
   </div>
 
   <div class="grid gap-4 xl:grid-cols-2">
@@ -19,11 +36,27 @@
       <h2 class="text-lg font-bold">Safras (ultimas)</h2>
       <div class="mt-4 overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="text-slate-500"><tr><th>Safra</th><th>Ano</th><th>Cultura</th><th>Status</th></tr></thead>
+          <thead class="text-slate-500">
+            <tr>
+              <th>Safra</th>
+              <th>Ano</th>
+              <th>Cultura</th>
+              <th>Status</th>
+            </tr>
+          </thead>
           <tbody>
             {% for s in safras %}
-              <tr class="border-t border-slate-200"><td class="py-2">{{ s.safra }}</td><td>{{ s.ano }}</td><td>{{ s.cultura }}</td><td>{{ s.get_status_display }}</td></tr>
-            {% empty %}<tr><td class="py-3 text-slate-500" colspan="4">Sem dados</td></tr>{% endfor %}
+            <tr class="border-t border-slate-200">
+              <td class="py-2">{{ s.safra }}</td>
+              <td>{{ s.ano }}</td>
+              <td>{{ s.cultura }}</td>
+              <td>{{ s.get_status_display }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="py-3 text-slate-500" colspan="4">Sem dados</td>
+            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
@@ -33,8 +66,12 @@
       <h2 class="text-lg font-bold">Clientes</h2>
       <ul class="mt-4 space-y-2 text-sm">
         {% for c in clientes %}
-          <li class="rounded-lg border border-slate-200 px-3 py-2">{{ c.cliente }} - {{ c.cpf_cnpj }}</li>
-        {% empty %}<li class="text-slate-500">Sem dados</li>{% endfor %}
+        <li class="rounded-lg border border-slate-200 px-3 py-2">
+          {{ c.cliente }} - {{ c.cpf_cnpj }}
+        </li>
+        {% empty %}
+        <li class="text-slate-500">Sem dados</li>
+        {% endfor %}
       </ul>
     </article>
 
@@ -42,8 +79,12 @@
       <h2 class="text-lg font-bold">Fornecedores</h2>
       <ul class="mt-4 space-y-2 text-sm">
         {% for f in fornecedores %}
-          <li class="rounded-lg border border-slate-200 px-3 py-2">{{ f.fornecedor }} - {{ f.cidade }}/{{ f.uf }}</li>
-        {% empty %}<li class="text-slate-500">Sem dados</li>{% endfor %}
+        <li class="rounded-lg border border-slate-200 px-3 py-2">
+          {{ f.fornecedor }} - {{ f.cidade }}/{{ f.uf }}
+        </li>
+        {% empty %}
+        <li class="text-slate-500">Sem dados</li>
+        {% endfor %}
       </ul>
     </article>
 
@@ -51,8 +92,12 @@
       <h2 class="text-lg font-bold">Produtores</h2>
       <ul class="mt-4 space-y-2 text-sm">
         {% for p in produtores %}
-          <li class="rounded-lg border border-slate-200 px-3 py-2">{{ p.produtor }} - {{ p.fazenda }}</li>
-        {% empty %}<li class="text-slate-500">Sem dados</li>{% endfor %}
+        <li class="rounded-lg border border-slate-200 px-3 py-2">
+          {{ p.produtor }} - {{ p.fazenda }}
+        </li>
+        {% empty %}
+        <li class="text-slate-500">Sem dados</li>
+        {% endfor %}
       </ul>
     </article>
   </div>

@@ -92,8 +92,9 @@
         </div>
         <div class="flex items-end gap-2 lg:col-span-4">
           <form id="filtros" method="get"></form>
+          <input type="hidden" name="show_filters" value="1" form="filtros" />
           <button type="submit" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
-          <a href="{% url 'core:faturamento_list' %}" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
+          <a href="{% url 'core:faturamento_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
           {% if current_sort %}<input type="hidden" name="sort" form="filtros" value="{{ current_sort }}" />{% endif %}
         </div>
       </div>
@@ -122,7 +123,7 @@
         <div class="flex items-start justify-between">
           <div class="text-amber-700">Preco Medio</div>
           <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-900">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8"/></svg>
+            <span class="text-[14px] font-bold leading-none">R$</span>
           </div>
         </div>
         <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_preco_medio|decimal_br:2 }}</div>
@@ -219,9 +220,13 @@
       <a href="{% url edit_url_name obj.pk %}" title="Editar" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.1 2.1 0 0 1 2.97 2.97L8.67 17.618l-4.16 1.19 1.19-4.16L16.862 3.487Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m14.5 5.85 3.65 3.65"/></svg>
       </a>
-      <a href="{% url delete_url_name obj.pk %}" title="Excluir" onclick="return confirm('Excluir esta nota fiscal? Isso pode remover a fatura em contas a pagar relacionada.')" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+      <button type="button"
+        title="Excluir"
+        data-fat-delete-url="{% url delete_url_name obj.pk %}"
+        data-fat-delete-label="NF {{ obj.nota_fiscal }}"
+        class="open-fat-delete inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/></svg>
-      </a>
+      </button>
     {% endif %}
   </div>
   {% endwith %}
@@ -256,6 +261,37 @@
   {% endif %}
 </section>
 
+<!-- Modal de confirmacao de exclusao (Faturamento) -->
+<div id="fat-delete-modal" class="fixed inset-0 z-[1000] hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="relative mx-auto w-[min(720px,calc(100vw-24px))] overflow-hidden rounded-xl border border-white/10 bg-white shadow-2xl top-1/2 -translate-y-1/2">
+    <div class="flex items-center justify-between bg-[#062317] px-4 py-2.5 sm:px-5">
+      <p class="text-[18px] font-bold text-slate-100">Confirmar exclusao</p>
+      <button type="button" id="fat-delete-close" class="rounded-md border border-slate-100/30 bg-slate-100/10 px-2.5 py-1 text-[14px] font-normal text-slate-100 hover:bg-slate-100/20">Fechar</button>
+    </div>
+
+    <div class="space-y-3 p-5 text-[14px] text-slate-700">
+      <p class="font-semibold text-slate-900" id="fat-delete-title">Excluir nota fiscal</p>
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
+        <p class="font-semibold">Impacto da exclusao</p>
+        <ul class="mt-1 list-disc space-y-1 pl-5">
+          <li>Remove a Nota Fiscal e todos os itens de produtos.</li>
+          <li>Se existir fatura em Contas a Pagar vinculada a esta NF, ela tambem sera removida.</li>
+          <li>Se houver pagamento registrado, a exclusao fica bloqueada ate estornar.</li>
+        </ul>
+      </div>
+
+      <form id="fat-delete-form" method="post" action="#">
+        {% csrf_token %}
+        <div class="flex flex-wrap gap-3 pt-2">
+          <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-[14px] font-semibold text-white hover:bg-red-700">Excluir</button>
+          <button type="button" id="fat-delete-cancel" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-[14px] font-normal text-slate-700 hover:bg-slate-50">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const btn = document.getElementById('toggle-filtros-fat');
@@ -263,6 +299,9 @@
   const eyeOpen = document.getElementById('icon-eye-open');
   const eyeClosed = document.getElementById('icon-eye-closed');
   if(!btn || !wrap) return;
+
+  const params = new URLSearchParams(window.location.search || '');
+  const shouldOpen = params.get('show_filters') === '1';
 
   function setState(isOpen){
     if(isOpen){
@@ -278,9 +317,44 @@
     }
   }
 
-  setState(false);
+  setState(shouldOpen);
   btn.addEventListener('click', function(){
     setState(wrap.classList.contains('hidden'));
+  });
+})();
+</script>
+
+<script>
+(function(){
+  var modal = document.getElementById('fat-delete-modal');
+  var form = document.getElementById('fat-delete-form');
+  var title = document.getElementById('fat-delete-title');
+  var closeBtn = document.getElementById('fat-delete-close');
+  var cancelBtn = document.getElementById('fat-delete-cancel');
+  if(!modal || !form) return;
+
+  function open(url, label){
+    form.setAttribute('action', url || '#');
+    if(title) title.textContent = 'Excluir ' + (label || 'nota fiscal') + '?';
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function close(){
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('.open-fat-delete') : null;
+    if(!btn) return;
+    e.preventDefault();
+    open(btn.getAttribute('data-fat-delete-url'), btn.getAttribute('data-fat-delete-label'));
+  });
+
+  if(closeBtn) closeBtn.addEventListener('click', close);
+  if(cancelBtn) cancelBtn.addEventListener('click', close);
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) close();
   });
 })();
 </script>

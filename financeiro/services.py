@@ -1,6 +1,7 @@
 ﻿from decimal import Decimal
 
 from compras.models import PedidoCompra, StatusPedidoCompra
+from django.db.models import Sum
 
 from .models import ContaPagar, Faturamento, PagamentoContaPagar
 
@@ -93,28 +94,38 @@ def sincronizar_fatura_origem_pedido(pedido):
 
 
 def processar_pedido_compra(pedido, created=False):
+    """
+    Recalcula saldo/status do pedido de forma deterministica com base nas NFs (faturamentos) vinculadas.
+
+    Motivo: em exclusao de NF nao ha post_delete signal, entao o pedido pode ficar "ENTREGUE" com saldo 0.
+    """
     total = _to_decimal(pedido.valor_total)
-    saldo = _to_decimal(pedido.saldo_faturar)
+    old_saldo = _to_decimal(pedido.saldo_faturar)
+    old_status = str(pedido.status or '')
 
-    if (created or saldo <= 0) and total > 0 and not pedido.faturamentos.exists():
-        saldo = total
+    total_faturado = _to_decimal(
+        Faturamento.objects.filter(pedido_id=pedido.pk).aggregate(total=Sum('valor_total'))['total']
+    )
 
-    if saldo < 0:
+    if total <= 0:
         saldo = Decimal('0')
+    else:
+        saldo = total - total_faturado
+        if saldo < 0:
+            saldo = Decimal('0')
 
+    # Atualiza no objeto em memoria para a classificacao de status.
+    pedido.saldo_faturar = saldo
     novo_status = _classificar_status_pedido(pedido)
 
-    fields_to_update = []
-    if pedido.saldo_faturar != saldo:
-        pedido.saldo_faturar = saldo
-        fields_to_update.append('saldo_faturar')
+    update_map = {}
+    if old_saldo != saldo:
+        update_map['saldo_faturar'] = saldo
+    if old_status != str(novo_status):
+        update_map['status'] = novo_status
 
-    if pedido.status != novo_status:
-        pedido.status = novo_status
-        fields_to_update.append('status')
-
-    if fields_to_update:
-        PedidoCompra.objects.filter(pk=pedido.pk).update(**{f: getattr(pedido, f) for f in fields_to_update})
+    if update_map:
+        PedidoCompra.objects.filter(pk=pedido.pk).update(**update_map)
 
     sincronizar_fatura_origem_pedido(pedido)
 

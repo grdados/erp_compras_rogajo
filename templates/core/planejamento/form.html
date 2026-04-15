@@ -1,0 +1,696 @@
+{% extends 'base.html' %}
+{% block title %}Planejamento | ERP Compras{% endblock %}
+{% block top_title %}Planejamento{% endblock %}
+{% block content %}
+<style>
+  /* Input-group: reserve space for the "+" button inside selects/inputs */
+  .has-inner-btn select,
+  .has-inner-btn input {
+    padding-left: 46px !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+  }
+
+  .has-inner-btn .inner-btn {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    bottom: 1px;
+    width: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid rgb(203 213 225); /* slate-300 */
+    background: rgba(255, 255, 255, 0.9);
+    border-top-left-radius: 12px; /* matches rounded-lg feel */
+    border-bottom-left-radius: 12px;
+  }
+
+  .has-inner-btn .inner-btn:hover {
+    background: rgb(241 245 249); /* slate-100 */
+  }
+
+  /* Smaller inner button for dense tables (items grid) */
+  .has-inner-btn-sm select,
+  .has-inner-btn-sm input {
+    padding-left: 34px !important;
+  }
+  .has-inner-btn-sm .inner-btn {
+    width: 28px;
+    background: transparent;
+    border-right: 0;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+  }
+
+  /* Desktop (<=1536px): make item columns fit better without breaking the select usability */
+  @media (min-width: 1280px) and (max-width: 1535px) {
+    .plan-itens-table colgroup col:nth-child(1) { width: 9% !important; }   /* Area */
+    .plan-itens-table colgroup col:nth-child(2) { width: 25% !important; }  /* Produto */
+    .plan-itens-table colgroup col:nth-child(3) { width: 10% !important; }  /* Unidade */
+    .plan-itens-table colgroup col:nth-child(4) { width: 11% !important; }  /* Quantidade */
+    .plan-itens-table colgroup col:nth-child(5) { width: 11% !important; }  /* Preco */
+    .plan-itens-table colgroup col:nth-child(6) { width: 9% !important; }   /* Desconto */
+    .plan-itens-table colgroup col:nth-child(7) { width: 11% !important; }  /* Total Item */
+    .plan-itens-table colgroup col:nth-child(8) { width: 8% !important; }   /* Sacas/HA */
+    .plan-itens-table colgroup col:nth-child(9) { width: 6% !important; }   /* Acoes */
+  }
+
+  /* Bootstrap-like: clean separators + hoverable rows (no cell grid) */
+  .plan-itens-table { border-collapse: separate; border-spacing: 0; }
+  .plan-itens-table thead th {
+    border-bottom: 1px solid #cbd5e1;
+  }
+  .plan-itens-table tbody tr td {
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+  }
+  .plan-itens-table tbody tr:first-child td { border-top: 0; }
+  .plan-itens-table tbody tr:hover td { background: #f1f5f9; } /* slate-100 */
+
+  /* Dense "spreadsheet" row editor: remove bulky field borders/padding */
+  .plan-itens-table { font-size: 12px; }
+  .plan-itens-table thead th { font-size: 12px; }
+  .plan-itens-table tbody td { padding: 5px 6px !important; vertical-align: middle; }
+  .plan-itens-table tbody input,
+  .plan-itens-table tbody select {
+    height: 34px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    padding: 2px 4px !important;
+    font-size: 12px !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-bottom: 1px solid #cbd5e1 !important; /* underline like spreadsheet */
+  }
+  .plan-itens-table tbody input:focus,
+  .plan-itens-table tbody select:focus {
+    border-bottom: 2px solid var(--accent) !important;
+  }
+  .plan-itens-table tbody input[readonly],
+  .plan-itens-table tbody input:disabled,
+  .plan-itens-table tbody select:disabled {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    opacity: 1 !important;
+  }
+
+  /* Make the inner "+" button feel attached without wasting width */
+  .plan-itens-table tbody .has-inner-btn-sm select,
+  .plan-itens-table tbody .has-inner-btn-sm input {
+    padding-left: 34px !important;
+  }
+  .plan-itens-table tbody .has-inner-btn-sm .inner-btn {
+    width: 28px;
+    background: transparent;
+    border-right: 0;
+  }
+
+  /* Slightly tighter for specific narrow columns */
+  .plan-itens-table tbody td[data-label="Area HA"] input { padding-left: 2px !important; padding-right: 2px !important; }
+  .plan-itens-table tbody td[data-label="Sacas/HA"] input,
+  .plan-itens-table tbody td[data-label="SC/HA"] input { padding-left: 2px !important; padding-right: 2px !important; }
+
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .plan-itens-table colgroup col:nth-child(1) { width: 12% !important; }
+    .plan-itens-table colgroup col:nth-child(2) { width: 26% !important; }
+    .plan-itens-table colgroup col:nth-child(3) { width: 10% !important; }
+    .plan-itens-table colgroup col:nth-child(4) { width: 12% !important; }
+    .plan-itens-table colgroup col:nth-child(5) { width: 12% !important; }
+    .plan-itens-table colgroup col:nth-child(6) { width: 10% !important; }
+    .plan-itens-table colgroup col:nth-child(7) { width: 10% !important; }
+    .plan-itens-table colgroup col:nth-child(8) { width: 8% !important; }
+  }
+
+  @media (max-width: 767px) {
+    .plan-itens-table { min-width: 100% !important; table-layout: auto !important; }
+    .plan-itens-table thead { display: none; }
+    .plan-itens-table tbody { display: block; }
+
+    .plan-itens-table .item-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      margin: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .plan-itens-table .item-row td { display: block; padding: 0; border: 0; }
+    .plan-itens-table .item-row td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+
+    .plan-itens-table .item-row td[data-label='Acoes'] { margin-top: 4px; }
+    .plan-itens-table .item-row td[data-label='Acoes']::before { margin-bottom: 6px; }
+    .plan-itens-table .item-row td[data-label='Acoes'] .ml-auto {
+      margin-left: 0 !important;
+      width: 100% !important;
+      justify-items: start !important;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+</style>
+
+<section class="space-y-5 text-[14px] font-normal">
+  <div>
+    <h2 class="text-[18px] font-bold text-slate-900">{% if modo_edicao %}Editar Planejamento{% else %}Novo Planejamento{% endif %}</h2>
+    <p class="text-slate-600">Dados do planejamento e itens</p>
+  </div>
+
+  <form method="post" class="space-y-5" novalidate>
+    {% csrf_token %}
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h3 class="mb-3 text-[18px] font-bold text-slate-900">Dados do Planejamento</h3>
+      <div class="grid gap-3 lg:grid-cols-12">
+        <div class="lg:col-span-3">
+          <label for="{{ form.data.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.data.label }}</label>
+          {{ form.data }}
+          {% if form.data.errors %}<p class="mt-1 text-xs text-red-600">{{ form.data.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-6">
+          <label for="{{ form.safra.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.safra.label }}</label>
+          <div class="relative has-inner-btn has-inner-btn-sm">
+            {{ form.safra }}
+            <button
+              type="button"
+              data-crud-popup-url="/app/safras/?novo=1"
+              title="Cadastrar Safra"
+              class="inner-btn text-slate-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+          </div>
+          {% if form.safra.errors %}<p class="mt-1 text-xs text-red-600">{{ form.safra.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-3">
+          <label for="{{ form.vencimento.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.vencimento.label }}</label>
+          {{ form.vencimento }}
+          {% if form.vencimento.errors %}<p class="mt-1 text-xs text-red-600">{{ form.vencimento.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="lg:col-span-3">
+          <label for="{{ form.custo.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.custo.label }}</label>
+          <div class="relative has-inner-btn has-inner-btn-sm">
+            {{ form.custo }}
+            <button
+              type="button"
+              data-crud-popup-url="/app/custos/?novo=1"
+              title="Cadastrar Custo"
+              class="inner-btn text-slate-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+          </div>
+          {% if form.custo.errors %}<p class="mt-1 text-xs text-red-600">{{ form.custo.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-5">
+          <label for="{{ form.cliente.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.cliente.label }}</label>
+          <div class="relative has-inner-btn has-inner-btn-sm">
+            {{ form.cliente }}
+            <button
+              type="button"
+              data-crud-popup-url="/app/clientes/?novo=1"
+              title="Cadastrar Cliente"
+              class="inner-btn text-slate-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+          </div>
+          {% if form.cliente.errors %}<p class="mt-1 text-xs text-red-600">{{ form.cliente.errors|join:', ' }}</p>{% endif %}
+        </div>
+        <div class="lg:col-span-2">
+          <label for="{{ form.preco_produto.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.preco_produto.label }}</label>
+          {{ form.preco_produto }}
+          {% if form.preco_produto.errors %}<p class="mt-1 text-xs text-red-600">{{ form.preco_produto.errors|join:', ' }}</p>{% endif %}
+        </div>
+
+        <div class="lg:col-span-2">
+          <label for="{{ form.valor_total.id_for_label }}" class="mb-1 block text-[14px] text-slate-700">{{ form.valor_total.label }}</label>
+          {{ form.valor_total }}
+          {% if form.valor_total.errors %}<p class="mt-1 text-xs text-red-600">{{ form.valor_total.errors|join:', ' }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Itens</h3>
+        <button id="add-item" type="button" class="rounded-lg bg-[#56d741] px-4 py-2 text-[14px] text-[#0d2f19]">+ Adicionar Item</button>
+      </div>
+
+      {{ formset.management_form }}
+
+      <div class="overflow-x-hidden rounded-lg border border-slate-200">
+        <table class="plan-itens-table w-full table-fixed text-left text-[14px]">
+          <colgroup>
+            <col style="width: 7%" />
+            <col style="width: 27%" />
+            <col style="width: 9%" />
+            <col style="width: 10.5%" />
+            <col style="width: 10.5%" />
+            <col style="width: 8.5%" />
+            <col style="width: 11%" />
+            <col style="width: 7%" />
+            <col style="width: 70px" />
+          </colgroup>
+          <thead class="bg-[#F1F3F4] text-slate-800">
+            <tr>
+              <th class="px-3 py-2">Area HA</th>
+              <th class="px-3 py-2">Produto</th>
+              <th class="px-3 py-2">Unidade</th>
+              <th class="px-3 py-2">Quantidade</th>
+              <th class="px-3 py-2">Preco</th>
+              <th class="px-3 py-2">Desconto</th>
+              <th class="px-3 py-2">Total Item</th>
+              <th class="px-3 py-2">SC/HA</th>
+              <th class="w-[60px] px-2 py-2 text-right">Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="itens-body">
+            {% for item_form in formset %}
+              <tr class="item-row">
+                <td data-label="Area HA" class="px-3 py-2">{{ item_form.area_ha }}{{ item_form.id }}</td>
+                <td data-label="Produto" class="px-3 py-2">
+                  <div class="relative has-inner-btn has-inner-btn-sm">
+                    {{ item_form.produto_cadastro }}
+                    <button
+                      type="button"
+                      data-crud-popup-url="/app/produtos/?novo=1"
+                      title="Cadastrar Produto"
+                      class="inner-btn text-slate-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+                <td data-label="Unidade" class="px-3 py-2">
+                  {{ item_form.unidade }}
+                </td>
+                <td data-label="Quantidade" class="px-3 py-2">{{ item_form.quantidade }}</td>
+                <td data-label="Preco" class="px-3 py-2">{{ item_form.preco }}</td>
+                <td data-label="Desconto" class="px-3 py-2">{{ item_form.desconto }}</td>
+                <td data-label="Total Item" class="px-3 py-2">{{ item_form.total_item }}</td>
+                <td data-label="SC/HA" class="px-3 py-2">{{ item_form.custo_ha }}</td>
+                <td data-label="Acoes" class="px-2 py-2 text-right">
+                  <div class="ml-auto grid w-[56px] grid-cols-1 justify-items-end gap-1 pr-1">
+                    <span class="hidden">{% if item_form.DELETE %}{{ item_form.DELETE }}{% endif %}</span>
+                    <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% if item_form.non_field_errors %}
+                <tr><td colspan="9" class="px-3 pb-2 text-xs text-red-600">{{ item_form.non_field_errors|join:', ' }}</td></tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if formset.non_form_errors %}
+      <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formset.non_form_errors|join:', ' }}</div>
+    {% endif %}
+
+    <div class="flex gap-3">
+      <button type="submit" class="rounded-lg bg-[#56d741] px-5 py-2 text-[14px] text-[#0d2f19]">Salvar</button>
+      <a href="{% url 'core:planejamento_list' %}" class="rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">Cancelar</a>
+    </div>
+  </form>
+</section>
+
+<template id="empty-form-template">
+  <tr class="item-row">
+    <td data-label="Area HA" class="px-3 py-2">__AREA__ __ID__</td>
+    <td data-label="Produto" class="px-3 py-2">
+      <div class="relative has-inner-btn has-inner-btn-sm">
+        __PRODUTO__
+        <button type="button" data-crud-popup-url="/app/produtos/?novo=1" title="Cadastrar Produto" class="inner-btn text-slate-700">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+    <td data-label="Unidade" class="px-3 py-2">
+      __UNIDADE__
+    </td>
+    <td data-label="Quantidade" class="px-3 py-2">__QTD__</td>
+    <td data-label="Preco" class="px-3 py-2">__PRECO__</td>
+    <td data-label="Desconto" class="px-3 py-2">__DESC__</td>
+    <td data-label="Total Item" class="px-3 py-2">__TOTAL__</td>
+    <td data-label="SC/HA" class="px-3 py-2">__CUSTO_HA__</td>
+    <td data-label="Acoes" class="px-2 py-2 text-right">
+      <div class="ml-auto grid w-[56px] grid-cols-1 justify-items-end gap-1 pr-1">__DELETE__
+        <button type="button" title="Excluir linha" class="remove-row inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7 8.3 19a2 2 0 0 0 2 1.86h3.4a2 2 0 0 0 2-1.86L16.5 7"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 11v5M14 11v5"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+  </tr>
+</template>
+
+<script>
+(function(){
+  const totalForms = document.getElementById('id_itens-TOTAL_FORMS');
+  const tbody = document.getElementById('itens-body');
+  const addBtn = document.getElementById('add-item');
+  const template = document.getElementById('empty-form-template');
+  let lastOptionsRefreshAt = 0;
+
+  function parseNum(v){
+    let s = (v || '0').toString().trim();
+    if (!s) return 0;
+    // Accept both "pt-BR" (1.234,56) and backend dot-decimal (1234.56 / 3.50000000)
+    // without blowing up values by stripping the decimal dot.
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+
+    if (hasComma && hasDot) {
+      // thousands "." + decimal ","
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (hasComma) {
+      // decimal ","
+      s = s.replace(',', '.');
+    } else if (hasDot) {
+      // If it's a simple dot-decimal (single dot between digits), keep it.
+      const dotCount = (s.match(/\./g) || []).length;
+      const simpleDotDecimal = dotCount === 1 && /^\d+\.\d+$/.test(s);
+      if (!simpleDotDecimal) {
+        // otherwise treat dots as thousands separators
+        s = s.replace(/\./g, '');
+      }
+    }
+
+    const n = parseFloat(s);
+    return Number.isNaN(n) ? 0 : n;
+  }
+
+  function getNum(input){
+    if(!input) return 0;
+    const raw = (input.dataset && typeof input.dataset.raw !== 'undefined') ? input.dataset.raw : '';
+    if(raw !== null && raw !== undefined && String(raw).trim() !== '') return parseNum(raw);
+    return parseNum(input.value);
+  }
+
+  function setBrValue(input, value, decimals){
+    if(!input) return;
+    const safe = Number.isFinite(value) ? value : 0;
+    const fixed = safe.toFixed(decimals);
+    const parts = fixed.split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (decimals > 0) input.value = `${intPart},${parts[1]}`;
+    else input.value = intPart;
+  }
+
+  function recalcRow(row){
+    const area = row.querySelector('input[name$="-area_ha"]');
+    const qtd = row.querySelector('input[name$="-quantidade"]');
+    const preco = row.querySelector('input[name$="-preco"]');
+    const desc = row.querySelector('input[name$="-desconto"]');
+    const total = row.querySelector('input[name$="-total_item"]');
+    const custoHa = row.querySelector('input[name$="-custo_ha"]');
+    if(!area || !qtd || !preco || !desc || !total) return;
+
+    const totalItem = (getNum(qtd) * getNum(preco)) - getNum(desc);
+    setBrValue(total, totalItem, 2);
+
+    const a = getNum(area);
+    const custoPorHa = a > 0 ? (totalItem / a) : 0;
+    const parentPrice = document.getElementById('id_preco_produto');
+    const precoSaca = parentPrice ? parseNum(parentPrice.value) : 0;
+    // Show Sacas/HA: (Custo/HA) / (Preco da saca informado no cabecalho)
+    const sacasHa = (precoSaca > 0) ? (custoPorHa / precoSaca) : 0;
+    if(custoHa) setBrValue(custoHa, sacasHa, 1);
+  }
+
+  function recalcTotal(){
+    let totalPlan = 0;
+    tbody.querySelectorAll('.item-row').forEach((row)=>{
+      const del = row.querySelector('input[name$="-DELETE"]');
+      if (del && del.checked) return;
+      const total = row.querySelector('input[name$="-total_item"]');
+      totalPlan += parseNum(total ? total.value : 0);
+    });
+    const totalInput = document.getElementById('id_valor_total');
+    if(totalInput) setBrValue(totalInput, totalPlan, 2);
+  }
+
+  function bindRow(row){
+    // Keep "raw" values so we can show compact formatting when blurred.
+    function bindPretty(input, prettyDecimals){
+      if(!input) return;
+
+      // We keep a CANONICAL raw value in dataset.raw:
+      // - dot decimal (e.g. "250.50")
+      // - fixed to the field's allowed decimals (data-decimals)
+      // This avoids "3,50 -> 350.000.000" kind of explosions when submitting.
+      const keepDecimals = parseInt(input.getAttribute('data-decimals') || String(prettyDecimals || 0), 10);
+      const setCanonicalRawFromValue = ()=>{
+        const v = (input.value || '').toString().trim();
+        if(!v){
+          input.dataset.raw = '';
+          return;
+        }
+        const n = parseNum(v);
+        input.dataset.raw = Number.isFinite(n) ? n.toFixed(keepDecimals) : '';
+      };
+      const rawToPtBr = (rawDot)=>{
+        if(!rawDot) return '';
+        // No thousands, comma decimal
+        return String(rawDot).replace('.', ',');
+      };
+
+      if(typeof input.dataset.raw === 'undefined' || input.dataset.raw === null || String(input.dataset.raw).trim() === ''){
+        // Initialize from current rendered value (supports both pt-BR and dot-decimal).
+        setCanonicalRawFromValue();
+      }
+
+      input.addEventListener('focus', ()=>{
+        // Show editable raw (pt-BR, no thousands)
+        if(typeof input.dataset.raw !== 'undefined' && input.dataset.raw !== null && String(input.dataset.raw).trim() !== ''){
+          input.value = rawToPtBr(input.dataset.raw);
+        }
+      });
+      input.addEventListener('input', ()=>{
+        // Update canonical raw based on whatever the user typed (mask may be active).
+        setCanonicalRawFromValue();
+      });
+      input.addEventListener('blur', ()=>{
+        const n = getNum(input);
+        setBrValue(input, n, prettyDecimals);
+      });
+
+      // Initial pretty format (does not affect raw)
+      try {
+        const n0 = getNum(input);
+        // Ensure canonical raw exists for submit, even if user never focused this field.
+        if(typeof input.dataset.raw === 'undefined' || input.dataset.raw === null || String(input.dataset.raw).trim() === ''){
+          input.dataset.raw = Number.isFinite(n0) ? n0.toFixed(keepDecimals) : '';
+        }
+        setBrValue(input, n0, prettyDecimals);
+      } catch (e) {}
+    }
+
+    // Area: show 1 decimal
+    bindPretty(row.querySelector('input[name$="-area_ha"]'), 1);
+    // Quantidade: show integer when blurred (raw still keeps decimals)
+    bindPretty(row.querySelector('input[name$="-quantidade"]'), 0);
+    // Preco: show 2 decimals when blurred (raw keeps up to 5)
+    bindPretty(row.querySelector('input[name$="-preco"]'), 2);
+    // Desconto: show 2 decimals
+    bindPretty(row.querySelector('input[name$="-desconto"]'), 2);
+
+    ['area_ha','quantidade','preco','desconto'].forEach((field)=>{
+      const input = row.querySelector(`input[name$="-${field}"]`);
+      if(input){
+        input.addEventListener('input', ()=>{ recalcRow(row); recalcTotal(); });
+      }
+    });
+
+    const del = row.querySelector('input[name$="-DELETE"]');
+    if(del){ del.addEventListener('change', recalcTotal); }
+
+    const removeBtn = row.querySelector('.remove-row');
+    if(removeBtn){
+      removeBtn.addEventListener('click', ()=>{
+        if(del){
+          del.checked = true;
+          row.style.display = 'none';
+        } else {
+          row.remove();
+          totalForms.value = String(Math.max(parseInt(totalForms.value || '1', 10) - 1, 0));
+        }
+        recalcTotal();
+      });
+    }
+
+    // Fill item price from parent (optional) when empty
+    const parentPrice = document.getElementById('id_preco_produto');
+    const preco = row.querySelector('input[name$="-preco"]');
+    if(preco && (!preco.value || preco.value === '0' || preco.value === '0,00000') && parentPrice && parentPrice.value){
+      preco.value = parentPrice.value;
+    }
+
+    recalcRow(row);
+    if (window.initInputMasks) window.initInputMasks(row);
+    if (window.initInputNormalizers) window.initInputNormalizers(row);
+    if (window.initDecimalMasks) window.initDecimalMasks(row);
+  }
+
+  async function refreshSelectOptions(select, url){
+    if(!select) return;
+    const current = select.value;
+    const hadPlaceholder = (select.options.length > 0 && select.options[0].value === '');
+    const placeholderText = hadPlaceholder ? select.options[0].textContent : '---------';
+
+    const resp = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+    const data = await resp.json();
+
+    select.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = placeholderText;
+    select.appendChild(opt0);
+
+    (data.items || []).forEach((it)=>{
+      const opt = document.createElement('option');
+      opt.value = String(it.id);
+      opt.textContent = it.label || it.nome || String(it.id);
+      select.appendChild(opt);
+    });
+
+    // restore selection if still exists
+    if(current){
+      select.value = current;
+      if(select.value !== current){
+        select.value = '';
+      }
+    }
+  }
+
+  async function refreshAllSelects(){
+    const now = Date.now();
+    if(now - lastOptionsRefreshAt < 1200) return; // throttle
+    lastOptionsRefreshAt = now;
+
+    try{
+      await Promise.all([
+        refreshSelectOptions(document.getElementById('id_safra'), "{% url 'core:options_safras' %}"),
+        refreshSelectOptions(document.getElementById('id_custo'), "{% url 'core:options_custos' %}"),
+        refreshSelectOptions(document.getElementById('id_cliente'), "{% url 'core:options_clientes' %}"),
+      ]);
+
+      // refresh row selects (produto/unidade) for each existing row
+      const rows = tbody ? Array.from(tbody.querySelectorAll('.item-row')) : [];
+      for(const row of rows){
+        const prod = row.querySelector('select[name$=\"-produto_cadastro\"]');
+        const uni = row.querySelector('select[name$=\"-unidade\"]');
+        if(prod) await refreshSelectOptions(prod, "{% url 'core:options_produtos' %}");
+        if(uni) await refreshSelectOptions(uni, "{% url 'core:options_unidades' %}");
+      }
+    }catch(e){
+      // ignore refresh errors; user can still reload page if needed
+    }
+  }
+
+  tbody.querySelectorAll('.item-row').forEach(bindRow);
+  recalcTotal();
+
+  // If header price changes, recalc all rows (Sacas/HA depends on it).
+  const headerPrice = document.getElementById('id_preco_produto');
+  if(headerPrice){
+    headerPrice.addEventListener('input', ()=>{
+      tbody.querySelectorAll('.item-row').forEach(recalcRow);
+      recalcTotal();
+    });
+  }
+
+  // Restore raw values before submit so decimals are preserved (then global submit converter runs).
+  const formEl = document.querySelector('form');
+  if(formEl){
+    formEl.addEventListener('submit', ()=>{
+      formEl.querySelectorAll('input[data-decimal-br=\"1\"]').forEach((inp)=>{
+        if(inp && inp.dataset && typeof inp.dataset.raw !== 'undefined' && inp.dataset.raw !== null && String(inp.dataset.raw).trim() !== ''){
+          // Convert canonical dot-decimal raw to pt-BR (comma) so the global submit converter
+          // turns it into a proper dot-decimal for Django.
+          inp.value = String(inp.dataset.raw).replace('.', ',');
+        }
+      });
+    }, true);
+  }
+
+  // Expose hook for popup saved events (base.html)
+  window.__crudRefreshAllSelects = refreshAllSelects;
+
+  // Auto refresh options when user returns to this tab (after creating cadastro in another tab)
+  window.addEventListener('focus', refreshAllSelects);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAllSelects(); });
+
+  addBtn.addEventListener('click', ()=>{
+    const index = parseInt(totalForms.value || '0', 10);
+    const prefix = `itens-${index}`;
+
+    const area = document.getElementById('id_itens-0-area_ha');
+    const produto = document.getElementById('id_itens-0-produto_cadastro');
+    const unidade = document.getElementById('id_itens-0-unidade');
+    const qtd = document.getElementById('id_itens-0-quantidade');
+    const preco = document.getElementById('id_itens-0-preco');
+    const desc = document.getElementById('id_itens-0-desconto');
+    const total = document.getElementById('id_itens-0-total_item');
+    const custoHa = document.getElementById('id_itens-0-custo_ha');
+    const del = document.getElementById('id_itens-0-DELETE');
+    const hid = document.getElementById('id_itens-0-id');
+
+    const html = template.innerHTML
+      .replace('__AREA__', area ? area.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__PRODUTO__', produto ? produto.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__UNIDADE__', unidade ? unidade.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__QTD__', qtd ? qtd.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__PRECO__', preco ? preco.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__DESC__', desc ? desc.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__TOTAL__', total ? total.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__CUSTO_HA__', custoHa ? custoHa.outerHTML.replaceAll('itens-0', prefix) : '')
+      .replace('__DELETE__', del ? `<span class=\"hidden\">${del.outerHTML.replaceAll('itens-0', prefix)}</span>` : '')
+      .replace('__ID__', hid ? hid.outerHTML.replaceAll('itens-0', prefix) : '');
+
+    const wrapper = document.createElement('tbody');
+    wrapper.innerHTML = html.trim();
+    const row = wrapper.firstElementChild;
+    tbody.appendChild(row);
+    totalForms.value = String(index + 1);
+    bindRow(row);
+    recalcTotal();
+  });
+})();
+</script>
+{% endblock %}

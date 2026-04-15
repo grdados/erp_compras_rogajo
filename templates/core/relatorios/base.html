@@ -10,53 +10,69 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body { font-family: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 11px; font-weight: 400; }
-      .ui-title { font-size: 14px; font-weight: 700; }\n      .rpt-sub { font-size: 11px; color: #334155; }\n      .rpt-table th, .rpt-table td { padding: 4px 6px; }\n      .rpt-table th { font-weight: 700; }\n      .rpt-table { width: 100%; border-collapse: collapse; }\n      .rpt-table thead tr { background: #f1f3f4; }\n      .rpt-table td, .rpt-table th { border-bottom: 1px solid #e2e8f0; vertical-align: top; }\n      .rpt-group { background: #f8fafc; font-weight: 700; }\n      .rpt-right { text-align: right; }\n      .rpt-muted { color: #64748b; }\n      .rpt-box { border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+      body { font-family: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 12px; font-weight: 400; }
+      .ui-title { font-size: 16px; font-weight: 700; }
+      .rpt-sub { font-size: 11px; color: #334155; }
+      .rpt-table th, .rpt-table td { padding: 4px 6px; }
+      .rpt-table th { font-weight: 700; }
+      .rpt-table { width: 100%; border-collapse: collapse; }
+      .rpt-table thead tr { background: #f1f3f4; }
+      .rpt-table td, .rpt-table th { border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+      .rpt-group { background: #f8fafc; font-weight: 700; }
+      .rpt-right { text-align: right; }
+      .rpt-muted { color: #64748b; }
+      .rpt-box { border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
       .rpt-small { font-size: 10px; }
       .rpt-small th, .rpt-small td { padding: 3px 5px; }
       .rpt-total { border: 2px solid #94a3b8; }
 
-      @page { size: A4 portrait; margin: 10mm 6mm 10mm 6mm; }
+      /* Reduce left/right margins for a tighter PDF, like the provided model. */
+      @page { size: A4 portrait; margin: 10mm 2mm 6mm 2mm; }
+      {% block extra_css %}{% endblock %}
       @media print {
-        footer { position: fixed; bottom: 5mm; left: 0; right: 0; }
-        main { padding-bottom: 18mm !important; }
+        footer { position: fixed; bottom: 3mm; left: 0; right: 0; }
+        main { padding-bottom: 10mm !important; }
         .no-print { display: none !important; }
         body { background: white !important; }
+        html, body { margin: 0 !important; padding: 0 !important; }
       }
     </style>
   </head>
-  <body class="bg-slate-50 text-slate-900">    <header class="bg-white">
-      <div class="mx-auto max-w-6xl px-3 py-2">
-        <div class="flex items-center gap-3">
-          <img src="{% static 'img/rogajo-logo.jpeg' %}" class="h-8 w-auto rounded" alt="Rogajo" />
-          <div class="flex-1 text-center">
-            <div class="ui-title">{% block header_title %}Relatorio{% endblock %}</div>
-          </div>
-          <div class="w-[240px] text-right">
-            <div class="text-slate-600"><strong>Data Emissao:</strong> {% now 'd/m/Y' %}</div>
+  <body class="bg-white text-slate-900">
+    <header class="bg-white">
+      <div class="mx-auto px-1 pt-2" style="max-width: 202mm;">
+        <div class="flex items-start justify-between">
+          <img src="{% static 'img/rogajo-logo-exp.svg' %}" style="width:60px; height:20px; object-fit:contain;" alt="Rogajo" />
+          <div class="text-right" style="font-size:14px;">
+            <div><strong>Data Emissao:</strong> {% now 'd/m/Y' %}</div>
           </div>
         </div>
-        <div class="mt-1 text-slate-700">
+        <div class="mt-1 text-slate-700" style="font-size:11px;">
           {% if licenca %}
             {{ licenca.endereco }}, {{ licenca.numero }} - {{ licenca.cidade }}/{{ licenca.uf }} | Contato: {{ licenca.contato }} | {{ licenca.email }}
           {% else %}
             Endereco, Contato, email
           {% endif %}
         </div>
-        
-        <div id="hdr-divider" class="mt-2 border-b border-slate-300"></div>
-        <div class="no-print mt-2 flex items-center justify-end gap-2">
-          <button onclick="window.print()" class="rounded-md bg-emerald-500 px-3 py-2 text-white hover:bg-emerald-600">Imprimir</button>
+        <div class="mt-2" style="border-bottom:0.5px solid #0f172a;"></div>
+
+        <div class="mt-6 text-center" style="font-size:16px; font-weight:700; letter-spacing:0.5px;">
+          {% block header_title %}RELATORIO{% endblock %}
+        </div>
+
+        <div class="no-print mt-3 flex items-center justify-end gap-2">
+          <button onclick="window.print()" class="rounded-md bg-emerald-600 px-3 py-2 text-white hover:bg-emerald-700">Baixar PDF</button>
+          <button onclick="window.print()" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-700 hover:bg-slate-100">Imprimir</button>
           <a href="#" onclick="(function(){try{if(window.history.length>1){window.history.back();}else{window.location.href='{{ back_fallback_url|default:'/dashboard/' }}';}}catch(e){window.location.href='{{ back_fallback_url|default:'/dashboard/' }}';}})(); return false;" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-700 hover:bg-slate-100">Voltar</a>
         </div>
       </div>
     </header>
 
-    <main class="mx-auto max-w-6xl px-2 py-2">
+    <main class="mx-auto px-1 py-2" style="max-width: 202mm;">
       {% block content %}{% endblock %}
     </main>
     <footer class="border-t border-slate-300 bg-white">
-      <div class="mx-auto max-w-6xl px-3 py-2">
+      <div class="mx-auto px-1 py-2" style="max-width: 202mm;">
         
         <div class="mt-2 flex items-center justify-between text-slate-700">
           <div>{% if licenca %}{{ licenca.cidade }} / {{ licenca.uf }}{% else %}Laguna Carapa / MS{% endif %}</div>

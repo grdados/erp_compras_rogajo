@@ -8,9 +8,10 @@
     <div class="rpt-box p-2 mb-2">
       <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
         <tr>
-          <td style="width:50%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Cliente:</strong> {{ c.cliente }}</td>
-          <td style="width:18%; white-space:nowrap;"><strong>Cultura:</strong> {{ c.cultura_label }}</td>
-          <td style="width:12%; white-space:nowrap;"><strong>Safra:</strong> {{ c.safra_label }}</td>
+          {# Keep totals aligned at the same 80% / 20% split used in Produtor/Fornecedor rows #}
+          <td style="width:46%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Cliente:</strong> {{ c.cliente }}</td>
+          <td style="width:22%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Cultura:</strong> {{ c.cultura_label }}</td>
+          <td style="width:12%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Safra:</strong> {{ c.safra_label }}</td>
           <td style="width:20%; white-space:nowrap;" class="rpt-right"><strong>Valor Total:</strong> {{ c.total_valor|decimal_br:2 }}</td>
         </tr>
       </table>
@@ -28,14 +29,15 @@
         <div class="mt-1 border-b border-slate-300"></div>
 
         <div class="mt-1"><strong>Resumo do Fornecedor</strong></div>
-        <div class="mt-1 overflow-x-auto rounded-md border border-slate-300 p-1">
+        {# No horizontal padding here so the last column aligns with the "Valor Total" column above #}
+        <div class="mt-1 overflow-x-auto rounded-md border border-slate-300 p-0">
           <table class="rpt-table" style="table-layout:fixed;">
             <thead>
               <tr>
                 <th style="width:50%">Fornecedor</th>
                 <th style="width:15%">Status</th>
                 <th style="width:15%">Vencimento</th>
-                <th style="width:20%" class="rpt-right" style="white-space:nowrap;" style="white-space:nowrap;">Valor Total</th>
+                <th style="width:20%; white-space:nowrap;" class="rpt-right">Valor Total</th>
               </tr>
             </thead>
             <tbody>

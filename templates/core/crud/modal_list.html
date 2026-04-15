@@ -26,7 +26,7 @@
       <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-[14px] font-normal text-slate-700 hover:bg-slate-100">
         Filtrar
       </button>
-      {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
+      {% if current_sort %}<input type="hidden" name="o" value="{{ current_sort }}" />{% endif %}
     </form>
 
     <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
@@ -43,7 +43,7 @@
                 </a>
               </th>
             {% endfor %}
-            <th class="w-[230px] px-3 py-3 text-[14px] font-normal text-right">Acoes</th>
+            <th class="px-3 py-3 text-[14px] font-normal text-right">Acoes</th>
           </tr>
         </thead>
         <tbody>
@@ -53,7 +53,7 @@
                 <td class="px-3 py-2.5 text-[14px] font-normal text-slate-700">{{ obj|attr:column.field }}</td>
               {% endfor %}
               <td class="px-3 py-2.5">
-                <div class="ml-auto grid w-[210px] grid-cols-6 justify-items-end gap-1">
+                <div class="ml-auto inline-flex items-center justify-end gap-1">
                   <a href="?edit={{ obj.pk }}" title="Editar" aria-label="Editar" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 3.487a2.1 2.1 0 0 1 2.97 2.97L8.67 17.618l-4.16 1.19 1.19-4.16L16.862 3.487Z"/>
