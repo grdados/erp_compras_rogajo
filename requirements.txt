@@ -1,7 +1,8 @@
-﻿Django==4.2.9
+Django==4.2.9
 psycopg[binary]==3.2.13
 dj-database-url==2.2.0
 python-dotenv==1.0.1
 Pillow==10.4.0
 stripe==11.6.0
 gunicorn==22.0.0
+whitenoise==6.9.0
