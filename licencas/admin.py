@@ -7,4 +7,4 @@ from .models import Licenca
 class LicencaAdmin(admin.ModelAdmin):
     list_display = ('cliente', 'cpf_cnpj', 'email', 'status', 'inicio_vigencia', 'fim_vigencia')
     list_filter = ('status', 'uf')
-    search_fields = ('cliente__cliente', 'cpf_cnpj', 'email', 'stripe_subscription_id')
+    search_fields = ('cliente', 'cpf_cnpj', 'email', 'stripe_subscription_id')

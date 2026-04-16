@@ -1,0 +1,109 @@
+﻿{% extends 'core/relatorios/base.html' %}
+{% load core_extras static %}
+{% block title %}Contas a Pagar - Analitico{% endblock %}
+{% block header_title %}Contas a Pagar - Analitico{% endblock %}
+
+{% block content %}
+  {% for c in report_clientes %}
+    <div class="rpt-box p-2 mb-2">
+      <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
+        <tr>
+          {# Keep totals aligned at the same 80% / 20% split used in Produtor/Fornecedor rows #}
+          <td style="width:46%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Cliente:</strong> {{ c.cliente }}</td>
+          <td style="width:22%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Cultura:</strong> {{ c.cultura_label }}</td>
+          <td style="width:12%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Safra:</strong> {{ c.safra_label }}</td>
+          <td style="width:20%; white-space:nowrap;" class="rpt-right"><strong>Valor Total:</strong> {{ c.total_valor|decimal_br:2 }}</td>
+        </tr>
+      </table>
+      <div class="mt-1 border-b border-slate-300"></div>
+    </div>
+
+    {% for p in c.produtores_list %}
+      <div class="rpt-box p-2 mb-2">
+        <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
+          <tr>
+            <td style="width:80%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Produtor:</strong> {{ p.produtor }}</td>
+            <td style="width:20%; white-space:nowrap;" class="rpt-right"><strong>Valor Total:</strong> {{ p.total_valor|decimal_br:2 }}</td>
+          </tr>
+        </table>
+        <div class="mt-1 border-b border-slate-300"></div>
+
+        <div class="mt-1"><strong>Resumo do Fornecedor</strong></div>
+        {# No horizontal padding here so the last column aligns with the "Valor Total" column above #}
+        <div class="mt-1 overflow-x-auto rounded-md border border-slate-300 p-0">
+          <table class="rpt-table" style="table-layout:fixed;">
+            <thead>
+              <tr>
+                <th style="width:50%">Fornecedor</th>
+                <th style="width:15%">Status</th>
+                <th style="width:15%">Vencimento</th>
+                <th style="width:20%; white-space:nowrap;" class="rpt-right">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in p.resumo_rows %}
+                <tr>
+                  <td>{{ r.fornecedor }}</td>
+                  <td>{{ r.status }}</td>
+                  <td>{{ r.vencimento|date:'d/m/Y' }}</td>
+                  <td class="rpt-right">{{ r.valor_total|decimal_br:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% for f in p.fornecedores_list %}
+        <div class="rpt-box p-2 mb-2">
+          <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
+            <tr>
+              <td style="width:80%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>Fornecedor:</strong> {{ f.fornecedor }}</td>
+              <td style="width:20%; white-space:nowrap;" class="rpt-right"><strong>Valor Total:</strong> {{ f.total_valor|decimal_br:2 }}</td>
+            </tr>
+          </table>
+
+          <div class="mt-1 overflow-x-auto rounded-md border border-slate-300 p-1">
+            <table class="rpt-table rpt-small" style="table-layout:fixed;">
+              <thead>
+                <tr>
+                  <th style="width:9%">Status</th>
+                  <th style="width:12%">Nota Fiscal</th>
+                  <th style="width:12%">Vencimento</th>
+                  <th style="width:41%">Produto</th>
+                  <th style="width:10%" class="rpt-right">Quantidade</th>
+                  <th style="width:8%" class="rpt-right">Preco</th>
+                  <th style="width:8%" class="rpt-right" style="white-space:nowrap;">Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in f.itens %}
+                  <tr>
+                    <td>{{ it.status }}</td>
+                    <td>{{ it.nota_fiscal }}</td>
+                    <td>{{ it.vencimento|date:'d/m/Y' }}</td>
+                    <td>{{ it.produto }}</td>
+                    <td class="rpt-right">{{ it.quantidade|decimal_br:3 }}</td>
+                    <td class="rpt-right">{{ it.preco|decimal_br:5 }}</td>
+                    <td class="rpt-right">{{ it.total_item|decimal_br:2 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endfor %}
+    {% endfor %}
+  {% empty %}
+    <div class="rpt-box rpt-total p-2">Sem registros.</div>
+  {% endfor %}
+
+  <div class="rpt-box p-2" style="border-top:2px solid #94a3b8; text-align:center;">
+    <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
+      <tr>
+        <td style="width:50%;"><strong>Total geral:</strong> {{ total_valor|decimal_br:2 }}</td>
+        <td style="width:50%;"><strong>Saldo geral:</strong> {{ total_saldo|decimal_br:2 }}</td>
+      </tr>
+    </table>
+  </div>
+{% endblock %}

@@ -1,21 +1,91 @@
-﻿{% extends 'base.html' %}
-{% block title %}Login | ERP Compras{% endblock %}
-{% block content %}
-<div class="mx-auto max-w-md rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
-  <h1 class="text-2xl font-black">Acesso ao ERP</h1>
-  <p class="mt-2 text-sm text-slate-300">Entre com seu usuario e senha para acessar o dashboard.</p>
-  <form method="post" class="mt-6 space-y-4">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
-    <div>
-      <label class="mb-1 block text-sm text-slate-300">Usuario</label>
-      <input type="text" name="username" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" required />
-    </div>
-    <div>
-      <label class="mb-1 block text-sm text-slate-300">Senha</label>
-      <input type="password" name="password" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" required />
-    </div>
-    <button type="submit" class="w-full rounded-lg bg-emerald-400 px-4 py-2 font-bold text-slate-900">Entrar</button>
-  </form>
-</div>
-{% endblock %}
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Rogajo Consultoria</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+        --brand-900: #1f5f3a;
+        --brand-800: #236b43;
+        --brand-500: #37a457;
+        --brand-300: #64d26f;
+      }
+      .field-glow {
+        transition: box-shadow .22s ease, border-color .22s ease, transform .22s ease;
+      }
+      .field-glow:focus {
+        border-color: var(--brand-300);
+        box-shadow: 0 0 0 3px rgba(100, 210, 111, 0.18), 0 8px 24px rgba(55, 164, 87, 0.28);
+        transform: translateY(-1px);
+      }
+          body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
+      .ui-title { font-size: 18px; font-weight: 700; }
+      .ui-text { font-size: 14px; font-weight: 400; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-[#010707] text-white">
+    <main class="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(100,210,111,0.25),transparent_35%),radial-gradient(circle_at_85%_75%,rgba(35,107,67,0.22),transparent_30%),linear-gradient(120deg,#010707_10%,#143f29_60%,#010707_100%)]"></div>
+
+      <div class="relative w-full max-w-md">
+        <div class="mb-6 text-center">
+          <div class="mx-auto inline-flex p-1">
+            <img src="{% static 'img/rogajo-logo-exp.svg' %}" alt="Rogajo" class="h-16 w-auto" />
+          </div>
+          <p class="mt-3 text-sm text-[var(--brand-300)]"><a href="/" class="hover:underline">Voltar para a landing page</a></p>
+        </div>
+
+        <div class="rounded-3xl border border-white/15 bg-white/10 p-8 shadow-2xl backdrop-blur">
+          <h1 class="text-4xl font-bold">Entrar no sistema</h1>
+
+          <form method="post" class="mt-6 space-y-5">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+              <div class="rounded-lg border border-red-300/40 bg-red-500/20 px-3 py-2 text-sm text-red-100">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-200">Usuario</label>
+              <input type="text" name="username" class="field-glow w-full rounded-xl border border-white/20 bg-black/25 px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none" placeholder="Digite seu usuario" required />
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-200">Senha</label>
+              <input type="password" name="password" class="field-glow w-full rounded-xl border border-white/20 bg-black/25 px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none" placeholder="Digite sua senha" required />
+            </div>
+
+            {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+
+            <button type="submit" class="w-full rounded-xl bg-[var(--brand-300)] px-5 py-3 text-base font-bold text-[#10301e] transition hover:-translate-y-0.5 hover:bg-[#79df83] hover:shadow-[0_12px_28px_rgba(55,164,87,0.35)]">
+              Entrar
+            </button>
+          </form>
+          </div>
+
+          <div class="my-5 flex items-center gap-3">
+            <div class="h-px flex-1 bg-white/10"></div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-white/40">licenca</span>
+            <div class="h-px flex-1 bg-white/10"></div>
+          </div>
+
+            <div class="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-200">
+              <div class="font-bold">Nao tem licenca ainda?</div>
+              <div class="mt-1 text-slate-300">Clique abaixo para criar sua conta e ativar sua licenca (primeiro acesso).</div>
+              <a href="/licencas/primeiro-acesso/" class="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-base font-bold text-white transition hover:bg-white/15">Ativar licenca (primeiro acesso)</a>
+            </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
+
+

@@ -1,14 +1,13 @@
-import os
+﻿import os
 import sys
 from pathlib import Path
 
-from django.core.wsgi import get_wsgi_application
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-app = get_wsgi_application()
+from django.core.wsgi import get_wsgi_application  # noqa: E402
 
+app = get_wsgi_application()

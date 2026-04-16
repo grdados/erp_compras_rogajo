@@ -92,7 +92,7 @@ class Safra(TimestampedModel):
         unique_together = ('safra', 'ano', 'cultura')
 
     def __str__(self):
-        return f'{self.safra}/{self.ano} - {self.cultura}'
+        return self.safra
 
 
 class Fornecedor(TimestampedModel):
@@ -128,9 +128,10 @@ class Cliente(TimestampedModel):
 
 
 class Produtor(TimestampedModel):
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='produtores', null=True)
     produtor = models.CharField(max_length=150)
     ie = models.CharField('IE', max_length=30, blank=True)
-    cpf = models.CharField(max_length=14, unique=True)
+    cpf = models.CharField(max_length=14)
     fazenda = models.CharField(max_length=150)
     cidade = models.CharField(max_length=80)
     uf = models.CharField(max_length=2)
@@ -141,7 +142,7 @@ class Produtor(TimestampedModel):
         ordering = ['produtor']
 
     def __str__(self):
-        return self.produtor
+        return f'{self.produtor} - {self.fazenda}' if self.fazenda else self.produtor
 
 
 class Propriedade(TimestampedModel):
@@ -158,6 +159,22 @@ class Propriedade(TimestampedModel):
     def __str__(self):
         return f'{self.propriedade} - {self.produtor}'
 
+
+class Produto(TimestampedModel):
+    nome = models.CharField('Nome', max_length=160)
+    nome_abreviado = models.CharField('Nome Abreviado', max_length=80, blank=True)
+    npk = models.CharField('NPK', max_length=40, blank=True)
+    variedade = models.CharField('Variedade', max_length=120, blank=True)
+    custo = models.ForeignKey(Custo, on_delete=models.PROTECT, related_name='produtos')
+    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name='produtos')
+    status = models.CharField(max_length=10, choices=StatusAtivoInativo.choices, default=StatusAtivoInativo.ATIVO)
+
+    class Meta:
+        ordering = ['nome']
+        unique_together = ('nome', 'categoria', 'variedade')
+
+    def __str__(self):
+        return self.nome
 
 class PerfilUsuarioCliente(TimestampedModel):
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil_cliente')

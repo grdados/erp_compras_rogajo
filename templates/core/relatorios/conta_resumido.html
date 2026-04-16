@@ -1,0 +1,64 @@
+﻿{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Contas a Pagar - Resumido{% endblock %}
+{% block header_title %}Contas a Pagar - Resumido{% endblock %}
+{% block content %}
+  {% for c in report_clientes %}
+    <div class="rpt-box p-2 mb-2">
+      <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
+        <tr>
+          <td style="width:50%; white-space:nowrap;"><strong>Cliente:</strong> {{ c.cliente }}</td>
+          <td style="width:18%; white-space:nowrap;"><strong>Cultura:</strong> {{ c.cultura_label }}</td>
+          <td style="width:12%; white-space:nowrap;"><strong>Safra:</strong> {{ c.safra_label }}</td>
+          <td style="width:20%; white-space:nowrap;" class="rpt-right"><strong>Valor Total:</strong> {{ c.total_valor|decimal_br:2 }}</td>
+        </tr>
+      </table>
+    </div>
+
+    {% for p in c.produtores_list %}
+      <div class="rpt-box p-2 mb-2">
+        <table class="w-full" style="border-collapse:collapse;">
+          <tr>
+            <td style="width:70%;"><strong>Produtor:</strong> {{ p.produtor }}</td>
+            <td style="width:30%;" class="rpt-right"><strong>Valor Total:</strong> {{ p.total_valor|decimal_br:2 }}</td>
+          </tr>
+        </table>
+
+        <div class="mt-1"><strong>Resumo do Fornecedor</strong></div>
+        <div class="mt-1 overflow-x-auto">
+          <table class="rpt-table" style="table-layout:fixed;">
+            <thead>
+              <tr>
+                <th style="width:52%">Fornecedor</th>
+                <th style="width:16%">Status</th>
+                <th style="width:16%">Vencimento</th>
+                <th style="width:16%" class="rpt-right">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in p.resumo_rows %}
+                <tr>
+                  <td>{{ r.fornecedor }}</td>
+                  <td>{{ r.status }}</td>
+                  <td>{{ r.vencimento|date:'d/m/Y' }}</td>
+                  <td class="rpt-right">{{ r.valor_total|decimal_br:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  {% empty %}
+    <div class="rpt-box rpt-total p-2">Sem registros.</div>
+  {% endfor %}
+
+  <div class="rpt-box p-2">
+    <table class="w-full" style="border-collapse:collapse;">
+      <tr>
+        <td><strong>Total geral:</strong> {{ total_valor|decimal_br:2 }}</td>
+        <td class="rpt-right"><strong>Saldo geral:</strong> {{ total_saldo|decimal_br:2 }}</td>
+      </tr>
+    </table>
+  </div>
+{% endblock %}

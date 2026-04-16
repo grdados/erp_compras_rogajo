@@ -9,6 +9,7 @@ from .models import (
     Fornecedor,
     Operacao,
     PerfilUsuarioCliente,
+    Produto,
     Produtor,
     Propriedade,
     Safra,
@@ -23,7 +24,7 @@ class SafraAdmin(admin.ModelAdmin):
     search_fields = ('safra',)
 
 
-admin.site.register([Cultura, Custo, Categoria, Unidade, FormaPagamento, Operacao])
+admin.site.register([Cultura, Custo, Categoria, Unidade, FormaPagamento, Operacao, Produto])
 
 
 @admin.register(Fornecedor)
@@ -42,9 +43,9 @@ class ClienteAdmin(admin.ModelAdmin):
 
 @admin.register(Produtor)
 class ProdutorAdmin(admin.ModelAdmin):
-    list_display = ('produtor', 'cpf', 'cidade', 'uf', 'ha', 'status')
-    list_filter = ('status', 'uf')
-    search_fields = ('produtor', 'cpf')
+    list_display = ('cliente', 'produtor', 'cpf', 'cidade', 'uf', 'ha', 'status')
+    list_filter = ('cliente', 'status', 'uf')
+    search_fields = ('cliente__cliente', 'produtor', 'cpf')
 
 
 @admin.register(Propriedade)

@@ -1,36 +1,870 @@
-﻿<!DOCTYPE html>
-<html lang="pt-BR">
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}ERP Compras{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body class="min-h-screen bg-slate-950 text-slate-100">
-    <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="/" class="text-lg font-extrabold tracking-wide">ERP Compras</a>
-        <nav class="flex items-center gap-3 text-sm">
-          {% if user.is_authenticated %}
-            <a href="/dashboard/" class="rounded-lg border border-slate-700 px-3 py-1 hover:bg-slate-800">Dashboard</a>
-            <a href="/licencas/renovar/" class="rounded-lg border border-emerald-500/40 px-3 py-1 text-emerald-300 hover:bg-emerald-500/10">Licenca</a>
-            <a href="/accounts/logout/" class="rounded-lg border border-slate-700 px-3 py-1 hover:bg-slate-800">Sair</a>
-          {% else %}
-            <a href="/accounts/login/" class="rounded-lg border border-slate-700 px-3 py-1 hover:bg-slate-800">Entrar</a>
-          {% endif %}
-        </nav>
-      </div>
-    </header>
+    <style>
+      :root {
+        --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+        --bg-app: #f1f3f4;
+        --sidebar-top: #010b09;
+        --sidebar-bottom: #06301f;
+        --accent: #56d741;
+        --text-main: #0f172a;
+      }
+      html, body { margin: 0; padding: 0; }
+      /* Prevent any top "white strip" from overscroll showing a different background */
+      html { background: var(--sidebar-top); }
+      body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
+      .ui-title { font-size: 18px; font-weight: 700; }
+      .ui-text { font-size: 12px; font-weight: 400; }
+      details > summary { list-style: none; }
+      details > summary::-webkit-details-marker { display: none; }
+      .menu-item { display: block; border-radius: 8px; padding: 10px 12px; color: #fff; }
+      .menu-item:hover { background: rgba(255,255,255,.1); }
+      .menu-item-active { background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+      .menu-icon { width: 20px; height: 20px; }
+      .menu-link { display: flex; align-items: center; gap: 10px; }
+      .menu-label { white-space: nowrap; }
+      /* Responsive panel container:
+         - 1440px wide screens stay around 1100px (as requested)
+         - larger screens (1920+) expand smoothly */
+      .panel-wrap { width: 100%; max-width: clamp(1100px, 88vw, 1820px); margin-left: auto; margin-right: auto; }
 
-    <main class="mx-auto w-full max-w-6xl px-6 py-10">
-      {% if messages %}
-        <div class="mb-6 space-y-3">
-          {% for message in messages %}
-            <div class="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm">{{ message }}</div>
-          {% endfor %}
+      /* Sidebar collapse (desktop only) */
+      @media (min-width: 1024px) {
+        body.sidebar-collapsed aside { width: 92px !important; }
+        body.sidebar-collapsed aside nav { padding-left: 8px; padding-right: 8px; }
+        /* when collapsed: icon with label BELOW (like the model) */
+        body.sidebar-collapsed .menu-link { flex-direction: column; gap: 6px; justify-content: center; }
+        body.sidebar-collapsed .menu-label { display: block; font-size: 11px; line-height: 1.1; text-align: center; }
+        body.sidebar-collapsed .menu-item { padding: 10px 8px; }
+        body.sidebar-collapsed details > summary { justify-content: center; }
+        body.sidebar-collapsed details > summary .caret { display: none; }
+        body.sidebar-collapsed details > div { padding-left: 0 !important; }
+        body.sidebar-collapsed .collapse-only { display: none !important; }
+        /* allow icon-only submenu expansion for selected groups */
+        body.sidebar-collapsed details.collapsed-icons[open] > div.collapse-only { display: block !important; }
+        body.sidebar-collapsed details.collapsed-icons > div.collapse-only { margin-top: 6px; }
+        body.sidebar-collapsed details.collapsed-icons > div.collapse-only .menu-link { gap: 0; }
+        body.sidebar-collapsed details.collapsed-icons > div.collapse-only .menu-item { padding: 10px 8px; }
+        /* Cadastros: show a compact icon submenu when collapsed */
+        body.sidebar-collapsed .cad-expanded { display: none !important; }
+        body.sidebar-collapsed .cad-collapsed { display: block !important; }
+        body.sidebar-collapsed #sidebar-logo-wrap { justify-content: center; }
+        body.sidebar-collapsed #sidebar-toggle { transform: rotate(180deg); }
+        /* When collapsed, place the toggle "tab" outside the sidebar edge */
+        body.sidebar-collapsed #sidebar-toggle { right: -14px !important; }
+        body.sidebar-collapsed #sidebar-user-card { text-align: center; }
+        body.sidebar-collapsed #sidebar-user-card .user-role { font-size: 12px; }
+        body.sidebar-collapsed #sidebar-user-card .user-name { font-size: 12px; }
+        /* Keep user card "frozen" and slightly higher so it never gets cut off */
+        body.sidebar-collapsed #sidebar-user-wrap { bottom: 16px !important; }
+        /* When sidebar is collapsed, use the extra width for content */
+        body.sidebar-collapsed main { padding-left: 16px !important; padding-right: 16px !important; }
+        body.sidebar-collapsed .panel-wrap { max-width: clamp(1280px, 92vw, 1860px); }
+      }
+      /* Cadastros: hide compact submenu when expanded */
+      body:not(.sidebar-collapsed) .cad-collapsed { display: none !important; }
+
+      /* --------------------------------------------
+         Form "table editor" standard (from Planejamento)
+         - hover rows like Bootstrap
+         - dense inputs/selects inside tables (spreadsheet-ish)
+         - compact inner "+" buttons (has-inner-btn / has-inner-btn-sm)
+         -------------------------------------------- */
+      .tbl-hover { border-collapse: separate; border-spacing: 0; }
+      .tbl-hover thead th { border-bottom: 1px solid #cbd5e1; }
+      .tbl-hover tbody tr td { border-top: 1px solid #e2e8f0; background: #ffffff; }
+      .tbl-hover tbody tr:first-child td { border-top: 0; }
+      .tbl-hover tbody tr:hover td { background: #f1f5f9; }
+
+      .tbl-dense { font-size: 12px; }
+      .tbl-dense thead th { font-size: 12px; }
+      .tbl-dense tbody td { padding: 5px 6px !important; vertical-align: middle; }
+      .tbl-dense tbody input,
+      .tbl-dense tbody select {
+        height: 34px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        padding: 2px 4px !important;
+        font-size: 12px !important;
+        box-shadow: none !important;
+        outline: none !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+      }
+      .tbl-dense tbody input:focus,
+      .tbl-dense tbody select:focus {
+        border-bottom: 2px solid var(--accent) !important;
+      }
+      .tbl-dense tbody input[readonly],
+      .tbl-dense tbody input:disabled,
+      .tbl-dense tbody select:disabled {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        opacity: 1 !important;
+      }
+
+      /* Inner "+" button inside inputs/selects */
+      .has-inner-btn select,
+      .has-inner-btn input {
+        padding-left: 46px !important;
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+      }
+      .has-inner-btn .inner-btn {
+        position: absolute;
+        left: 1px;
+        top: 1px;
+        bottom: 1px;
+        width: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid rgb(203 213 225);
+        background: rgba(255, 255, 255, 0.9);
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+      .has-inner-btn .inner-btn:hover { background: rgb(241 245 249); }
+
+      .has-inner-btn-sm select,
+      .has-inner-btn-sm input { padding-left: 34px !important; }
+      .has-inner-btn-sm .inner-btn {
+        width: 28px;
+        background: transparent;
+        border-right: 0;
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+      }
+
+      /* Actions column standard */
+      .actions-cell { padding-left: 8px !important; padding-right: 8px !important; text-align: right; }
+      .actions-wrap { margin-left: auto; width: 56px; display: grid; grid-template-columns: 1fr; justify-items: end; gap: 4px; padding-right: 4px; }
+    </style>
+  </head>
+  <!-- Keep page background dark so any tiny gaps never show a "white strip" above the header -->
+  <body class="h-full min-h-screen overflow-x-hidden overflow-y-hidden bg-[var(--sidebar-top)] text-[var(--text-main)] overscroll-none">
+    {% with embed=request.GET.embed|default:'' %}
+    {% if embed == '1' %}
+      <main class="min-h-screen bg-[var(--bg-app)] px-4 py-4">
+    {% else %}
+    <div class="h-screen bg-[var(--bg-app)] lg:flex overflow-hidden">
+      {% if user.is_authenticated %}
+      <aside id="app-sidebar" class="relative flex w-full flex-col overflow-x-hidden border-b border-emerald-900/40 bg-gradient-to-b from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] text-white lg:sticky lg:top-0 lg:h-screen lg:w-[286px] lg:flex-none lg:shrink-0 lg:overflow-hidden lg:border-b-0 lg:pb-3">
+        <div class="border-b border-emerald-400/70 px-3 py-2 h-[62px] flex items-center justify-center">
+          <!-- Logo: no border/background (per request) -->
+          <a href="/dashboard/" id="sidebar-logo-wrap" class="inline-flex items-center justify-center">
+            <!-- Expanded logo -->
+            <img src="{% static 'img/rogajo-logo-exp.svg' %}" alt="Rogajo" class="logo-expanded h-[40px] w-auto" />
+            <!-- Collapsed icon -->
+            <img src="{% static 'img/rogajo-icon.png' %}" alt="Rogajo" class="logo-collapsed hidden h-[40px] w-[40px] object-contain" />
+          </a>
         </div>
+
+        <!-- Toggle button: stuck on the right border of the menu (as requested) -->
+        <button id="sidebar-toggle" type="button" class="hidden lg:inline-flex absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent shadow-none hover:bg-white/10" title="Recolher/Expandir menu" aria-label="Recolher/Expandir menu">
+          <!-- Chevron icon (requested: remove the hamburger icon) -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.5 18 8.5 12l6-6"/>
+          </svg>
+        </button>
+
+        <!-- Only the nav scrolls; keep the user card always visible (prevents it from being cut off) -->
+        <nav class="flex-1 min-h-0 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-1.5 text-[15px]">
+          <a href="/dashboard/" class="menu-item {% if request.path == '/dashboard/' %}menu-item-active{% endif %}">
+            <span class="menu-link">
+              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 12a8.5 8.5 0 1 0 17 0 8.5 8.5 0 0 0-17 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></svg>
+              <span class="menu-label">Dashboard</span>
+            </span>
+          </a>
+          <a href="/app/planejamento/" class="menu-item {% if '/app/planejamento/' in request.path %}menu-item-active{% endif %}">
+            <span class="menu-link">
+              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+              <span class="menu-label">Planejamentos</span>
+            </span>
+          </a>
+
+          <details class="rounded-lg collapsed-icons" {% if '/app/pedidos/' in request.path or '/app/faturamentos/' in request.path %}open{% endif %}>
+            <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10 {% if '/app/pedidos/' in request.path or '/app/faturamentos/' in request.path %}bg-white/10{% endif %}">
+              <span class="menu-link">
+                <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h15l-2 10H7L6 7Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 7 5 4H3"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/></svg>
+                <span class="menu-label">Compras</span>
+              </span>
+              <span class="caret text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+            </summary>
+            <div class="mt-1 space-y-1 pl-3 text-sm collapse-only">
+              <a href="/app/pedidos/" class="menu-item py-1.5 {% if '/app/pedidos/' in request.path %}menu-item-active{% endif %}" title="Pedido">
+                <span class="menu-link">
+                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2Z"/></svg>
+                  <span class="menu-label">Pedido</span>
+                </span>
+              </a>
+              <a href="/app/faturamentos/" class="menu-item py-1.5 {% if '/app/faturamentos/' in request.path %}menu-item-active{% endif %}" title="Faturamento">
+                <span class="menu-link">
+                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 0 1 2 2v14l-2-1-2 1-2-1-2 1-2-1-2 1V5a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 8h6M9 12h6M9 16h4"/></svg>
+                  <span class="menu-label">Faturamento</span>
+                </span>
+              </a>
+            </div>
+          </details>
+
+          <details class="rounded-lg collapsed-icons" {% if '/app/contas/' in request.path or '/app/financeiro/' in request.path %}open{% endif %}>
+            <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10 {% if '/app/contas/' in request.path or '/app/financeiro/' in request.path %}bg-white/10{% endif %}">
+              <span class="menu-link">
+                <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 20h17"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 16v-6"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V6"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 16v-9"/></svg>
+                <span class="menu-label">Financeiro</span>
+              </span>
+              <span class="caret text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+            </summary>
+            <div class="mt-1 space-y-1 pl-3 text-sm collapse-only">
+              <a href="/app/contas/" class="menu-item py-1.5 {% if '/app/contas/' in request.path %}menu-item-active{% endif %}" title="Faturas (Contas a Pagar)">
+                <span class="menu-link">
+                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 0 1 2 2v14H5V5a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h6"/></svg>
+                  <span class="menu-label">Faturas</span>
+                </span>
+              </a>
+            </div>
+          </details>
+
+          {% if user.is_superuser or user.role == 'ADMIN' %}
+            <details class="rounded-lg collapsed-icons" {% if '/app/safras/' in request.path or '/app/culturas/' in request.path or '/app/custos/' in request.path or '/app/categorias/' in request.path or '/app/unidades/' in request.path or '/app/formas-pagamento/' in request.path or '/app/operacoes/' in request.path or '/app/fornecedores/' in request.path or '/app/clientes/' in request.path or '/app/produtores/' in request.path or '/app/propriedades/' in request.path or '/app/produtos/' in request.path %}open{% endif %}>
+              <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10">
+                <span class="menu-link">
+                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 17h16"/></svg>
+                  <span class="menu-label">Cadastros</span>
+                </span>
+                <span class="caret text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+              </summary>
+
+              <div class="mt-1 space-y-1 pl-3 text-sm collapse-only">
+                <!-- Collapsed-only (compact icons) -->
+                <div class="cad-collapsed space-y-1">
+                  <a href="/app/safras/" class="menu-item py-1.5 {% if '/app/safras/' in request.path %}menu-item-active{% endif %}" title="Safra">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21c4.5-2.8 7-7.2 7-12.5C19 5.5 16.5 3 12 3S5 5.5 5 8.5C5 13.8 7.5 18.2 12 21Z"/></svg>
+                      <span class="menu-label">Safra</span>
+                    </span>
+                  </a>
+                  <a href="/app/culturas/" class="menu-item py-1.5 {% if '/app/culturas/' in request.path %}menu-item-active{% endif %}" title="Cultura">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21V10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 10c0-4 3-6 7-6 0 4-2 7-7 7Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 10c0-4-3-6-7-6 0 4 2 7 7 7Z"/></svg>
+                      <span class="menu-label">Cultura</span>
+                    </span>
+                  </a>
+                  <a href="/app/custos/" class="menu-item py-1.5 {% if '/app/custos/' in request.path %}menu-item-active{% endif %}" title="Custo">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 7.5c0-1.9-2.2-3.5-5-3.5s-5 1.6-5 3.5S9.2 11 12 11s5 1.6 5 3.5S14.8 18 12 18s-5-1.6-5-3.5"/></svg>
+                      <span class="menu-label">Custo</span>
+                    </span>
+                  </a>
+                  <a href="/app/categorias/" class="menu-item py-1.5 {% if '/app/categorias/' in request.path %}menu-item-active{% endif %}" title="Categoria">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 3 10 14"/></svg>
+                      <span class="menu-label">Categoria</span>
+                    </span>
+                  </a>
+                  <a href="/app/unidades/" class="menu-item py-1.5 {% if '/app/unidades/' in request.path %}menu-item-active{% endif %}" title="Unidade">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 7v10"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 7v10"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 7v10"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 7v10"/></svg>
+                      <span class="menu-label">Unidade</span>
+                    </span>
+                  </a>
+                  <a href="/app/formas-pagamento/" class="menu-item py-1.5 {% if '/app/formas-pagamento/' in request.path %}menu-item-active{% endif %}" title="Forma Pagamento">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18v10H3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 15h4"/></svg>
+                      <span class="menu-label">Pagamento</span>
+                    </span>
+                  </a>
+                  <a href="/app/operacoes/" class="menu-item py-1.5 {% if '/app/operacoes/' in request.path %}menu-item-active{% endif %}" title="Operacao">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 12h7"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 17h10"/></svg>
+                      <span class="menu-label">Operacao</span>
+                    </span>
+                  </a>
+                  <a href="/app/fornecedores/" class="menu-item py-1.5 {% if '/app/fornecedores/' in request.path %}menu-item-active{% endif %}" title="Fornecedor">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v10H3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4l3 3v4h-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M18.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg>
+                      <span class="menu-label">Fornecedor</span>
+                    </span>
+                  </a>
+                  <a href="/app/clientes/" class="menu-item py-1.5 {% if '/app/clientes/' in request.path %}menu-item-active{% endif %}" title="Cliente">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 0 0-16 0"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
+                      <span class="menu-label">Cliente</span>
+                    </span>
+                  </a>
+                  <a href="/app/produtores/" class="menu-item py-1.5 {% if '/app/produtores/' in request.path %}menu-item-active{% endif %}" title="Produtor">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 21a8 8 0 0 0-16 0"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
+                      <span class="menu-label">Produtor</span>
+                    </span>
+                  </a>
+                  <a href="/app/propriedades/" class="menu-item py-1.5 {% if '/app/propriedades/' in request.path %}menu-item-active{% endif %}" title="Propriedade">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s7-4.5 7-10a7 7 0 1 0-14 0c0 5.5 7 10 7 10Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+                      <span class="menu-label">Propriedade</span>
+                    </span>
+                  </a>
+                  <a href="/app/produtos/" class="menu-item py-1.5 {% if '/app/produtos/' in request.path %}menu-item-active{% endif %}" title="Produto">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8 12 3 3 8l9 5 9-5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 8v10l9 5 9-5V8"/></svg>
+                      <span class="menu-label">Produto</span>
+                    </span>
+                  </a>
+                  <a href="/app/licencas/vinculos/" class="menu-item py-1.5 {% if '/app/licencas/vinculos/' in request.path %}menu-item-active{% endif %}" title="Usuarios">
+                    <span class="menu-link">
+                      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21a6 6 0 0 0-12 0"/><path stroke-linecap="round" stroke-linejoin="round" d="M11 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 21a5 5 0 0 0-7-4.58"/></svg>
+                      <span class="menu-label">Usuarios</span>
+                    </span>
+                  </a>
+                </div>
+
+                <!-- Expanded-only (full tree) -->
+                <div class="cad-expanded space-y-1">
+                  <details class="rounded-lg" {% if '/app/safras/' in request.path or '/app/culturas/' in request.path or '/app/custos/' in request.path or '/app/categorias/' in request.path or '/app/unidades/' in request.path or '/app/formas-pagamento/' in request.path or '/app/operacoes/' in request.path %}open{% endif %}>
+                    <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-emerald-100 hover:bg-white/10">
+                      <span>Gerais</span>
+                      <span class="caret text-sm font-semibold leading-none text-emerald-200">&#9662;</span>
+                    </summary>
+                    <div class="mt-1 space-y-1 pl-3 text-sm">
+                      <a href="/app/safras/" class="menu-item py-1.5 {% if '/app/safras/' in request.path %}menu-item-active{% endif %}">Safra</a>
+                      <a href="/app/culturas/" class="menu-item py-1.5 {% if '/app/culturas/' in request.path %}menu-item-active{% endif %}">Cultura</a>
+                      <a href="/app/custos/" class="menu-item py-1.5 {% if '/app/custos/' in request.path %}menu-item-active{% endif %}">Custo</a>
+                      <a href="/app/categorias/" class="menu-item py-1.5 {% if '/app/categorias/' in request.path %}menu-item-active{% endif %}">Categoria</a>
+                      <a href="/app/unidades/" class="menu-item py-1.5 {% if '/app/unidades/' in request.path %}menu-item-active{% endif %}">Unidade</a>
+                      <a href="/app/formas-pagamento/" class="menu-item py-1.5 {% if '/app/formas-pagamento/' in request.path %}menu-item-active{% endif %}">Forma Pagamento</a>
+                      <a href="/app/operacoes/" class="menu-item py-1.5 {% if '/app/operacoes/' in request.path %}menu-item-active{% endif %}">Operacao</a>
+                    </div>
+                  </details>
+
+                  <details class="rounded-lg" {% if '/app/fornecedores/' in request.path or '/app/clientes/' in request.path or '/app/produtores/' in request.path or '/app/propriedades/' in request.path or '/app/produtos/' in request.path or '/app/licencas/vinculos/' in request.path %}open{% endif %}>
+                    <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-emerald-100 hover:bg-white/10">
+                      <span>Administrativo</span>
+                      <span class="caret text-sm font-semibold leading-none text-emerald-200">&#9662;</span>
+                    </summary>
+                    <div class="mt-1 space-y-1 pl-3 text-sm">
+                      <a href="/app/fornecedores/" class="menu-item py-1.5 {% if '/app/fornecedores/' in request.path %}menu-item-active{% endif %}">Fornecedor</a>
+                      <a href="/app/clientes/" class="menu-item py-1.5 {% if '/app/clientes/' in request.path %}menu-item-active{% endif %}">Cliente</a>
+                      <a href="/app/produtores/" class="menu-item py-1.5 {% if '/app/produtores/' in request.path %}menu-item-active{% endif %}">Produtor</a>
+                      <a href="/app/propriedades/" class="menu-item py-1.5 {% if '/app/propriedades/' in request.path %}menu-item-active{% endif %}">Propriedade</a>
+                      <a href="/app/produtos/" class="menu-item py-1.5 {% if '/app/produtos/' in request.path %}menu-item-active{% endif %}">Produto</a>
+                      <a href="/app/licencas/vinculos/" class="menu-item py-1.5 {% if '/app/licencas/vinculos/' in request.path %}menu-item-active{% endif %}">Usuarios</a>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </details>
+          {% endif %}
+
+          <details class="rounded-lg collapsed-icons" {% if '/app/cotacoes/' in request.path %}open{% endif %}>
+            <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10 {% if '/app/cotacoes/' in request.path %}bg-white/10{% endif %}">
+              <span class="menu-link">
+                <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16H4z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 16V8"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-5"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 16v-3"/></svg>
+                <span class="menu-label">Cotações</span>
+              </span>
+              <span class="caret text-base font-semibold leading-none text-emerald-200">&#9662;</span>
+            </summary>
+            <div class="mt-1 space-y-1 pl-3 text-sm collapse-only">
+              <a href="/app/cotacoes/" class="menu-item py-1.5 {% if '/app/cotacoes/' in request.path %}menu-item-active{% endif %}" title="Cotação de Preço">
+                <span class="menu-link">
+                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 17h10"/></svg>
+                  <span class="menu-label">Preco</span>
+                </span>
+              </a>
+            </div>
+          </details>
+
+          <a href="/app/backup/" class="menu-item {% if '/app/backup/' in request.path %}menu-item-active{% endif %}">
+            <span class="menu-link">
+              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v7"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5 12 10.5l3.5-3"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 14a8 8 0 0 0 16 0"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10"/></svg>
+              <span class="menu-label">Backup</span>
+            </span>
+          </a>
+
+          <a href="/app/licencas/" class="menu-item {% if '/app/licencas/' in request.path %}menu-item-active{% endif %}">
+            <span class="menu-link">
+              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6 11V8a6 6 0 0 1 12 0v3"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v10H6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v3"/></svg>
+              <span class="menu-label">Licenca</span>
+            </span>
+          </a>
+        </nav>
+
+        <!-- Frozen user card (like the sticky actions column) -->
+        <div id="sidebar-user-wrap" class="shrink-0 sticky bottom-6 z-20 px-3 pb-3 pt-2">
+          <div id="sidebar-user-card" class="rounded-xl bg-white/10 px-3 py-2.5">
+            <div class="mx-auto flex w-full flex-col items-center gap-2 text-center">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-emerald-950">{{ user.username|first|upper }}</span>
+              <div>
+                <p class="user-role text-sm font-semibold leading-tight">{{ user.get_effective_role_display }}</p>
+                <p class="user-name text-xs text-emerald-100/80">{{ user.username }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
       {% endif %}
-      {% block content %}{% endblock %}
-    </main>
-  </body>
+
+      <div class="flex-1 min-w-0 flex flex-col">
+        <header class="border-b border-emerald-900/40 bg-gradient-to-r from-[var(--sidebar-top)] via-[#001812] to-[var(--sidebar-bottom)] text-white">
+          <div class="flex h-[62px] items-center justify-between border-b border-emerald-400/70 px-8">
+            <h1 class="text-lg font-semibold">{% block top_title %}Painel Administrativo{% endblock %}</h1>
+            <div class="flex items-center gap-3">
+              {% if user.is_authenticated %}
+                <div class="hidden h-[42px] items-center gap-2 rounded-lg border border-emerald-200/40 bg-emerald-100/10 px-3 sm:flex">
+                  <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-emerald-950">{{ user.username|first|upper }}</span>
+                  <p class="text-sm font-semibold text-white">{{ user.username }}</p>
+                </div>
+                <a href="/accounts/logout/" class="inline-flex h-[42px] items-center rounded-lg border border-emerald-200/40 bg-white/10 px-4 text-sm font-medium text-white hover:bg-white/20">Sair</a>
+              {% else %}
+                <a href="/accounts/login/" class="rounded-lg border border-emerald-200/40 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20">Entrar</a>
+              {% endif %}
+            </div>
+          </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-6 py-3 lg:px-8 lg:py-3">
+    {% endif %}
+
+    {% if messages %}
+      <div class="mb-6 space-y-3" id="flash-messages">
+        {% for message in messages %}
+          <div data-flash-message class="rounded-xl border px-4 py-3 text-sm shadow-sm transition duration-300
+            {% if 'success' in message.tags %}
+              border-emerald-300 bg-emerald-50 text-emerald-900
+            {% elif 'error' in message.tags %}
+              border-red-300 bg-red-50 text-red-900
+            {% elif 'warning' in message.tags %}
+              border-amber-300 bg-amber-50 text-amber-900
+            {% else %}
+              border-sky-300 bg-sky-50 text-sky-900
+            {% endif %}
+          ">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+
+    {% if embed == '1' %}
+      </main>
+    {% else %}
+        </main>
+      </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- CRUD embed modal (used by "+" buttons inside fields) -->
+    <div id="crud-embed-modal" class="fixed inset-0 z-[1000] hidden">
+      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div class="relative mx-auto flex h-[min(84vh,860px)] w-[min(1100px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-white/10 bg-[#f7f8f9] shadow-2xl top-1/2 -translate-y-1/2">
+        <div class="flex items-center justify-between bg-[#062317] px-4 py-2.5 sm:px-5">
+          <p id="crud-embed-title" class="text-[18px] font-bold text-slate-100">Cadastro</p>
+          <button type="button" id="crud-embed-close" class="rounded-md border border-slate-100/30 bg-slate-100/10 px-2.5 py-1 text-[14px] font-normal text-slate-100 hover:bg-slate-100/20">Fechar</button>
+        </div>
+        <iframe id="crud-embed-iframe" title="Cadastro" class="w-full flex-1 bg-white" src="about:blank"></iframe>
+      </div>
+    </div>
+
+    <script>
+      (function(){
+        const btn = document.getElementById('sidebar-toggle');
+        if(!btn) return;
+        const key = 'sidebarCollapsed';
+        const logoExpanded = document.querySelector('#sidebar-logo-wrap .logo-expanded');
+        const logoCollapsed = document.querySelector('#sidebar-logo-wrap .logo-collapsed');
+        function setCollapsed(isCollapsed){
+          if(isCollapsed){
+            document.body.classList.add('sidebar-collapsed');
+            try{ localStorage.setItem(key,'1'); }catch(e){}
+            if(logoExpanded) logoExpanded.classList.add('hidden');
+            if(logoCollapsed) logoCollapsed.classList.remove('hidden');
+          } else {
+            document.body.classList.remove('sidebar-collapsed');
+            try{ localStorage.setItem(key,'0'); }catch(e){}
+            if(logoExpanded) logoExpanded.classList.remove('hidden');
+            if(logoCollapsed) logoCollapsed.classList.add('hidden');
+          }
+        }
+        // restore only on desktop/tablet (sidebar layout starts at >= 1024)
+        const isDesktop = window.matchMedia && window.matchMedia('(min-width: 1024px)').matches;
+        const isIpadLike = window.matchMedia && window.matchMedia('(min-width: 1024px) and (max-width: 1279px)').matches;
+        if(isDesktop){
+          let stored = null;
+          try{ stored = localStorage.getItem(key); }catch(e){}
+          if(stored === '1') {
+            setCollapsed(true);
+          } else if(stored === '0') {
+            setCollapsed(false);
+          } else if(isIpadLike) {
+            // Default collapsed on iPad-like resolutions (requested).
+            setCollapsed(true);
+          }
+        }
+        btn.addEventListener('click', function(){
+          setCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+        });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        // Auto-hide flash messages after 4 seconds (requested).
+        var msgs = document.querySelectorAll('[data-flash-message]');
+        if (!msgs || !msgs.length) return;
+
+        window.setTimeout(function () {
+          msgs.forEach(function (el) {
+            el.classList.add('opacity-0');
+            window.setTimeout(function () {
+              try { el.remove(); } catch (e) {}
+            }, 350);
+          });
+        }, 4000);
+      })();
+    </script>
+
+    <script>
+    (function () {
+      // ------------------------------
+      // Cadastro rapido (popup) helpers
+      // ------------------------------
+      function openCrudEmbed(url, selectId, titleText) {
+        if (!url) return;
+        var u = new URL(url, window.location.origin);
+        u.searchParams.set('embed', '1');
+        u.searchParams.set('popup', '1');
+        if (selectId) u.searchParams.set('select', selectId);
+
+        var modal = document.getElementById('crud-embed-modal');
+        var iframe = document.getElementById('crud-embed-iframe');
+        var title = document.getElementById('crud-embed-title');
+        if (!modal || !iframe) return;
+
+        if (title && titleText) title.textContent = titleText;
+        iframe.src = u.toString();
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeCrudEmbed() {
+        var modal = document.getElementById('crud-embed-modal');
+        var iframe = document.getElementById('crud-embed-iframe');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        if (iframe) iframe.src = 'about:blank';
+        document.body.style.overflow = '';
+      }
+
+      // Click handler for "+" inside select/input groups.
+      document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-crud-popup-url]') : null;
+        if (!btn) return;
+        e.preventDefault();
+
+        var group = btn.closest('.has-inner-btn');
+        var field = group ? (group.querySelector('select, input') || null) : null;
+        var selectId = field && field.id ? field.id : '';
+        var lbl = '';
+        try {
+          var labelEl = group && group.parentElement ? group.parentElement.querySelector('label') : null;
+          lbl = labelEl ? labelEl.textContent.trim() : '';
+        } catch (err) {}
+        openCrudEmbed(btn.getAttribute('data-crud-popup-url'), selectId, lbl ? ('Cadastrar ' + lbl) : 'Cadastro');
+      });
+
+      // Close handlers for embed modal
+      document.addEventListener('click', function (e) {
+        var modal = document.getElementById('crud-embed-modal');
+        if (!modal || modal.classList.contains('hidden')) return;
+
+        if (e.target && e.target.id === 'crud-embed-close') {
+          e.preventDefault();
+          closeCrudEmbed();
+          return;
+        }
+
+        // click backdrop
+        var backdrop = modal.firstElementChild;
+        if (e.target === backdrop) {
+          closeCrudEmbed();
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var modal = document.getElementById('crud-embed-modal');
+        if (modal && !modal.classList.contains('hidden')) closeCrudEmbed();
+      });
+
+      // Listen to popup saved events and refresh selects on the current page.
+      window.addEventListener('message', function (event) {
+        var data = event && event.data ? event.data : null;
+        if (!data || data.type !== 'crud:saved') return;
+
+        // Optional: select the newly created item back in the triggering select.
+        if (data.select && data.id) {
+          var el = document.getElementById(data.select);
+          if (el) {
+            try { el.value = String(data.id); } catch (e) {}
+          }
+        }
+
+        if (typeof window.__crudRefreshAllSelects === 'function') {
+          try { window.__crudRefreshAllSelects(); } catch (e) {}
+        }
+
+        // Close embed modal after saving
+        closeCrudEmbed();
+      });
+
+      function digits(value) {
+        return (value || '').replace(/\D/g, '');
+      }
+
+      function formatCPF(value) {
+        const v = digits(value).slice(0, 11);
+        if (v.length <= 3) return v;
+        if (v.length <= 6) return v.slice(0, 3) + '.' + v.slice(3);
+        if (v.length <= 9) return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6);
+        return v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
+      }
+
+      function formatCNPJ(value) {
+        const v = digits(value).slice(0, 14);
+        if (v.length <= 2) return v;
+        if (v.length <= 5) return v.slice(0, 2) + '.' + v.slice(2);
+        if (v.length <= 8) return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5);
+        if (v.length <= 12) return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8);
+        return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8, 12) + '-' + v.slice(12);
+      }
+
+      function formatCEP(value) {
+        const v = digits(value).slice(0, 8);
+        if (v.length <= 5) return v;
+        return v.slice(0, 5) + '-' + v.slice(5);
+      }
+
+      function formatContato(value) {
+        const v = digits(value).slice(0, 11);
+        if (v.length <= 2) return v;
+        if (v.length <= 6) return '(' + v.slice(0, 2) + ') ' + v.slice(2);
+        if (v.length <= 10) return '(' + v.slice(0, 2) + ') ' + v.slice(2, 6) + '-' + v.slice(6);
+        return '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+      }
+
+      function formatByMask(value, mask) {
+        if (mask === 'cpf') return formatCPF(value);
+        if (mask === 'cnpj') return formatCNPJ(value);
+        if (mask === 'cep') return formatCEP(value);
+        if (mask === 'contato') return formatContato(value);
+        if (mask === 'cpf_cnpj') {
+          const only = digits(value);
+          return only.length <= 11 ? formatCPF(only) : formatCNPJ(only);
+        }
+        return value;
+      }
+
+      function bindMask(input) {
+        const mask = input.getAttribute('data-mask');
+        if (!mask) return;
+
+        const apply = function () {
+          input.value = formatByMask(input.value, mask);
+        };
+
+        input.addEventListener('input', apply);
+        input.addEventListener('blur', apply);
+        apply();
+      }
+
+      function removeAccents(value) {
+        return (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      }
+
+      function capitalizeWords(value) {
+        return (value || '').split(' ').map(function (part) {
+          if (!part) return '';
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        }).join(' ');
+      }
+
+      function bindNormalizer(input) {
+        const apply = function () {
+          input.value = capitalizeWords(removeAccents(input.value));
+        };
+
+        input.addEventListener('input', apply);
+        input.addEventListener('blur', apply);
+        apply();
+      }
+
+      function formatThousands(numberStr) {
+        const clean = (numberStr || '').replace(/^0+(\d)/, '$1');
+        if (!clean) return '0';
+        return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      }
+
+      function formatDecimalBR(value, decimals) {
+        const raw = (value || '').toString().trim();
+        if (!raw) return '';
+
+        if (decimals > 0) {
+          // If backend rendered using "." as decimal separator (e.g. "3.50000000"),
+          // normalize it instead of treating "." as thousands separator.
+          if (!raw.includes(',') && raw.includes('.')) {
+            const dotCount = (raw.match(/\./g) || []).length;
+            const simpleDotDecimal = dotCount === 1 && /^\d+\.\d+$/.test(raw);
+            if (simpleDotDecimal) {
+              const partsDot = raw.split('.');
+              const intPartDot = (partsDot[0] || '').replace(/\D/g, '') || '0';
+              const decPartDot = ((partsDot[1] || '').replace(/\D/g, '')).slice(0, decimals).padEnd(decimals, '0');
+              return formatThousands(intPartDot) + ',' + decPartDot;
+            }
+          }
+
+          if (raw.includes(',')) {
+            const parts = raw.split(',');
+            const intPart = (parts[0] || '').replace(/\D/g, '') || '0';
+            const decPart = ((parts[1] || '').replace(/\D/g, '')).slice(0, decimals).padEnd(decimals, '0');
+            return formatThousands(intPart) + ',' + decPart;
+          }
+
+          const intPart = raw.replace(/\D/g, '') || '0';
+          return formatThousands(intPart) + ',' + '0'.repeat(decimals);
+        }
+
+        const intPart = raw.replace(/\D/g, '') || '0';
+        return formatThousands(intPart);
+      }
+
+      function bindDecimalInput(input) {
+        if (input.dataset.decimalBound === '1') return;
+        input.dataset.decimalBound = '1';
+
+        const decimals = parseInt(input.getAttribute('data-decimals') || '2', 10);
+
+        // While typing: keep only digits and an optional comma, without padding/auto-zeros.
+        // On blur: apply full PT-BR formatting (thousands + decimal padding).
+        const onInput = function () {
+          let raw = (input.value || '').toString();
+          raw = raw.replace(/[^\d,]/g, '');
+
+          const parts = raw.split(',');
+          const intPart = (parts[0] || '').replace(/^0+(\d)/, '$1');
+
+          if (decimals <= 0) {
+            input.value = intPart;
+            return;
+          }
+
+          let decPart = parts.length > 1 ? (parts[1] || '') : '';
+          decPart = decPart.replace(/[^\d]/g, '').slice(0, decimals);
+
+          if (parts.length > 1) {
+            input.value = intPart + ',' + decPart;
+          } else {
+            input.value = intPart;
+          }
+        };
+
+        const onBlur = function () {
+          input.value = formatDecimalBR(input.value, decimals);
+        };
+
+        input.addEventListener('input', onInput);
+        input.addEventListener('blur', onBlur);
+        onBlur();
+      }
+
+      function convertDecimalForSubmit(input) {
+        const decimals = parseInt(input.getAttribute('data-decimals') || '2', 10);
+        const raw = (input.value || '').trim();
+        if (!raw) return;
+
+        if (decimals > 0) {
+          input.value = raw.replace(/\./g, '').replace(',', '.');
+        } else {
+          input.value = raw.replace(/\./g, '');
+        }
+      }
+
+      function bindDecimalSubmitOnForm(form) {
+        if (form.dataset.decimalSubmitBound === '1') return;
+        form.dataset.decimalSubmitBound = '1';
+
+        form.addEventListener('submit', function () {
+          form.querySelectorAll('input[data-decimal-br="1"]').forEach(convertDecimalForSubmit);
+        });
+      }
+
+      function initMasks(root) {
+        (root || document).querySelectorAll('input[data-mask]').forEach(bindMask);
+      }
+
+      function initNormalizers(root) {
+        (root || document).querySelectorAll('input[data-normalize="text"], textarea[data-normalize="text"]').forEach(bindNormalizer);
+      }
+
+      function initDecimalMasks(root) {
+        const scope = root || document;
+        scope.querySelectorAll('input[data-decimal-br="1"]').forEach(bindDecimalInput);
+
+        if (scope.tagName === 'FORM') {
+          bindDecimalSubmitOnForm(scope);
+        } else {
+          scope.querySelectorAll('form').forEach(bindDecimalSubmitOnForm);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        // Responsive pagination (server reads cookie "per_page")
+        // 1024x768 -> 7 items; 1440x900 -> 8 items; larger -> 10 items
+        (function syncPerPageCookie() {
+          try {
+            const w = window.innerWidth || screen.width || 0;
+            const h = window.innerHeight || screen.height || 0;
+            let perPage = 10;
+            if (w <= 1100) perPage = 7;
+            else if (w <= 1600 || h <= 950) perPage = 8;
+
+            const m = document.cookie.match(/(?:^|; )per_page=(\d+)/);
+            const current = m ? m[1] : '';
+            if (current !== String(perPage)) {
+              document.cookie = `per_page=${perPage}; path=/; SameSite=Lax`;
+              // Apply immediately on first visit for this viewport size.
+              if (window.sessionStorage && !sessionStorage.getItem('per_page_reloaded')) {
+                sessionStorage.setItem('per_page_reloaded', '1');
+                window.location.reload();
+                return;
+              }
+            }
+            if (window.sessionStorage) sessionStorage.removeItem('per_page_reloaded');
+          } catch (e) {
+            // no-op
+          }
+        })();
+
+        initMasks(document);
+        initNormalizers(document);
+        initDecimalMasks(document);
+      });
+
+      window.initInputMasks = initMasks;
+      window.initInputNormalizers = initNormalizers;
+      window.initDecimalMasks = initDecimalMasks;
+    })();
+  </script>
+
+</body>
 </html>
+
+
+
+

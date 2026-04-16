@@ -1,12 +1,68 @@
-﻿{% extends 'base.html' %}
+﻿{% extends "base.html" %}
+{% load core_extras %}
+
 {% block title %}Renovar Licenca | ERP Compras{% endblock %}
+
 {% block content %}
-<div class="mx-auto max-w-2xl rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
-  <h1 class="text-2xl font-black">Renovar Licenca</h1>
-  <p class="mt-2 text-slate-300">Finalize a assinatura para manter o acesso do cliente ativo.</p>
-  <form method="post" class="mt-6">
+<div class="mx-auto max-w-3xl rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
+  <h1 class="text-[18px] font-bold text-white">Renovar Licenca</h1>
+  {% if setup_error %}
+  <div class="mt-4 rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-[14px] font-normal text-amber-100">{{ setup_error }}</div>
+{% endif %}
+
+  <p class="mt-2 text-[14px] font-normal text-slate-300">Escolha o periodo e finalize no Stripe. Suporte e atualizacoes ja estao incluidos na licenca.</p>
+
+  <div class="mt-4 grid gap-3 md:grid-cols-2">
+    <label class="cursor-pointer rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-slate-100 hover:bg-slate-950/60">
+      <div class="flex items-start gap-3">
+        <input type="radio" name="periodo_pick" value="semestral" class="mt-1" checked>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <div class="text-[18px] font-bold">Semestral</div>
+            <div class="text-[18px] font-bold text-emerald-300">R$ {{ valor_semestral|decimal_br:2 }}</div>
+          </div>
+          <div class="mt-1 text-[14px] font-normal text-slate-300">Equivale a 6 meses (29% do salario minimo vigente por mes).</div>
+          <div class="mt-1 text-[14px] font-normal text-slate-400">Mensal base: R$ {{ valor_mensal|decimal_br:2 }}</div>
+        </div>
+      </div>
+    </label>
+
+    <label class="cursor-pointer rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-slate-100 hover:bg-slate-950/60">
+      <div class="flex items-start gap-3">
+        <input type="radio" name="periodo_pick" value="anual" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <div class="text-[18px] font-bold">Anual</div>
+            <div class="text-[18px] font-bold text-emerald-300">R$ {{ valor_anual|decimal_br:2 }}</div>
+          </div>
+          <div class="mt-1 text-[14px] font-normal text-slate-300">12 meses com 8% de desconto.</div>
+          <div class="mt-1 text-[14px] font-normal text-slate-400">Mensal base: R$ {{ valor_mensal|decimal_br:2 }}</div>
+        </div>
+      </div>
+    </label>
+  </div>
+
+  <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950/30 p-4 text-slate-200">
+    <div class="text-[14px] font-bold">Melhorias (fora da licenca)</div>
+    <div class="mt-1 text-[14px] font-normal text-slate-300">Hora tecnica: <span class="font-bold text-white">R$ 120,00</span> (minimo <span class="font-bold text-white">4 horas</span>).</div>
+  </div>
+
+  <form method="post" class="mt-6 flex flex-wrap items-center gap-3">
     {% csrf_token %}
-    <button type="submit" class="rounded-lg bg-emerald-400 px-5 py-3 font-bold text-slate-900">Ir para checkout Stripe</button>
+    <input type="hidden" name="periodo" id="periodo" value="semestral">
+    <button type="submit" {% if not checkout_enabled %}disabled{% endif %} class="rounded-lg bg-emerald-400 px-5 py-3 text-[14px] font-bold text-slate-900 {% if not checkout_enabled %}opacity-60 cursor-not-allowed{% endif %}">{% if checkout_enabled %}Ir para checkout Stripe{% else %}Checkout indisponivel{% endif %}</button>
+    <a href="/app/licencas/" class="rounded-lg border border-slate-500 px-5 py-3 text-[14px] font-bold text-slate-100 hover:bg-slate-800/40">Voltar</a>
   </form>
 </div>
+
+<script>
+(function(){
+  const hidden = document.getElementById('periodo');
+  document.addEventListener('change', function(e){
+    const r = e.target && e.target.name === 'periodo_pick' ? e.target : null;
+    if(!r) return;
+    hidden.value = r.value;
+  });
+})();
+</script>
 {% endblock %}

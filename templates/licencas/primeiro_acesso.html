@@ -1,0 +1,115 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Primeiro Acesso | Rogajo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+        --brand-900: #1f5f3a;
+        --brand-800: #236b43;
+        --brand-500: #37a457;
+        --brand-300: #64d26f;
+      }
+          body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
+      .ui-title { font-size: 18px; font-weight: 700; }
+      .ui-text { font-size: 14px; font-weight: 400; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-[#010707] text-white">
+    <main class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(100,210,111,0.25),transparent_35%),radial-gradient(circle_at_85%_75%,rgba(35,107,67,0.22),transparent_30%),linear-gradient(120deg,#010707_10%,#143f29_60%,#010707_100%)]"></div>
+
+      <div class="relative w-full max-w-2xl">
+        <div class="mb-6 text-center">
+          <div class="mx-auto inline-flex p-1">
+            <img src="{% static 'img/rogajo-logo-exp.svg' %}" alt="Rogajo" class="h-14 w-auto" />
+          </div>
+          <p class="mt-3 text-sm text-[var(--brand-300)]">
+            <a href="/" class="hover:underline">Voltar para a landing page</a>
+            <span class="mx-2 text-white/25">|</span>
+            <a href="/accounts/login/" class="hover:underline">Ir para o login</a>
+          </p>
+        </div>
+
+        <div class="rounded-3xl border border-white/15 bg-white/10 p-8 shadow-2xl backdrop-blur">
+          <h1 class="text-[18px] font-bold">Ativar licenca (primeiro acesso)</h1>
+          <p class="mt-2 text-[14px] font-normal text-slate-200">
+            Preencha os dados para criar sua licenca e seguir para o pagamento.
+          </p>
+
+          <form method="post" class="mt-6 space-y-4">
+            {% csrf_token %}
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-[14px] font-normal text-slate-200">Cliente</label>
+                {{ form.cliente }}
+                {% if form.cliente.errors %}<div class="mt-1 text-sm text-red-200">{{ form.cliente.errors|striptags }}</div>{% endif %}
+              </div>
+              <div>
+                <label class="mb-1 block text-[14px] font-normal text-slate-200">CPF/CNPJ</label>
+                {{ form.cpf_cnpj }}
+                {% if form.cpf_cnpj.errors %}<div class="mt-1 text-sm text-red-200">{{ form.cpf_cnpj.errors|striptags }}</div>{% endif %}
+              </div>
+              <div>
+                <label class="mb-1 block text-[14px] font-normal text-slate-200">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="mt-1 text-sm text-red-200">{{ form.email.errors|striptags }}</div>{% endif %}
+              </div>
+              <div>
+                <label class="mb-1 block text-[14px] font-normal text-slate-200">Contato</label>
+                {{ form.contato }}
+                {% if form.contato.errors %}<div class="mt-1 text-sm text-red-200">{{ form.contato.errors|striptags }}</div>{% endif %}
+              </div>
+
+              {% if modo_publico %}
+                <div>
+                  <label class="mb-1 block text-[14px] font-normal text-slate-200">Usuario</label>
+                  {{ form.username }}
+                  {% if form.username.errors %}<div class="mt-1 text-sm text-red-200">{{ form.username.errors|striptags }}</div>{% endif %}
+                </div>
+                <div>
+                  <label class="mb-1 block text-[14px] font-normal text-slate-200">Senha</label>
+                  {{ form.password1 }}
+                  {% if form.password1.errors %}<div class="mt-1 text-sm text-red-200">{{ form.password1.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="md:col-span-2">
+                  <label class="mb-1 block text-[14px] font-normal text-slate-200">Confirmar senha</label>
+                  {{ form.password2 }}
+                  {% if form.password2.errors %}<div class="mt-1 text-sm text-red-200">{{ form.password2.errors|striptags }}</div>{% endif %}
+                </div>
+              {% endif %}
+            </div>
+
+            {% if form.non_field_errors %}
+              <div class="rounded-lg border border-red-300/40 bg-red-500/20 px-3 py-2 text-sm text-red-100">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button type="submit" class="rounded-xl bg-[var(--brand-300)] px-6 py-3 text-[14px] font-bold text-[#10301e] transition hover:-translate-y-0.5 hover:bg-[#79df83]">
+                Continuar
+              </button>
+              <a href="/accounts/login/" class="rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/10">Cancelar</a>
+            </div>
+
+            {% if modo_publico %}
+              <p class="pt-2 text-xs text-white/50">
+                Ao continuar, criaremos seu usuario (perfil Cliente/Supervisor) e sua licenca.
+              </p>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
+

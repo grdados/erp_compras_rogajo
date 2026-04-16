@@ -1,0 +1,76 @@
+{% load core_extras %}
+<div class="space-y-4 text-[14px]">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="space-y-1">
+      <div class="text-slate-500">Planejamento</div>
+      <div class="text-[18px] font-bold text-slate-900">#{{ object.id }}</div>
+    </div>
+    <div class="space-y-1 text-right">
+      <div class="text-slate-500">Valor Total</div>
+      <div class="text-[18px] font-bold text-slate-900">{{ object.valor_total|decimal_br:2 }}</div>
+    </div>
+  </div>
+
+  <div class="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <div class="text-slate-500">Data</div>
+      <div class="font-semibold text-slate-900">{{ object.data|date:"d/m/Y" }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Safra</div>
+      <div class="font-semibold text-slate-900">{{ object.safra.safra }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Custo</div>
+      <div class="font-semibold text-slate-900">{{ object.custo.nome }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Cliente</div>
+      <div class="font-semibold text-slate-900">{{ object.cliente.cliente }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Vencimento</div>
+      <div class="font-semibold text-slate-900">{{ object.vencimento|date:"d/m/Y" }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Preco Produto</div>
+      <div class="font-semibold text-slate-900">{{ object.preco_produto|decimal_br:5 }}</div>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-4">
+    <div class="mb-3 text-[16px] font-bold text-slate-900">Itens</div>
+    <div class="overflow-x-auto rounded-lg border border-slate-200">
+      <table class="w-full text-left text-[14px] whitespace-nowrap">
+        <thead class="bg-[#F1F3F4] text-slate-800">
+          <tr class="border-b border-slate-200">
+            <th class="px-3 py-2 font-normal">Area HA</th>
+            <th class="px-3 py-2 font-normal">Produto</th>
+            <th class="px-3 py-2 font-normal">Unidade</th>
+            <th class="px-3 py-2 font-normal">Quantidade</th>
+            <th class="px-3 py-2 font-normal">Preco</th>
+            <th class="px-3 py-2 font-normal">Desconto</th>
+            <th class="px-3 py-2 font-normal">Total</th>
+            <th class="px-3 py-2 font-normal">Custo HA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in object.itens.all %}
+            <tr class="border-t border-slate-200">
+              <td class="px-3 py-2.5 text-slate-700">{{ it.area_ha|decimal_br:2 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{% if it.produto_cadastro %}{{ it.produto_cadastro.nome }}{% else %}{{ it.produto }}{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.unidade }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.quantidade|decimal_br:3 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.preco|decimal_br:5 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.desconto|decimal_br:2 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.total_item|decimal_br:2 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.custo_ha|decimal_br:2 }}</td>
+            </tr>
+          {% empty %}
+            <tr><td class="px-3 py-6 text-center text-slate-400" colspan="8">Sem itens.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

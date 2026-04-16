@@ -1,0 +1,88 @@
+{% load core_extras %}
+<div class="space-y-4 text-[14px]">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="space-y-1">
+      <div class="text-slate-500">Pedido</div>
+      <div class="text-[18px] font-bold text-slate-900">{{ pedido.pedido }}</div>
+    </div>
+    <div class="space-y-1">
+      <div class="text-slate-500">Status</div>
+      {% with st=pedido.status %}
+        {% if st == 'ENTREGUE' or st == 'PG_ENTREGUE' %}
+          <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900">{{ pedido.get_status_display }}</span>
+        {% elif st == 'PARCIAL' or st == 'PG_PARCIAL' %}
+          <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">{{ pedido.get_status_display }}</span>
+        {% else %}
+          <span class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900">{{ pedido.get_status_display }}</span>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <div class="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <div class="text-slate-500">Data</div>
+      <div class="font-semibold text-slate-900">{{ pedido.data|date:"d/m/Y" }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Safra</div>
+      <div class="font-semibold text-slate-900">{% if pedido.safra %}{{ pedido.safra.safra }}{% else %}-{% endif %}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Cliente</div>
+      <div class="font-semibold text-slate-900">{{ pedido.cliente }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Produtor</div>
+      <div class="font-semibold text-slate-900">{{ pedido.produtor.produtor }}{% if pedido.produtor.fazenda %} - {{ pedido.produtor.fazenda }}{% endif %}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Vencimento</div>
+      <div class="font-semibold text-slate-900">{{ pedido.vencimento|date:"d/m/Y" }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Saldo</div>
+      <div class="font-semibold text-slate-900">{{ pedido.saldo_faturar|decimal_br:2 }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Valor Total</div>
+      <div class="font-semibold text-slate-900">{{ pedido.valor_total|decimal_br:2 }}</div>
+    </div>
+    <div>
+      <div class="text-slate-500">Pedido Pago</div>
+      <div class="font-semibold text-slate-900">{% if pedido.pedido_pago %}Sim{% else %}Nao{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-4">
+    <div class="mb-3 text-[16px] font-bold text-slate-900">Produtos</div>
+    <div class="overflow-x-auto rounded-lg border border-slate-200">
+      <table class="w-full text-left text-[14px]">
+        <thead class="bg-[#F1F3F4] text-slate-800">
+          <tr class="border-b border-slate-200">
+            <th class="px-3 py-2 font-normal">Produto</th>
+            <th class="px-3 py-2 font-normal">Unidade</th>
+            <th class="px-3 py-2 font-normal">Quantidade</th>
+            <th class="px-3 py-2 font-normal">Preco</th>
+            <th class="px-3 py-2 font-normal">Desconto</th>
+            <th class="px-3 py-2 font-normal">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in itens %}
+            <tr class="border-t border-slate-200">
+              <td class="px-3 py-2.5 text-slate-700">{% if it.produto_cadastro %}{{ it.produto_cadastro.nome }}{% else %}{{ it.produto }}{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.unidade }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.quantidade|decimal_br:0 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.preco|decimal_br:5 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.desconto|decimal_br:2 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ it.total_item|decimal_br:2 }}</td>
+            </tr>
+          {% empty %}
+            <tr><td class="px-3 py-6 text-center text-slate-400" colspan="6">Sem itens.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

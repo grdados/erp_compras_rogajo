@@ -1,12 +1,12 @@
 ﻿from django.shortcuts import redirect
 from django.urls import reverse
 
-from cadastros.models import PerfilUsuarioCliente
-
-from .models import Licenca
+from .models import Licenca, PerfilUsuarioLicenca
 
 
 class LicencaAtivaMiddleware:
+    # Permitimos o acesso ao painel de licencas mesmo expirado/inadimplente
+    # para o usuario conseguir ver o status e renovar sem ficar preso em redirect.
     EXEMPT_PREFIXES = (
         '/admin/',
         '/accounts/login',
@@ -14,6 +14,8 @@ class LicencaAtivaMiddleware:
         '/licencas/renovar',
         '/licencas/checkout/',
         '/licencas/webhook/',
+        '/licencas/primeiro-acesso/',
+        '/app/licencas/',
         '/static/',
         '/media/',
     )
@@ -25,21 +27,18 @@ class LicencaAtivaMiddleware:
         if not request.user.is_authenticated:
             return self.get_response(request)
 
-        if request.user.role == 'ADMIN':
+        if getattr(request.user, 'effective_role', '') == 'ADMIN':
             return self.get_response(request)
 
         if request.path == reverse('core:landing_page') or request.path.startswith(self.EXEMPT_PREFIXES):
             return self.get_response(request)
 
-        perfil = PerfilUsuarioCliente.objects.select_related('cliente').filter(usuario=request.user).first()
-        cliente = perfil.cliente if perfil else None
-        if not cliente:
-            return redirect('core:landing_page')
+        perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
+        licenca = perfil.licenca if perfil else None
+        if not licenca:
+            return redirect('licencas:primeiro_acesso')
 
-        licenca = Licenca.licenca_vigente_cliente(cliente)
-        if not licenca or not licenca.esta_vigente:
-            if request.path.startswith('/dashboard'):
-                return redirect('licencas:renovar')
+        if not licenca.esta_vigente:
             return redirect('licencas:renovar')
 
         return self.get_response(request)

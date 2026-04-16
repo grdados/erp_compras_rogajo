@@ -22,8 +22,8 @@ class PedidoCompraItemInline(admin.TabularInline):
 
 @admin.register(PedidoCompra)
 class PedidoCompraAdmin(admin.ModelAdmin):
-    list_display = ('pedido', 'data', 'cliente', 'produtor', 'custo', 'vencimento', 'valor_total')
-    list_filter = ('cliente', 'produtor')
+    list_display = ('pedido', 'data', 'cliente', 'produtor', 'vencimento', 'valor_total', 'saldo_faturar', 'status', 'pedido_pago')
+    list_filter = ('cliente', 'produtor', 'status', 'pedido_pago')
     search_fields = ('pedido',)
     inlines = [PedidoCompraItemInline]
 

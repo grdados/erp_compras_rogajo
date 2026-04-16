@@ -1,0 +1,52 @@
+{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Planejamento - Analitico{% endblock %}
+{% block header_title %}Planejamento - Analitico{% endblock %}
+
+{% block content %}
+  {% for pl in planejamentos %}
+    <div class="rpt-box p-2 mb-2">
+      <table class="w-full" style="border-collapse:collapse; table-layout:fixed;">
+        <tr>
+          <td style="width:80%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <strong>#{{ pl.id }}</strong> | {{ pl.cliente.cliente }} | {{ pl.safra.safra }} | {{ pl.custo.nome }} | {{ pl.data|date:'d/m/Y' }}
+          </td>
+          <td style="width:20%; white-space:nowrap;" class="rpt-right"><strong>Total:</strong> {{ pl.valor_total|decimal_br:2 }}</td>
+        </tr>
+      </table>
+
+      <div class="mt-1 overflow-x-auto rounded-md border border-slate-300 p-0">
+        <table class="rpt-table rpt-small" style="table-layout:fixed;">
+          <thead>
+            <tr>
+              <th style="width:10%;">Area</th>
+              <th style="width:32%;">Produto</th>
+              <th style="width:12%;">Unidade</th>
+              <th style="width:12%;" class="rpt-right">Qtd</th>
+              <th style="width:12%;" class="rpt-right">Preco</th>
+              <th style="width:10%;" class="rpt-right">Desc</th>
+              <th style="width:12%;" class="rpt-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in pl.itens.all %}
+              <tr>
+                <td>{{ it.area_ha|decimal_br:2 }}</td>
+                <td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{% if it.produto_cadastro %}{{ it.produto_cadastro.nome }}{% else %}{{ it.produto }}{% endif %}</td>
+                <td>{{ it.unidade }}</td>
+                <td class="rpt-right">{{ it.quantidade|decimal_br:3 }}</td>
+                <td class="rpt-right">{{ it.preco|decimal_br:5 }}</td>
+                <td class="rpt-right">{{ it.desconto|decimal_br:2 }}</td>
+                <td class="rpt-right">{{ it.total_item|decimal_br:2 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="rpt-muted">Sem itens.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% empty %}
+    <div class="rpt-box rpt-total p-2">Sem registros.</div>
+  {% endfor %}
+{% endblock %}

@@ -1,29 +1,395 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
+{% load core_extras %}
 {% block title %}Dashboard | ERP Compras{% endblock %}
+{% block top_title %}Dashboard{% endblock %}
 {% block content %}
-<section class="space-y-6">
-  <div>
-    <p class="text-sm uppercase tracking-wider text-emerald-300">{{ role_display }}</p>
-    <h1 class="mt-2 text-3xl font-black sm:text-4xl">{{ titulo }}</h1>
-    <p class="mt-2 text-slate-300">{{ subtitulo }}</p>
+<section class="space-y-5 text-[14px] font-normal">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 class="text-[18px] font-bold text-slate-900">Dashboard</h2>
+      <p class="text-slate-600">Gestao de Compras - pedidos e faturamentos</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <a target="_blank" href="{% url 'core:dashboard_report_economia' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+        <span class="inline-flex h-5 w-5 items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2Z"/></svg>
+        </span>
+        <span>Relatorio economia</span>
+      </a>
+      <button id="toggle-filtros-dash" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100" aria-expanded="false">
+        <span class="inline-flex h-5 w-5 items-center justify-center">
+          <svg id="icon-eye-open-dash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="icon-eye-closed-dash" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="hidden h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.58 10.58A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A9.8 9.8 0 0 1 12 4.5c6 0 9.75 7.5 9.75 7.5a18.3 18.3 0 0 1-3.02 4.14"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.14 6.14A18.4 18.4 0 0 0 2.25 12S6 19.5 12 19.5c1.05 0 2.02-.18 2.91-.51"/></svg>
+        </span>
+        <span>Filtros</span>
+      </button>
+    </div>
   </div>
 
-  {% if licenca %}
-  <div class="rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
-    <p class="text-sm text-slate-300">Status da Licenca</p>
-    <p class="mt-1 text-xl font-bold">{{ licenca.get_status_display }}</p>
-    <p class="mt-1 text-sm text-slate-300">Validade: {{ licenca.fim_vigencia|default:'Nao definida' }}</p>
-    <a href="/licencas/renovar/" class="mt-4 inline-flex rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-900">Renovar licenca</a>
-  </div>
+  {% if licenca and not licenca.esta_vigente %}
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+      <div class="font-bold">Licenca nao vigente</div>
+      <div class="text-slate-700">Acesse <a class="underline" href="/licencas/renovar/">Licenca</a> para renovar e liberar o sistema.</div>
+    </div>
   {% endif %}
 
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for card in cards %}
-      <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
-        <p class="text-sm text-slate-300">{{ card.label }}</p>
-        <p class="mt-3 text-2xl font-black">{{ card.value }}</p>
-      </article>
-    {% endfor %}
+  <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <!-- Safra sempre visível (o cliente sempre sabe qual safra está analisando) -->
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-900/20 bg-emerald-50 px-3 py-2">
+      <div class="flex items-center gap-3">
+        <span class="relative inline-flex h-3 w-3">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span>
+        </span>
+        <div class="text-slate-800">
+          <span class="font-bold">Safra:</span>
+          <span class="font-bold text-slate-900">{% if safra_obj %}{{ safra_obj.safra }}{% else %}Todas{% endif %}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-slate-600">Trocar</label>
+        <form method="get" class="flex items-center gap-2">
+          <input type="hidden" name="show_filters" value="1" />
+          {% if filtro_cultura %}<input type="hidden" name="cultura" value="{{ filtro_cultura }}" />{% endif %}
+          {% if filtro_categoria %}<input type="hidden" name="categoria" value="{{ filtro_categoria }}" />{% endif %}
+          {% if filtro_cliente %}<input type="hidden" name="cliente" value="{{ filtro_cliente }}" />{% endif %}
+          <select name="safra" class="rounded-md border border-slate-300 bg-white px-3 py-2">
+            <option value="">Todas</option>
+            {% for s in safras %}
+              <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+            {% endfor %}
+          </select>
+          <button class="rounded-md bg-[var(--accent)] px-3 py-2 text-emerald-950 hover:brightness-95">Aplicar</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="dash-filtros" class="hidden">
+      <div class="grid gap-3 lg:grid-cols-4">
+        <div>
+          <label class="mb-1 block text-slate-600">Cultura</label>
+          <select name="cultura" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_cultura %}selected{% endif %}>Todos</option>
+            {% for c in culturas %}
+              <option value="{{ c.pk }}" {% if filtro_cultura|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Safra</label>
+          <select name="safra" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="">Todas</option>
+            {% for s in safras %}
+              <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Categoria</label>
+          <select name="categoria" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_categoria %}selected{% endif %}>Todos</option>
+            {% for c in categorias %}
+              <option value="{{ c.pk }}" {% if filtro_categoria|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Cliente</label>
+          <select name="cliente" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_cliente %}selected{% endif %}>Todos</option>
+            {% for c in clientes %}
+              <option value="{{ c.pk }}" {% if filtro_cliente|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.cliente }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex items-end gap-2 lg:col-span-4">
+          <form id="filtros" method="get" autocomplete="off"></form>
+          <input type="hidden" name="show_filters" value="1" form="filtros" />
+          <button type="submit" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+          <a href="/dashboard/?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-sky-700">Realizado (Faturado)</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8M8 11h8M8 15h6"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ realized_total|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-indigo-700">Utilizado do Orcado</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ utilizado_pct|floatformat:1 }}%</div>
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-indigo-100">
+          <div class="h-2 rounded-full bg-indigo-500" style="width: {% if utilizado_pct > 100 %}100{% else %}{{ utilizado_pct|floatformat:0 }}{% endif %}%;"></div>
+        </div>
+      </div>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-amber-700">SC/HA (Planejado)</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ sc_ha|floatformat:2 }}</div>
+        <div class="mt-1 text-[12px] text-slate-600">Area: {{ planned_area|decimal_br:0 }} | Preco medio: {{ avg_preco_prod|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-emerald-700">Planejado x Realizado</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 18V6"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 18V10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 18V8"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 18V12"/><path stroke-linecap="round" stroke-linejoin="round" d="M20 18V9"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+          <div>
+            <div class="text-[12px] text-slate-600">Planejado</div>
+            <div class="font-bold text-slate-900">{{ planned_total|decimal_br:2 }}</div>
+          </div>
+          <div>
+            <div class="text-[12px] text-slate-600">Economia</div>
+            <div class="font-bold text-slate-900">{{ economia|decimal_br:2 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Planejado x Realizado</h3>
+      </div>
+      <div class="mt-3 space-y-3">
+        <div>
+          <div class="flex items-center justify-between text-slate-600">
+            <span>Planejado</span>
+            <span class="font-bold text-slate-900">{{ planned_total|decimal_br:2 }}</span>
+          </div>
+          <div class="mt-1 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+            <div class="h-3 rounded-full bg-emerald-700" style="width:100%"></div>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between text-slate-600">
+            <span>Realizado</span>
+            <span class="font-bold text-slate-900">{{ realized_total|decimal_br:2 }}</span>
+          </div>
+          <div class="mt-1 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+            {% with pct=utilizado_pct %}
+              <div class="h-3 rounded-full bg-sky-600" style="width:{% if pct > 100 %}100{% else %}{{ pct|floatformat:0 }}{% endif %}%"></div>
+            {% endwith %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Resumo de Pedidos</h3>
+        <div class="text-slate-600">Total: <span class="font-bold text-slate-900">{{ pedidos_total }}</span></div>
+      </div>
+      <div class="mt-3 overflow-hidden rounded-lg border border-slate-200">
+        <table class="w-full text-left text-[14px] whitespace-nowrap">
+          <thead>
+            <tr class="bg-[#F1F3F4] text-slate-800 border-b border-slate-200">
+              <th class="px-3 py-2 font-normal">Status</th>
+              <th class="px-3 py-2 font-normal">Qtd</th>
+              <th class="px-3 py-2 font-normal">Total</th>
+              <th class="px-3 py-2 font-normal">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in pedidos_por_status %}
+              <tr class="border-t border-slate-200">
+                <td class="px-3 py-2 text-slate-700">{{ r.status_label }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ r.qtd|default:0 }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ r.total|default:0|decimal_br:2 }}</td>
+                <td class="px-3 py-2 text-slate-700">{{ r.saldo|default:0|decimal_br:2 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="px-3 py-6 text-center text-slate-400">Sem pedidos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Resumo de Categorias</h3>
+        <div class="flex items-center gap-4 text-slate-700">
+          <div class="inline-flex items-center gap-2">
+            <span class="h-3 w-6 rounded-sm bg-[#b08a00]"></span>
+            <span class="text-[12px]">Planejado</span>
+          </div>
+          <div class="inline-flex items-center gap-2">
+            <span class="h-3 w-6 rounded-sm bg-[#1f7f6b]"></span>
+            <span class="text-[12px]">Realizado</span>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 rounded-lg border border-slate-200 bg-[#F1F3F4] p-2">
+        {% for r in categorias_rows %}
+          <div class="grid grid-cols-[160px_1fr] items-center gap-4 px-2 py-2 border-b border-slate-300/60 last:border-b-0">
+            <div class="text-[14px] font-normal text-slate-800">
+              <div class="truncate">{{ r.obj.nome }} <span class="text-slate-500">({{ r.pct_total|floatformat:1 }}%)</span></div>
+            </div>
+
+            <div class="space-y-0">
+              <div class="flex items-center gap-3">
+                <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100 p-[1px]">
+                  <div class="h-full rounded-full bg-[#b08a00]" style="width:{{ r.pct_planejado }}%"></div>
+                </div>
+                <div class="w-[110px] text-right text-[14px] font-normal text-slate-800">
+                  {{ r.planejado|decimal_br:2 }}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100 p-[1px]">
+                  <div class="h-full rounded-full bg-[#1f7f6b]" style="width:{{ r.pct_realizado }}%"></div>
+                </div>
+                <div class="w-[110px] text-right text-[14px] font-normal text-slate-800">
+                  {{ r.realizado|decimal_br:2 }}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="py-6 text-center text-slate-400">Sem categorias para exibir.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Resumo de Produtos</h3>
+        <div class="text-slate-600">Top por realizado</div>
+      </div>
+      <div class="mt-3 space-y-2">
+        {% for r in produtos_rows %}
+          <div class="rounded-lg border border-slate-200 px-3 py-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-bold text-slate-900 truncate">{{ r.nome }}</div>
+              <div class="text-right">
+                <div class="text-[12px] text-slate-600">Realizado</div>
+                <div class="font-bold text-slate-900">{{ r.realizado|decimal_br:2 }}</div>
+              </div>
+            </div>
+            <div class="mt-2 grid grid-cols-2 gap-3 text-[12px]">
+              <div>
+                <div class="text-slate-600">Planejado</div>
+                <div class="font-bold text-slate-900">{{ r.planejado|decimal_br:2 }}</div>
+                <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div class="h-2 rounded-full bg-sky-600" style="width:{{ r.pct_planejado }}%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="text-slate-600">Realizado</div>
+                <div class="font-bold text-slate-900">{{ r.realizado|decimal_br:2 }}</div>
+                <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div class="h-2 rounded-full bg-emerald-700" style="width:{{ r.pct_realizado }}%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="py-6 text-center text-slate-400">Sem produtos para exibir.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-slate-900">Ranking por Fornecedor</h3>
+        <div class="flex items-center gap-4 text-slate-700">
+          <div class="inline-flex items-center gap-2">
+            <span class="h-3 w-6 rounded-sm bg-[#b08a00]"></span>
+            <span class="text-[12px]">Planejado</span>
+          </div>
+          <div class="inline-flex items-center gap-2">
+            <span class="h-3 w-6 rounded-sm bg-[#1f7f6b]"></span>
+            <span class="text-[12px]">Realizado</span>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 rounded-lg border border-slate-200 bg-[#F1F3F4] p-2">
+        {% for r in fornecedores_rows %}
+          <div class="grid grid-cols-[160px_1fr] items-center gap-4 px-2 py-2 border-b border-slate-300/60 last:border-b-0">
+            <div class="text-[14px] font-normal text-slate-800">
+              <div class="truncate">
+                {{ r.obj.fornecedor|default:"-" }}
+                <span class="text-slate-500">({{ r.pct_total|floatformat:1 }}%)</span>
+              </div>
+            </div>
+
+            <div class="space-y-0">
+              <div class="flex items-center gap-3">
+                <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100 p-[1px]">
+                  <div class="h-full rounded-full bg-[#b08a00]" style="width:{{ r.pct_planejado }}%"></div>
+                </div>
+                <div class="w-[110px] text-right text-[14px] font-normal text-slate-800">
+                  {{ r.planejado|decimal_br:2 }}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100 p-[1px]">
+                  <div class="h-full rounded-full bg-[#1f7f6b]" style="width:{{ r.pct_realizado }}%"></div>
+                </div>
+                <div class="w-[110px] text-right text-[14px] font-normal text-slate-800">
+                  {{ r.realizado|decimal_br:2 }}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="py-6 text-center text-slate-400">Sem fornecedores para exibir.</div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </section>
+
+<script>
+(function(){
+  const btn = document.getElementById('toggle-filtros-dash');
+  const wrap = document.getElementById('dash-filtros');
+  const eyeOpen = document.getElementById('icon-eye-open-dash');
+  const eyeClosed = document.getElementById('icon-eye-closed-dash');
+  if(!btn || !wrap) return;
+
+  const params = new URLSearchParams(window.location.search || '');
+  const shouldOpen = params.get('show_filters') === '1';
+
+  function setState(isOpen){
+    if(isOpen){
+      wrap.classList.remove('hidden');
+      if(eyeOpen) eyeOpen.classList.add('hidden');
+      if(eyeClosed) eyeClosed.classList.remove('hidden');
+      btn.setAttribute('aria-expanded','true');
+    } else {
+      wrap.classList.add('hidden');
+      if(eyeOpen) eyeOpen.classList.remove('hidden');
+      if(eyeClosed) eyeClosed.classList.add('hidden');
+      btn.setAttribute('aria-expanded','false');
+    }
+  }
+
+  setState(shouldOpen);
+  btn.addEventListener('click', function(){
+    setState(wrap.classList.contains('hidden'));
+  });
+})();
+</script>
 {% endblock %}
