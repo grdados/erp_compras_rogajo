@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -45,8 +46,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'licencas.middleware.LicencaAtivaMiddleware',
 ]
-if not IS_VERCEL:
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'config.urls'
 
@@ -96,6 +95,7 @@ STATICFILES_STORAGE = (
     if IS_VERCEL
     else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 )
+WHITENOISE_USE_FINDERS = IS_VERCEL
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

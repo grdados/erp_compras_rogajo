@@ -163,9 +163,9 @@
           <!-- Logo: no border/background (per request) -->
           <a href="/dashboard/" id="sidebar-logo-wrap" class="inline-flex items-center justify-center">
             <!-- Expanded logo -->
-            <img src="{% static 'img/rogajo-logo-exp.svg' %}" alt="Rogajo" class="logo-expanded h-[40px] w-auto" />
+            <img src="{% static 'img/rogajo-logo-exp.svg' %}" alt="Rogajo" class="logo-expanded h-[40px] w-auto" onerror="this.onerror=null;this.src='{% static 'img/rogajo-logo.jpeg' %}'" />
             <!-- Collapsed icon -->
-            <img src="{% static 'img/rogajo-icon.png' %}" alt="Rogajo" class="logo-collapsed hidden h-[40px] w-[40px] object-contain" />
+            <img src="{% static 'img/rogajo-icon.png' %}" alt="Rogajo" class="logo-collapsed hidden h-[40px] w-[40px] object-contain" onerror="this.onerror=null;this.src='{% static 'img/rogajo-logo.jpeg' %}'" />
           </a>
         </div>
 

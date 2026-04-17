@@ -7,7 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Q, Sum, Avg, Exists, OuterRef, Count, Min, F, ExpressionWrapper, DecimalField
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.http import FileResponse, HttpResponseBadRequest, JsonResponse
@@ -409,7 +409,35 @@ def _build_dashboard_context(request):
 
 @login_required
 def dashboard(request):
-    ctx = _build_dashboard_context(request)
+    try:
+        ctx = _build_dashboard_context(request)
+    except DatabaseError:
+        ctx = {
+            'filtro_cultura': '',
+            'filtro_safra': '',
+            'filtro_categoria': '',
+            'filtro_cliente': '',
+            'culturas': [],
+            'safras': [],
+            'categorias': [],
+            'clientes': [],
+            'planned_total': Decimal('0'),
+            'realized_total': Decimal('0'),
+            'utilizado_pct': Decimal('0'),
+            'sc_ha': Decimal('0'),
+            'economia': Decimal('0'),
+            'planned_area': Decimal('0'),
+            'avg_preco_prod': Decimal('0'),
+            'pedidos_total': Decimal('0'),
+            'pedidos_por_status': [],
+            'categorias_rows': [],
+            'max_cat': Decimal('0'),
+            'produtos_rows': [],
+            'max_prod': Decimal('0'),
+            'fornecedores_rows': [],
+            'max_forn': Decimal('0'),
+        }
+        messages.warning(request, 'Banco ainda sincronizando. Atualize a página em alguns segundos.')
     return render(request, 'core/dashboard.html', ctx)
 
 
@@ -419,7 +447,11 @@ def dashboard_report_economia(request):
     Relatório (A4 Paisagem) da Dashboard para compartilhar com o cliente.
     Mantém os elementos gráficos e destaca a economia do planejamento.
     """
-    ctx = _build_dashboard_context(request)
+    try:
+        ctx = _build_dashboard_context(request)
+    except DatabaseError:
+        messages.warning(request, 'Banco ainda sincronizando. Tente novamente em alguns segundos.')
+        return redirect('core:dashboard')
     ctx['back_fallback_url'] = '/dashboard/'
     return render(request, 'core/relatorios/dashboard_economia.html', ctx)
 
