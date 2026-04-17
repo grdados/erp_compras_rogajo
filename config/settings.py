@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
+IS_VERCEL = os.getenv('VERCEL') == '1'
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'changeme-in-production')
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
@@ -36,7 +37,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -45,6 +45,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'licencas.middleware.LicencaAtivaMiddleware',
 ]
+if not IS_VERCEL:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'config.urls'
 
@@ -70,7 +72,7 @@ DATABASES = {
     'default': dj_database_url.parse(
         os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=600,
-        ssl_require=os.getenv('DB_SSL_REQUIRE', 'False').lower() == 'true',
+        ssl_require=os.getenv('DB_SSL_REQUIRE', 'True' if IS_VERCEL else 'False').lower() == 'true',
     )
 }
 
@@ -86,10 +88,14 @@ TIME_ZONE = os.getenv('TIME_ZONE', 'America/Cuiaba')
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = (
+    'django.contrib.staticfiles.storage.StaticFilesStorage'
+    if IS_VERCEL
+    else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
