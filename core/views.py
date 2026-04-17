@@ -3046,13 +3046,41 @@ class PerfilUsuarioLicencaListView(GestorRequiredMixin, CrudListView):
     template_name = 'core/licencas/vinculos_list.html'
     model = PerfilUsuarioLicenca
     context_title = 'Vinculos Usuario-Licenca'
-    columns = [('usuario', 'Usuario'), ('licenca', 'Licenca'), ('created_at', 'Criado')]
+    columns = [('Usuario', 'usuario'), ('Licenca', 'licenca'), ('Criado', 'created_at')]
     create_url_name = 'core:licenca_vinculo_create'
     edit_url_name = 'core:licenca_vinculo_update'
     delete_url_name = 'core:licenca_vinculo_delete'
     search_fields = ['usuario__username', 'usuario__first_name', 'usuario__last_name', 'licenca__cliente', 'licenca__cpf_cnpj', 'licenca__email']
     default_ordering = '-created_at'
     paginate_by = 15
+
+    def _build_columns(self):
+        cols = []
+        req_order = (self.request.GET.get('o') or '').strip()
+        active_field = req_order[1:] if req_order.startswith('-') else req_order
+        is_desc = req_order.startswith('-')
+
+        base_params = self.request.GET.copy()
+        base_params.pop('page', None)
+
+        for col in (self.columns or []):
+            label, field = col[0], col[1]
+            col_params = base_params.copy()
+            if active_field == field and not is_desc:
+                col_params['o'] = f'-{field}'
+            else:
+                col_params['o'] = field
+
+            cols.append(
+                {
+                    'label': label,
+                    'field': field,
+                    'is_active': active_field == field,
+                    'is_desc': active_field == field and is_desc,
+                    'sort_query': col_params.urlencode(),
+                }
+            )
+        return cols
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('usuario', 'licenca')
@@ -3064,6 +3092,19 @@ class PerfilUsuarioLicencaListView(GestorRequiredMixin, CrudListView):
             if lic:
                 qs = qs.filter(licenca_id=lic.pk)
         return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+        params = self.request.GET.copy()
+        params.pop('page', None)
+
+        ctx['columns'] = self._build_columns()
+        ctx['current_q'] = self.request.GET.get('q', '')
+        ctx['current_sort'] = self.request.GET.get('o', '')
+        ctx['pagination_query'] = params.urlencode()
+        ctx['total_registros'] = qs.count()
+        return ctx
 
 
 class PerfilUsuarioLicencaCreateView(GestorRequiredMixin, CrudCreateView):

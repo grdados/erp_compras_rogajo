@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -31,7 +31,11 @@ def primeiro_acesso(request):
         if getattr(request.user, 'effective_role', '') == 'ADMIN':
             return redirect('core:dashboard')
 
-        perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
+        try:
+            perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
+        except DatabaseError:
+            messages.error(request, 'Banco de dados ainda está sincronizando. Tente novamente em alguns segundos.')
+            return render(request, 'licencas/primeiro_acesso.html', {'form': PrimeiroAcessoLicencaForm(), 'modo_publico': False})
         if perfil and perfil.licenca:
             lic = perfil.licenca
             if getattr(lic, 'esta_vigente', False):
@@ -40,39 +44,45 @@ def primeiro_acesso(request):
 
         form = PrimeiroAcessoLicencaForm(request.POST or None)
         if request.method == 'POST' and form.is_valid():
-            lic = Licenca.objects.create(
-                cliente=form.cleaned_data['cliente'],
-                cpf_cnpj=form.cleaned_data['cpf_cnpj'],
-                email=form.cleaned_data['email'],
-                contato=form.cleaned_data['contato'],
-                status=Licenca.Status.EXPIRADA,
-            )
-            PerfilUsuarioLicenca.objects.create(usuario=request.user, licenca=lic)
-            return redirect('licencas:renovar')
+            try:
+                lic = Licenca.objects.create(
+                    cliente=form.cleaned_data['cliente'],
+                    cpf_cnpj=form.cleaned_data['cpf_cnpj'],
+                    email=form.cleaned_data['email'],
+                    contato=form.cleaned_data['contato'],
+                    status=Licenca.Status.EXPIRADA,
+                )
+                PerfilUsuarioLicenca.objects.create(usuario=request.user, licenca=lic)
+                return redirect('licencas:renovar')
+            except DatabaseError:
+                messages.error(request, 'Não foi possível salvar agora. Banco em sincronização ou configuração pendente.')
 
         return render(request, 'licencas/primeiro_acesso.html', {'form': form, 'modo_publico': False})
 
     form = PrimeiroAcessoPublicForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         User = get_user_model()
-        with transaction.atomic():
-            user = User.objects.create_user(
-                username=form.cleaned_data['username'],
-                password=form.cleaned_data['password1'],
-                email=form.cleaned_data['email'],
-                role=User.Role.SUPERVISOR,
-            )
-            lic = Licenca.objects.create(
-                cliente=form.cleaned_data['cliente'],
-                cpf_cnpj=form.cleaned_data['cpf_cnpj'],
-                email=form.cleaned_data['email'],
-                contato=form.cleaned_data['contato'],
-                status=Licenca.Status.EXPIRADA,
-            )
-            PerfilUsuarioLicenca.objects.create(usuario=user, licenca=lic)
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    password=form.cleaned_data['password1'],
+                    email=form.cleaned_data['email'],
+                    role=User.Role.SUPERVISOR,
+                )
+                lic = Licenca.objects.create(
+                    cliente=form.cleaned_data['cliente'],
+                    cpf_cnpj=form.cleaned_data['cpf_cnpj'],
+                    email=form.cleaned_data['email'],
+                    contato=form.cleaned_data['contato'],
+                    status=Licenca.Status.EXPIRADA,
+                )
+                PerfilUsuarioLicenca.objects.create(usuario=user, licenca=lic)
 
-        login(request, user)
-        return redirect('licencas:renovar')
+            login(request, user)
+            return redirect('licencas:renovar')
+        except DatabaseError:
+            messages.error(request, 'Não foi possível ativar a licença agora. Banco em sincronização ou configuração pendente.')
 
     return render(request, 'licencas/primeiro_acesso.html', {'form': form, 'modo_publico': True})
 

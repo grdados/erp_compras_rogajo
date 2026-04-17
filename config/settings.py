@@ -10,15 +10,26 @@ IS_VERCEL = os.getenv('VERCEL') == '1'
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'changeme-in-production')
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',') if host.strip()]
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,.onrender.com,.vercel.app').split(',') if host.strip()]
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         'CSRF_TRUSTED_ORIGINS',
-        'http://127.0.0.1,http://localhost',
+        'http://127.0.0.1,http://localhost,https://*.onrender.com,https://*.vercel.app',
     ).split(',')
     if origin.strip()
 ]
+
+# Auto-include hosting domains when available (Render/Vercel)
+render_host = (os.getenv('RENDER_EXTERNAL_HOSTNAME') or '').strip()
+vercel_url = (os.getenv('VERCEL_URL') or '').strip()
+for dyn_host in (render_host, vercel_url):
+    if dyn_host and dyn_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(dyn_host)
+    if dyn_host:
+        dyn_origin = f'https://{dyn_host}'
+        if dyn_origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(dyn_origin)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
