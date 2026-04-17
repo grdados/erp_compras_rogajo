@@ -31,8 +31,9 @@
     </div>
 
     <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm max-h-[800px] overflow-hidden">
-      <div id="filtros-wrap" class="{% if request.GET %}{% else %}hidden{% endif %}">
+      <div id="filtros-wrap" class="hidden">
       <form method="get" class="grid gap-3 lg:grid-cols-4">
+      <input type="hidden" name="show_filters" value="1" />
       <div class="lg:col-span-2">
         <label class="mb-1 block text-slate-600">Busca</label>
         <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar nota, cliente, pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
@@ -98,8 +99,8 @@
         <input type="date" name="venc_fim" value="{{ filtro_venc_fim }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
       </div>
       <div class="flex items-end gap-2 lg:col-span-4">
-        <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
-        <a href="{% url 'core:conta_list' %}" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
+        <button type="submit" name="apply" value="1" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+        <a href="{% url 'core:conta_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
         {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
       </div>
     </form>
@@ -528,6 +529,7 @@
   const eyeOpen = document.getElementById('icon-eye-open-contas');
   const eyeClosed = document.getElementById('icon-eye-closed-contas');
   if (toggleFiltros && filtrosWrap) {
+    const params = new URLSearchParams(window.location.search || '');
     function setState(isOpen){
       if(isOpen){
         filtrosWrap.classList.remove('hidden');
@@ -542,7 +544,8 @@
       }
     }
 
-    setState({% if request.GET %}true{% else %}false{% endif %});
+    const shouldOpen = params.get('show_filters') === '1' || params.get('apply') === '1';
+    setState(shouldOpen);
     toggleFiltros.addEventListener('click', function(){
       setState(filtrosWrap.classList.contains('hidden'));
     });

@@ -146,6 +146,8 @@
             <th class="w-[260px] px-3 py-3 font-normal">Produtor</th>
             <th class="w-[170px] px-3 py-3 font-normal">Fornecedor</th>
             <th class="w-[120px] px-3 py-3 font-normal">Vencimento</th>
+            <th class="w-[120px] px-3 py-3 font-normal">Quantidade</th>
+            <th class="w-[120px] px-3 py-3 font-normal">Preco</th>
             <th class="hidden w-[120px] px-3 py-3 font-normal xl:table-cell">Saldo</th>
             <th class="w-[120px] px-3 py-3 font-normal">Total</th>
             <th class="sticky right-0 z-10 w-[210px] bg-[#F1F3F4] px-3 py-3 font-normal text-center">Acoes</th>
@@ -174,6 +176,8 @@
               <td class="px-3 py-2.5">
                 <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-900 ring-1 ring-amber-200">{{ obj.vencimento|date:"d/m/Y" }}</span>
               </td>
+              <td class="px-3 py-2.5 text-slate-700">{{ obj.row_qtd|decimal_br:0 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ obj.row_preco|decimal_br:2 }}</td>
               <td class="hidden px-3 py-2.5 text-slate-700 xl:table-cell">{{ obj.saldo_faturar|decimal_br:2 }}</td>
               <td class="px-3 py-2.5 text-slate-700">{{ obj.valor_total|decimal_br:2 }}</td>
               <td class="sticky right-0 z-10 bg-white px-3 py-2.5 group-hover:bg-slate-50">

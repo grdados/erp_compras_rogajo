@@ -73,6 +73,45 @@
       </div>
     </div>
 
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-indigo-700">Quantidade</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_quantidade|decimal_br:0 }}</div>
+      </div>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-amber-700">Preco Medio Produto</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-900">
+            <span class="text-[14px] font-bold leading-none">R$</span>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_preco_medio_produto|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-emerald-700">Valor Total</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7 10 17l-5-5"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_valor_total|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-sky-700">Sacas Ha</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_sacas_ha|decimal_br:1 }}</div>
+      </div>
+    </div>
+
     <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
       <table class="w-full text-left text-[14px] whitespace-nowrap">
         <thead>
@@ -82,6 +121,8 @@
             <th class="px-3 py-3 font-normal">Custo</th>
             <th class="px-3 py-3 font-normal">Cliente</th>
             <th class="px-3 py-3 font-normal">Vencimento</th>
+            <th class="px-3 py-3 font-normal">Preco produto</th>
+            <th class="px-3 py-3 font-normal">Sacas Ha</th>
             <th class="px-3 py-3 font-normal">Total</th>
             <th class="w-[230px] px-3 py-3 font-normal text-center">Acoes</th>
           </tr>
@@ -96,6 +137,8 @@
               <td class="px-3 py-2.5">
                 <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-900 ring-1 ring-amber-200">{{ obj.vencimento|date:"d/m/Y" }}</span>
               </td>
+              <td class="px-3 py-2.5 text-slate-700">{{ obj.row_preco_produto|decimal_br:2 }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{{ obj.row_sacas_ha|decimal_br:1 }}</td>
               <td class="px-3 py-2.5 text-slate-700">{{ obj.valor_total|decimal_br:2 }}</td>
               <td class="px-3 py-2.5">
                 <div class="mx-auto grid w-[210px] grid-cols-6 justify-items-center gap-1">
@@ -134,7 +177,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="px-3 py-8 text-center text-slate-500">Sem registros.</td>
+              <td colspan="9" class="px-3 py-8 text-center text-slate-500">Sem registros.</td>
             </tr>
           {% endfor %}
         </tbody>

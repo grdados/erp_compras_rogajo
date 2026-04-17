@@ -1225,6 +1225,55 @@ class PlanejamentoListView(GestorRequiredMixin, ListView):
         params.pop('page', None)
         ctx['pagination_query'] = params.urlencode()
         ctx['report_query'] = params.urlencode()
+        qs = self.get_queryset()
+
+        # Cards
+        try:
+            itens_all = PlanejamentoItem.objects.filter(planejamento__in=qs)
+            card_quantidade = itens_all.aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+            area_total = itens_all.aggregate(total=Sum('area_ha'))['total'] or Decimal('0')
+            card_valor_total = qs.aggregate(total=Sum('valor_total'))['total'] or Decimal('0')
+            card_preco_medio_produto = qs.aggregate(media=Avg('preco_produto'))['media'] or Decimal('0')
+            if area_total and card_preco_medio_produto:
+                card_sacas_ha = (Decimal(card_valor_total) / Decimal(area_total)) / Decimal(card_preco_medio_produto)
+            else:
+                card_sacas_ha = Decimal('0')
+        except Exception:
+            card_quantidade = Decimal('0')
+            card_valor_total = Decimal('0')
+            card_preco_medio_produto = Decimal('0')
+            card_sacas_ha = Decimal('0')
+
+        ctx['card_quantidade'] = card_quantidade
+        ctx['card_preco_medio_produto'] = card_preco_medio_produto
+        ctx['card_valor_total'] = card_valor_total
+        ctx['card_sacas_ha'] = card_sacas_ha
+
+        # Valores por linha (pagina atual)
+        try:
+            rows = list(ctx.get('object_list') or [])
+            ids = [o.pk for o in rows if getattr(o, 'pk', None)]
+            itens_rows = (
+                PlanejamentoItem.objects.filter(planejamento_id__in=ids)
+                .values('planejamento_id')
+                .annotate(qtd=Sum('quantidade'), valor=Sum('total_item'), area=Sum('area_ha'))
+            )
+            itens_map = {r['planejamento_id']: r for r in itens_rows}
+            for o in rows:
+                r = itens_map.get(o.pk, {}) if o.pk else {}
+                row_qtd = r.get('qtd') or Decimal('0')
+                row_valor = r.get('valor') or Decimal('0')
+                row_area = r.get('area') or Decimal('0')
+                row_preco_produto = o.preco_produto or Decimal('0')
+                if row_area and row_preco_produto:
+                    row_sacas_ha = (Decimal(row_valor) / Decimal(row_area)) / Decimal(row_preco_produto)
+                else:
+                    row_sacas_ha = Decimal('0')
+                setattr(o, 'row_qtd', row_qtd)
+                setattr(o, 'row_preco_produto', row_preco_produto)
+                setattr(o, 'row_sacas_ha', row_sacas_ha)
+        except Exception:
+            pass
         try:
             ctx['total_registros'] = self.get_queryset().count()
         except Exception:
@@ -1507,23 +1556,53 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         qs = self.get_queryset()
 
         # Cards (padrao igual Faturamento)
-        try:
-            itens_qs = PedidoCompraItem.objects.filter(pedido__in=qs)
-            qtd_total = itens_qs.aggregate(total=Sum('quantidade'))['total'] or 0
-        except Exception:
-            qtd_total = 0
+        itens_qs = PedidoCompraItem.objects.filter(pedido_compra__in=qs)
+        qtd_total = itens_qs.aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+        total_itens = itens_qs.aggregate(total=Sum('total_item'))['total'] or Decimal('0')
+        total_pedidos = qs.aggregate(total=Sum('valor_total'))['total'] or Decimal('0')
 
         try:
-            total_pedidos = qs.aggregate(total=Sum('valor_total'))['total'] or 0
+            qtd_total = Decimal(qtd_total)
         except Exception:
-            total_pedidos = 0
+            qtd_total = Decimal('0')
+        try:
+            total_itens = Decimal(total_itens)
+        except Exception:
+            total_itens = Decimal('0')
+        try:
+            total_pedidos = Decimal(total_pedidos)
+        except Exception:
+            total_pedidos = Decimal('0')
 
-        preco_medio = 0
-        if qtd_total:
+        preco_medio = Decimal('0')
+        if qtd_total > 0:
             try:
-                preco_medio = Decimal(total_pedidos or 0) / Decimal(qtd_total or 1)
+                preco_medio = total_itens / qtd_total
             except Exception:
-                preco_medio = 0
+                preco_medio = Decimal('0')
+
+        # Valores por linha (pagina atual)
+        try:
+            rows = list(ctx.get('object_list') or [])
+            ids = [o.pk for o in rows if getattr(o, 'pk', None)]
+            itens_rows = (
+                PedidoCompraItem.objects.filter(pedido_compra_id__in=ids)
+                .values('pedido_compra_id')
+                .annotate(qtd=Sum('quantidade'), total=Sum('total_item'))
+            )
+            itens_map = {r['pedido_compra_id']: r for r in itens_rows}
+            for o in rows:
+                r = itens_map.get(o.pk, {}) if o.pk else {}
+                row_qtd = r.get('qtd') or Decimal('0')
+                row_total = r.get('total') or Decimal('0')
+                if row_qtd:
+                    row_preco = Decimal(row_total) / Decimal(row_qtd)
+                else:
+                    row_preco = Decimal('0')
+                setattr(o, 'row_qtd', row_qtd)
+                setattr(o, 'row_preco', row_preco)
+        except Exception:
+            pass
 
         # Links usados pelo template
         ctx['create_url_name'] = 'core:pedido_create'
@@ -2361,16 +2440,54 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('safra', 'produtor', 'fornecedor', 'pedido').order_by('-data', '-id')
+
+        # Padrao: filtros somente quando clicar em "Aplicar filtros" (apply=1)
+        apply_filters = (self.request.GET.get('apply') or '').strip()
+        if not apply_filters:
+            return qs
+
         q = (self.request.GET.get('q') or '').strip()
         safra_id = (self.request.GET.get('safra') or '').strip()
+        cliente_id = (self.request.GET.get('cliente') or '').strip()
+        produtor_id = (self.request.GET.get('produtor') or '').strip()
+        fornecedor_id = (self.request.GET.get('fornecedor') or '').strip()
+        categoria_id = (self.request.GET.get('categoria') or '').strip()
+        pedido_txt = (self.request.GET.get('pedido') or '').strip()
+        nota_fiscal = (self.request.GET.get('nota_fiscal') or '').strip()
+        venc_ini = (self.request.GET.get('venc_ini') or '').strip()
+        venc_fim = (self.request.GET.get('venc_fim') or '').strip()
+
         if q:
-            qs = qs.filter(Q(nota_fiscal__icontains=q) | Q(pedido__pedido__icontains=q) | Q(produtor__produtor__icontains=q) | Q(fornecedor__fornecedor__icontains=q))
+            qs = qs.filter(
+                Q(nota_fiscal__icontains=q)
+                | Q(pedido__pedido__icontains=q)
+                | Q(produtor__produtor__icontains=q)
+                | Q(fornecedor__fornecedor__icontains=q)
+                | Q(cliente__cliente__icontains=q)
+            )
         if safra_id:
             qs = qs.filter(safra_id=safra_id)
+        if cliente_id:
+            qs = qs.filter(cliente_id=cliente_id)
+        if produtor_id:
+            qs = qs.filter(produtor_id=produtor_id)
+        if fornecedor_id:
+            qs = qs.filter(fornecedor_id=fornecedor_id)
+        if categoria_id:
+            qs = qs.filter(itens__produto_cadastro__categoria_id=categoria_id).distinct()
+        if pedido_txt:
+            qs = qs.filter(pedido__pedido__icontains=pedido_txt)
+        if nota_fiscal:
+            qs = qs.filter(nota_fiscal__icontains=nota_fiscal)
+        if venc_ini:
+            qs = qs.filter(vencimento__gte=venc_ini)
+        if venc_fim:
+            qs = qs.filter(vencimento__lte=venc_fim)
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        apply_filters = (self.request.GET.get('apply') or '').strip()
         qs = self.get_queryset()
         itens_qs = FaturamentoItem.objects.filter(faturamento__in=qs)
         qtd_total = itens_qs.aggregate(total=Sum('quantidade'))['total'] or 0
@@ -2386,9 +2503,21 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         context['edit_url_name'] = 'core:faturamento_update'
         context['delete_url_name'] = 'core:faturamento_delete'
 
-        context['current_q'] = self.request.GET.get('q', '')
-        context['filtro_safra'] = self.request.GET.get('safra', '')
+        context['current_q'] = self.request.GET.get('q', '') if apply_filters else ''
+        context['filtro_safra'] = self.request.GET.get('safra', '') if apply_filters else ''
+        context['filtro_cliente'] = self.request.GET.get('cliente', '') if apply_filters else ''
+        context['filtro_produtor'] = self.request.GET.get('produtor', '') if apply_filters else ''
+        context['filtro_fornecedor'] = self.request.GET.get('fornecedor', '') if apply_filters else ''
+        context['filtro_categoria'] = self.request.GET.get('categoria', '') if apply_filters else ''
+        context['filtro_pedido'] = self.request.GET.get('pedido', '') if apply_filters else ''
+        context['filtro_nota_fiscal'] = self.request.GET.get('nota_fiscal', '') if apply_filters else ''
+        context['filtro_venc_ini'] = self.request.GET.get('venc_ini', '') if apply_filters else ''
+        context['filtro_venc_fim'] = self.request.GET.get('venc_fim', '') if apply_filters else ''
         context['safras'] = Safra.objects.all().order_by('-ano', 'safra')
+        context['clientes'] = Cliente.objects.all().order_by('cliente')
+        context['produtores'] = Produtor.objects.all().order_by('produtor', 'fazenda')
+        context['fornecedores'] = Fornecedor.objects.all().order_by('fornecedor')
+        context['categorias'] = Categoria.objects.all().order_by('nome')
 
         params = self.request.GET.copy()
         params.pop('page', None)
@@ -2788,6 +2917,10 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         ContaPagar.objects.filter(origem=ContaPagar.Origem.PEDIDO, saldo_aberto__lte=0).delete()
 
         qs = super().get_queryset().select_related('cliente', 'produtor', 'pedido', 'safra', 'fornecedor')
+        apply_filters = (self.request.GET.get('apply') or '').strip()
+        if not apply_filters:
+            return qs
+
         status = (self.request.GET.get('status') or '').strip()
         safra_id = (self.request.GET.get('safra') or '').strip()
         cliente_id = (self.request.GET.get('cliente') or '').strip()
@@ -2829,6 +2962,7 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        apply_filters = (self.request.GET.get('apply') or '').strip()
         qs = self.get_queryset()
         today = date.today()
 
@@ -2840,17 +2974,17 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         total_vencido = _sum(qs.filter(pago=False, saldo_aberto__gt=0, vencimento__lt=today))
         total_a_pagar = _sum(qs.filter(pago=False, saldo_aberto__gt=0, vencimento__gte=today))
 
-        context['filtro_status'] = self.request.GET.get('status', '')
-        context['filtro_safra'] = self.request.GET.get('safra', '')
-        context['filtro_cliente'] = self.request.GET.get('cliente', '')
-        context['filtro_produtor'] = self.request.GET.get('produtor', '')
-        context['filtro_fornecedor'] = self.request.GET.get('fornecedor', '')
-        context['filtro_pedido'] = self.request.GET.get('pedido', '')
-        context['filtro_nota_fiscal'] = self.request.GET.get('nota_fiscal', '')
-        context['filtro_venc_ini'] = self.request.GET.get('venc_ini', '')
-        context['filtro_venc_fim'] = self.request.GET.get('venc_fim', '')
+        context['filtro_status'] = self.request.GET.get('status', '') if apply_filters else ''
+        context['filtro_safra'] = self.request.GET.get('safra', '') if apply_filters else ''
+        context['filtro_cliente'] = self.request.GET.get('cliente', '') if apply_filters else ''
+        context['filtro_produtor'] = self.request.GET.get('produtor', '') if apply_filters else ''
+        context['filtro_fornecedor'] = self.request.GET.get('fornecedor', '') if apply_filters else ''
+        context['filtro_pedido'] = self.request.GET.get('pedido', '') if apply_filters else ''
+        context['filtro_nota_fiscal'] = self.request.GET.get('nota_fiscal', '') if apply_filters else ''
+        context['filtro_venc_ini'] = self.request.GET.get('venc_ini', '') if apply_filters else ''
+        context['filtro_venc_fim'] = self.request.GET.get('venc_fim', '') if apply_filters else ''
 
-        context['current_q'] = self.request.GET.get('q', '')
+        context['current_q'] = self.request.GET.get('q', '') if apply_filters else ''
 
         params = self.request.GET.copy()
         params.pop('page', None)

@@ -93,7 +93,7 @@
         <div class="flex items-end gap-2 lg:col-span-4">
           <form id="filtros" method="get"></form>
           <input type="hidden" name="show_filters" value="1" form="filtros" />
-          <button type="submit" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+          <button type="submit" name="apply" value="1" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
           <a href="{% url 'core:faturamento_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
           {% if current_sort %}<input type="hidden" name="sort" form="filtros" value="{{ current_sort }}" />{% endif %}
         </div>
@@ -301,7 +301,7 @@
   if(!btn || !wrap) return;
 
   const params = new URLSearchParams(window.location.search || '');
-  const shouldOpen = params.get('show_filters') === '1';
+  const shouldOpen = params.get('show_filters') === '1' || params.get('apply') === '1';
 
   function setState(isOpen){
     if(isOpen){
