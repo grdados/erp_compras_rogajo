@@ -1,7 +1,8 @@
-﻿from django.shortcuts import redirect
+﻿from django.db import DatabaseError
+from django.shortcuts import redirect
 from django.urls import reverse
 
-from .models import Licenca, PerfilUsuarioLicenca
+from .models import PerfilUsuarioLicenca
 
 
 class LicencaAtivaMiddleware:
@@ -33,8 +34,14 @@ class LicencaAtivaMiddleware:
         if request.path == reverse('core:landing_page') or request.path.startswith(self.EXEMPT_PREFIXES):
             return self.get_response(request)
 
-        perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
-        licenca = perfil.licenca if perfil else None
+        try:
+            perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
+            licenca = perfil.licenca if perfil else None
+        except DatabaseError:
+            # Em ambientes recém-publicados (ex.: Vercel sem migração concluída),
+            # não derruba o login com erro 500.
+            return self.get_response(request)
+
         if not licenca:
             return redirect('licencas:primeiro_acesso')
 
