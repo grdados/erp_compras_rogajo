@@ -3,6 +3,25 @@
 {% block top_title %}Planejamento{% endblock %}
 {% block content %}
 <style>
+  .plan-itens-table td[data-label='Produto'],
+  .plan-itens-table td[data-label='Unidade'] {
+    text-align: left;
+  }
+  .plan-itens-table td[data-label='Produto'] select,
+  .plan-itens-table td[data-label='Unidade'] select,
+  .plan-itens-table td[data-label='Produto'] input,
+  .plan-itens-table td[data-label='Unidade'] input {
+    text-align: left;
+    text-align-last: left;
+  }
+  /* deixa o texto iniciar depois do botao "+" nos campos com inner button */
+  .plan-itens-table td[data-label='Produto'] .has-inner-btn-sm select,
+  .plan-itens-table td[data-label='Produto'] .has-inner-btn-sm input,
+  .plan-itens-table td[data-label='Unidade'] .has-inner-btn-sm select,
+  .plan-itens-table td[data-label='Unidade'] .has-inner-btn-sm input {
+    padding-left: 44px !important;
+  }
+
   /* Input-group: reserve space for the "+" button inside selects/inputs */
   .has-inner-btn select,
   .has-inner-btn input {

@@ -3,6 +3,21 @@
 {% block top_title %}Pedido de Compra{% endblock %}
 {% block content %}
 <style>
+  .pedido-itens-table td[data-label='Produto'],
+  .pedido-itens-table td[data-label='Unidade'] {
+    text-align: left;
+  }
+  .pedido-itens-table td[data-label='Produto'] select,
+  .pedido-itens-table td[data-label='Unidade'] select {
+    text-align: left;
+    text-align-last: left;
+    padding-left: 44px !important; /* folga fixa apos o botao "+" */
+  }
+  .pedido-itens-table td[data-label='Produto'] .has-inner-btn,
+  .pedido-itens-table td[data-label='Unidade'] .has-inner-btn {
+    margin-left: 0;
+  }
+
   @media (min-width: 768px) and (max-width: 1279px) {
     .pedido-itens-table colgroup col:nth-child(1) { width: 22% !important; }
     .pedido-itens-table colgroup col:nth-child(2) { width: 12% !important; }

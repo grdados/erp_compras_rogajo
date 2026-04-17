@@ -113,7 +113,10 @@ def renovar_licenca(request):
     setup_error = None
     checkout_enabled = True
 
-    if not settings.STRIPE_SECRET_KEY:
+    if settings.LICENCA_MANUAL_MODE:
+        checkout_enabled = False
+        setup_error = 'Licenciamento manual ativo. A liberacao da licenca e feita pela equipe (sem Stripe).'
+    elif not settings.STRIPE_SECRET_KEY:
         checkout_enabled = False
         setup_error = 'Stripe ainda nao esta configurado (STRIPE_SECRET_KEY). Contate o suporte para ativar o checkout.'
 
@@ -122,6 +125,10 @@ def renovar_licenca(request):
         setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL no .env (ou no cadastro da licenca).'
 
     if request.method == 'POST':
+        if settings.LICENCA_MANUAL_MODE:
+            messages.info(request, 'Modo manual ativo: solicite a liberacao da licenca para a equipe responsavel.')
+            return redirect('core:licencas_page')
+
         periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
         if periodo not in {'semestral', 'anual'}:
             periodo = 'semestral'
@@ -175,6 +182,9 @@ def checkout_cancelado(request):
 @csrf_exempt
 @require_POST
 def stripe_webhook(request):
+    if settings.LICENCA_MANUAL_MODE:
+        return JsonResponse({'status': 'disabled', 'provider': 'manual'})
+
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
     webhook_secret = os.getenv('STRIPE_WEBHOOK_SECRET', '')

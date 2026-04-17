@@ -875,7 +875,20 @@ def produtores_por_cliente(request):
         return JsonResponse({'items': []})
 
     qs = Produtor.objects.filter(cliente_id=int(cliente_id)).order_by('produtor', 'fazenda')
-    items = [{'id': p.pk, 'nome': f'{p.produtor} - {p.fazenda}'} for p in qs]
+    items = []
+    for p in qs:
+        produtor_nome = (p.produtor or '').strip()
+        fazenda_nome = (p.fazenda or '').strip()
+        label = f'{produtor_nome} - {fazenda_nome}' if fazenda_nome else produtor_nome
+        items.append(
+            {
+                'id': p.pk,
+                'nome': label,  # compatibilidade legada
+                'label': label,
+                'produtor': produtor_nome,
+                'fazenda': fazenda_nome,
+            }
+        )
     return JsonResponse({'items': items})
 
 

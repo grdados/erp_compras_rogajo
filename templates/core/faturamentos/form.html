@@ -3,6 +3,25 @@
 {% block top_title %}Faturamento{% endblock %}
 {% block content %}
 <style>
+  .fat-itens-table td[data-label='Produto'],
+  .fat-itens-table td[data-label='Unidade'] {
+    text-align: left;
+  }
+  .fat-itens-table td[data-label='Produto'] select,
+  .fat-itens-table td[data-label='Unidade'] select,
+  .fat-itens-table td[data-label='Produto'] input,
+  .fat-itens-table td[data-label='Unidade'] input {
+    text-align: left;
+    text-align-last: left;
+  }
+  /* deixa o texto iniciar depois do botao "+" nos campos com inner button */
+  .fat-itens-table td[data-label='Produto'] .has-inner-btn-sm select,
+  .fat-itens-table td[data-label='Produto'] .has-inner-btn-sm input,
+  .fat-itens-table td[data-label='Unidade'] .has-inner-btn-sm select,
+  .fat-itens-table td[data-label='Unidade'] .has-inner-btn-sm input {
+    padding-left: 44px !important;
+  }
+
   @media (min-width: 768px) and (max-width: 1279px) {
     .fat-itens-table colgroup col:nth-child(1) { width: 26% !important; }
     .fat-itens-table colgroup col:nth-child(2) { width: 12% !important; }
