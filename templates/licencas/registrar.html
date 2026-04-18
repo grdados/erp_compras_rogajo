@@ -12,6 +12,8 @@
     <style>
       :root { --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; --brand-300: #64d26f; }
       body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
+      .rule-icon { transition: transform .18s ease, color .18s ease; }
+      .rule-ok .rule-icon { transform: scale(1.12); }
     </style>
   </head>
   <body class="min-h-screen bg-[#010707] text-white">
@@ -55,14 +57,16 @@
             </div>
 
             {% if modo_publico %}
-              <div class="rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-xs text-slate-300">
-                Sua senha deve ter:
-                <div>! 8 caracteres ou mais</div>
-                <div>! Letras maiusculas e minusculas</div>
-                <div>! Pelo menos um numero</div>
-                <div>! Pelo menos um caractere especial</div>
+              <div class="rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-[14px] text-slate-300">
+                <div class="mb-1 font-semibold text-slate-100">Sua senha deve ter:</div>
+                <ul id="password-validator-public" class="space-y-1">
+                  <li data-rule="len" class="inline-flex items-center gap-2 text-slate-300"><span class="rule-icon text-red-300">•</span>8 caracteres ou mais</li>
+                  <li data-rule="case" class="inline-flex items-center gap-2 text-slate-300"><span class="rule-icon text-red-300">•</span>Letras maiusculas e minusculas</li>
+                  <li data-rule="num" class="inline-flex items-center gap-2 text-slate-300"><span class="rule-icon text-red-300">•</span>Pelo menos um numero</li>
+                  <li data-rule="special" class="inline-flex items-center gap-2 text-slate-300"><span class="rule-icon text-red-300">•</span>Pelo menos um caractere especial</li>
+                </ul>
               </div>
-              <div class="text-xs text-slate-300">
+              <div class="text-[14px] font-normal text-slate-200">
                 Ao continuar voce aceita nossos <a class="underline hover:text-white" href="/licencas/politica-privacidade/" target="_blank">termos e condicoes</a>.
               </div>
               <div class="text-sm text-slate-200">
@@ -83,4 +87,45 @@
       </div>
     </main>
   </body>
+  <script>
+    (function(){
+      const pass = document.querySelector('input[name="password1"]');
+      const wrap = document.getElementById('password-validator-public');
+      if(!pass || !wrap) return;
+
+      function mark(rule, ok){
+        const li = wrap.querySelector('li[data-rule="'+rule+'"]');
+        if(!li) return;
+        const icon = li.querySelector('.rule-icon');
+        if(ok){
+          li.classList.remove('text-slate-300');
+          li.classList.add('text-emerald-300', 'rule-ok');
+          if(icon){
+            icon.textContent = '✓';
+            icon.classList.remove('text-red-300');
+            icon.classList.add('text-emerald-300');
+          }
+        } else {
+          li.classList.remove('text-emerald-300', 'rule-ok');
+          li.classList.add('text-slate-300');
+          if(icon){
+            icon.textContent = '•';
+            icon.classList.remove('text-emerald-300');
+            icon.classList.add('text-red-300');
+          }
+        }
+      }
+
+      function validate(){
+        const v = pass.value || '';
+        mark('len', v.length >= 8);
+        mark('case', /[A-Z]/.test(v) && /[a-z]/.test(v));
+        mark('num', /\d/.test(v));
+        mark('special', /[^A-Za-z0-9]/.test(v));
+      }
+
+      pass.addEventListener('input', validate);
+      validate();
+    })();
+  </script>
 </html>
