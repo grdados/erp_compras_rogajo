@@ -1,118 +1,105 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
+{% load core_extras %}
 {% block title %}Licencas | ERP Compras{% endblock %}
 
 {% block content %}
 <section class="space-y-6">
   <div class="rounded-3xl border border-slate-200 bg-white p-6">
     <h1 class="text-[18px] font-bold">{{ titulo }}</h1>
-    <p class="mt-1 text-[14px] font-normal text-slate-600">Gestao de vigencia e status das assinaturas.</p>
-  </div>
-
-  {% if user.is_superuser or user.role == 'ADMIN' %}
-  <div class="grid gap-3 sm:grid-cols-2">
-    <a href="/app/licencas/crud/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-semibold hover:bg-emerald-500/10">CRUD de Licencas</a>
-    <a href="/app/licencas/vinculos/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-semibold hover:bg-emerald-500/10">Vinculos de Usuarios</a>
-    <a href="/licencas/renovar/" class="rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-3 text-[14px] font-semibold text-emerald-800 hover:bg-emerald-500/20">Fluxo de Renovacao Manual</a>
-  </div>
-  {% endif %}
-
-  <div class="rounded-2xl border border-slate-200 bg-white p-5">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 class="text-[18px] font-bold">Status da Licenca</h2>
-        <p class="mt-1 text-[14px] font-normal text-slate-600">Acesso ao sistema e cobranca recorrente.</p>
-      </div>
-
-      <div class="flex items-center gap-2">
-        {% if licenca_action_variant == 'neutral' %}
-          <a href="/app/licencas/crud/nova/" class="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-4 text-[14px] font-bold text-slate-800 hover:bg-slate-50">{{ licenca_action_label }}</a>
-        {% else %}
-          <a href="/licencas/renovar/" title="{{ licenca_action_hint }}" class="inline-flex h-10 items-center rounded-lg bg-[var(--accent)] px-4 text-[14px] font-bold text-emerald-950 hover:opacity-95">{{ licenca_action_label }}</a>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="mt-4 grid gap-3 lg:grid-cols-3">
-      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div class="text-[14px] font-normal text-slate-600">Titular</div>
-        <div class="mt-1 text-[18px] font-bold text-slate-900">
-          {% if licenca_atual %}{{ licenca_atual.cliente }}{% else %}-{% endif %}
-        </div>
-        <div class="mt-1 text-[14px] font-normal text-slate-600">
-          {% if licenca_atual %}{{ licenca_atual.cpf_cnpj }}{% else %}-{% endif %}
-        </div>
-      </div>
-
-      <div class="rounded-xl border border-slate-200 p-4
-        {% if licenca_status_efetivo == 'ATIVA' %} bg-emerald-50 border-emerald-200
-        {% elif licenca_status_efetivo == 'INADIMPLENTE' %} bg-amber-50 border-amber-200
-        {% elif licenca_status_efetivo == 'AGUARDANDO_CONFIRMACAO' %} bg-sky-50 border-sky-200
-        {% elif licenca_status_efetivo == 'EXPIRADA' %} bg-red-50 border-red-200
-        {% else %} bg-slate-50{% endif %}
-      ">
-        <div class="text-[14px] font-normal text-slate-600">Status</div>
-        <div class="mt-2">
-          {% if licenca_status_efetivo == 'ATIVA' %}
-            <span class="inline-flex rounded-md bg-emerald-100 px-3 py-1 text-[14px] font-bold text-emerald-900 ring-1 ring-emerald-200">{{ licenca_status_label }}</span>
-          {% elif licenca_status_efetivo == 'AGUARDANDO_CONFIRMACAO' %}
-            <span class="inline-flex rounded-md bg-sky-100 px-3 py-1 text-[14px] font-bold text-sky-900 ring-1 ring-sky-200">{{ licenca_status_label }}</span>
-          {% elif licenca_status_efetivo == 'INADIMPLENTE' %}
-            <span class="inline-flex rounded-md bg-amber-100 px-3 py-1 text-[14px] font-bold text-amber-900 ring-1 ring-amber-200">{{ licenca_status_label }}</span>
-          {% elif licenca_status_efetivo == 'EXPIRADA' %}
-            <span class="inline-flex rounded-md bg-red-100 px-3 py-1 text-[14px] font-bold text-red-900 ring-1 ring-red-200">{{ licenca_status_label }}</span>
-          {% else %}
-            <span class="inline-flex rounded-md bg-slate-100 px-3 py-1 text-[14px] font-bold text-slate-800 ring-1 ring-slate-200">{{ licenca_status_label }}</span>
-          {% endif %}
-        </div>
-        <div class="mt-2 text-[14px] font-normal text-slate-700">
-          {% if licenca_atual and licenca_atual.fim_vigencia %}
-            Valida ate: <span class="font-bold">{{ licenca_atual.fim_vigencia|date:"d/m/Y" }}</span>
-          {% else %}
-            Validade: -
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div class="text-[14px] font-normal text-slate-600">Contato</div>
-        <div class="mt-1 text-[14px] font-normal text-slate-800">
-          {% if licenca_atual %}<span class="font-bold">{{ licenca_atual.email }}</span>{% else %}-{% endif %}
-        </div>
-        <div class="mt-1 text-[14px] font-normal text-slate-600">
-          {% if licenca_atual %}{{ licenca_atual.contato }}{% else %}-{% endif %}
-        </div>
-      </div>
-    </div>
+    <p class="mt-1 text-[14px] font-normal text-slate-600">Assinatura da empresa/pessoa para acesso ao sistema.</p>
   </div>
 
   <div class="rounded-2xl border border-slate-200 bg-white p-5">
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 class="text-[18px] font-bold">Historico de Licencas</h2>
-      <a href="/licencas/renovar/" class="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-4 text-[14px] font-bold text-slate-800 hover:bg-slate-50">Renovar licenca</a>
+      <h2 class="text-[18px] font-bold">Historico de Assinaturas</h2>
+      {% if licenca_action_url %}
+        <a href="{{ licenca_action_url }}" class="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-4 text-[14px] font-bold text-slate-800 hover:bg-slate-50">{{ licenca_action_label }}</a>
+      {% endif %}
     </div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-left text-[14px] whitespace-nowrap">
         <thead class="bg-[#F1F3F4] text-slate-800">
           <tr class="border-b border-slate-200">
-            <th class="px-3 py-2 font-normal">Cliente</th>
+            <th class="px-3 py-2 font-normal">Titular</th>
+            <th class="px-3 py-2 font-normal">Plano</th>
+            <th class="px-3 py-2 font-normal">Emissao</th>
+            <th class="px-3 py-2 font-normal">Pagamento</th>
+            <th class="px-3 py-2 font-normal">Vencimento pagamento</th>
+            <th class="px-3 py-2 font-normal">Inicio vigencia</th>
+            <th class="px-3 py-2 font-normal">Fim vigencia</th>
+            <th class="px-3 py-2 font-normal">Valor total</th>
             <th class="px-3 py-2 font-normal">Status</th>
-            <th class="px-3 py-2 font-normal">Inicio</th>
-            <th class="px-3 py-2 font-normal">Fim</th>
-            <th class="px-3 py-2 font-normal">Email</th>
+            <th class="px-3 py-2 font-normal">Alerta</th>
+            <th class="px-3 py-2 font-normal text-center">Acoes</th>
           </tr>
         </thead>
         <tbody>
           {% for l in licencas %}
             <tr class="border-t border-slate-200 bg-white hover:bg-slate-50">
               <td class="px-3 py-2.5 text-slate-700">{{ l.cliente }}</td>
-              <td class="px-3 py-2.5 text-slate-700">{{ l.get_status_display }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{% if l.plano %}{{ l.get_plano_display }}{% else %}-{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700">{% if l.data_emissao %}{{ l.data_emissao|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700">{% if l.data_pagamento %}{{ l.data_pagamento|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+              <td class="px-3 py-2.5 text-slate-700">{% if l.data_vencimento_pagamento %}{{ l.data_vencimento_pagamento|date:"d/m/Y" }}{% else %}-{% endif %}</td>
               <td class="px-3 py-2.5 text-slate-700">{% if l.inicio_vigencia %}{{ l.inicio_vigencia|date:"d/m/Y" }}{% else %}-{% endif %}</td>
               <td class="px-3 py-2.5 text-slate-700">{% if l.fim_vigencia %}{{ l.fim_vigencia|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-              <td class="px-3 py-2.5 text-slate-700">{{ l.email }}</td>
+              <td class="px-3 py-2.5 text-slate-700">{% if l.valor_total %}{{ l.valor_total|decimal_br:2 }}{% else %}-{% endif %}</td>
+              <td class="px-3 py-2.5">
+                {% if l.status == 'ATIVA' %}
+                  <span class="inline-flex rounded-md bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-900 ring-1 ring-emerald-200">Ativo</span>
+                {% elif l.status == 'AGUARDANDO_CONFIRMACAO' %}
+                  <span class="inline-flex rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-900 ring-1 ring-red-200">Aguardando pagamento</span>
+                {% elif l.status == 'INADIMPLENTE' %}
+                  <span class="inline-flex rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-900 ring-1 ring-red-200">Inadimplente</span>
+                {% elif l.status == 'EXPIRADA' %}
+                  <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 text-sm font-bold text-amber-900 ring-1 ring-amber-200">Expirada</span>
+                {% elif l.status == 'CANCELADA' %}
+                  <span class="inline-flex rounded-md bg-slate-100 px-2 py-1 text-sm font-bold text-slate-800 ring-1 ring-slate-200">Cancelada</span>
+                {% else %}
+                  <span class="inline-flex rounded-md bg-slate-100 px-2 py-1 text-sm font-bold text-slate-800 ring-1 ring-slate-200">{{ l.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2.5">
+                {% if l.alerta_renovacao %}
+                  {% if l.dias_para_vencer <= 6 %}
+                    <span class="inline-flex rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-900 ring-1 ring-red-200">
+                      Renovar ({{ l.dias_para_vencer }}d)
+                    </span>
+                  {% elif l.dias_para_vencer <= 15 %}
+                    <span class="inline-flex rounded-md bg-orange-50 px-2 py-1 text-sm font-bold text-orange-900 ring-1 ring-orange-200">
+                      Renovar ({{ l.dias_para_vencer }}d)
+                    </span>
+                  {% else %}
+                    <span class="inline-flex rounded-md bg-amber-50 px-2 py-1 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+                      Renovar ({{ l.dias_para_vencer }}d)
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-slate-400">-</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2.5">
+                <div class="mx-auto flex w-[96px] items-center justify-center gap-2">
+                  {% if l.status == 'ATIVA' or l.status == 'INADIMPLENTE' or l.status == 'EXPIRADA' %}
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed" title="Edicao bloqueada para este status">E</span>
+                    {% if is_admin %}
+                      <a href="{% url 'core:licenca_delete' l.pk %}" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50" title="Excluir">X</a>
+                    {% else %}
+                      <span class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed">X</span>
+                    {% endif %}
+                  {% elif is_admin or l.status != 'ATIVA' %}
+                    <a href="{% url 'core:licenca_update' l.pk %}" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100" title="Editar">E</a>
+                    <a href="{% url 'core:licenca_delete' l.pk %}" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-300 text-red-700 hover:bg-red-50" title="Excluir">X</a>
+                  {% else %}
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-400 opacity-60">E</span>
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-400 opacity-60">X</span>
+                  {% endif %}
+                </div>
+              </td>
             </tr>
           {% empty %}
-            <tr><td class="px-3 py-6 text-center text-slate-400" colspan="5">Sem licencas cadastradas</td></tr>
+            <tr><td class="px-3 py-6 text-center text-slate-400" colspan="11">Sem assinaturas cadastradas</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -125,15 +125,25 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_PRICE_ID = os.getenv('STRIPE_PRICE_ID', '')
 LICENCA_BILLING_MODE = (os.getenv('LICENCA_BILLING_MODE', 'manual') or 'manual').strip().lower()
 LICENCA_MANUAL_MODE = LICENCA_BILLING_MODE != 'stripe'
-ADMIN_DEFAULT_USERNAME = os.getenv('ADMIN_DEFAULT_USERNAME', 'admin')
-ADMIN_DEFAULT_EMAIL = os.getenv('ADMIN_DEFAULT_EMAIL', 'admin@rogajo.local')
-ADMIN_DEFAULT_PASSWORD = os.getenv('ADMIN_DEFAULT_PASSWORD', 'Admin@123')
+ADMIN_DEFAULT_USERNAME = os.getenv('ADMIN_DEFAULT_USERNAME', 'grdados.oficial@gmail.com')
+ADMIN_DEFAULT_EMAIL = os.getenv('ADMIN_DEFAULT_EMAIL', 'grdados.oficial@gmail.com')
+ADMIN_DEFAULT_PASSWORD = os.getenv('ADMIN_DEFAULT_PASSWORD', 'Ecs*120208')
 
 SALARIO_MINIMO_VIGENTE = os.getenv('SALARIO_MINIMO_VIGENTE', '1621.00')
 LICENCA_PERCENTUAL_SALARIO_MINIMO = os.getenv('LICENCA_PERCENTUAL_SALARIO_MINIMO', '0.29')
 LICENCA_DESCONTO_ANUAL = os.getenv('LICENCA_DESCONTO_ANUAL', '0.08')
 STRIPE_PRICE_ID_SEMESTRAL = os.getenv('STRIPE_PRICE_ID_SEMESTRAL', '')
 STRIPE_PRICE_ID_ANUAL = os.getenv('STRIPE_PRICE_ID_ANUAL', '')
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'grdados.oficial@gmail.com')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true')
 
 # Production hardening (Render / Vercel)
 if not DEBUG:

@@ -511,14 +511,55 @@ class CrudListView(ListView):
 
         return qs
 
+    def _build_columns(self):
+        cols = []
+        req_order = (self.request.GET.get('o') or '').strip()
+        active_field = req_order[1:] if req_order.startswith('-') else req_order
+        is_desc = req_order.startswith('-')
+
+        base_params = self.request.GET.copy()
+        base_params.pop('page', None)
+
+        for col in (self.columns or []):
+            if isinstance(col, (list, tuple)) and len(col) >= 2:
+                label, field = col[0], col[1]
+            else:
+                label, field = str(col), str(col)
+
+            params = base_params.copy()
+            if active_field == field:
+                params['o'] = field if is_desc else f'-{field}'
+            else:
+                params['o'] = field
+
+            cols.append(
+                {
+                    'label': label,
+                    'field': field,
+                    'sort_query': params.urlencode(),
+                    'is_active': active_field == field,
+                    'is_desc': is_desc if active_field == field else False,
+                }
+            )
+        return cols
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['titulo'] = self.context_title or (self.model._meta.verbose_name_plural.title() if self.model else 'Lista')
-        ctx['columns'] = self.columns
+        ctx['columns'] = self._build_columns()
         ctx['create_url_name'] = self.create_url_name
         ctx['edit_url_name'] = self.edit_url_name
         ctx['delete_url_name'] = self.delete_url_name
         ctx['q'] = self.request.GET.get('q', '')
+        ctx['current_q'] = (self.request.GET.get('q') or '').strip()
+        ctx['current_sort'] = (self.request.GET.get('o') or '').strip()
+        params = self.request.GET.copy()
+        params.pop('page', None)
+        ctx['pagination_query'] = params.urlencode()
+        try:
+            ctx['total_registros'] = self.get_queryset().count()
+        except Exception:
+            ctx['total_registros'] = 0
         return ctx
 
 
@@ -763,10 +804,56 @@ def licencas_page(request):
     if getattr(request.user, 'effective_role', '') not in {'ADMIN', 'SUPERVISOR'}:
         return redirect('core:dashboard')
 
+    is_admin = getattr(request.user, 'effective_role', '') == 'ADMIN'
     lic = None
     perfil = getattr(request.user, 'perfil_licenca', None)
     if perfil:
         lic = perfil.licenca
+        if lic and lic.pagamento_pendente_expirado:
+            lic.delete()
+            lic = None
+            messages.warning(
+                request,
+                'Assinatura expirada por falta de pagamento em 7 dias. Realize um novo registro.',
+            )
+
+    if is_admin:
+        historico_qs = Licenca.objects.all().order_by('-updated_at')[:50]
+    else:
+        historico_qs = Licenca.objects.filter(pk=lic.pk).order_by('-updated_at') if lic else Licenca.objects.none()
+
+    historico_list = list(historico_qs)
+    hoje = timezone.localdate()
+    qtd_alerta_renovacao = 0
+    for item in historico_list:
+        item.alerta_renovacao = False
+        item.dias_para_vencer = None
+        if item.status == Licenca.Status.ATIVA and item.fim_vigencia:
+            dias = (item.fim_vigencia - hoje).days
+            item.dias_para_vencer = dias
+            if 0 <= dias <= 30:
+                item.alerta_renovacao = True
+                qtd_alerta_renovacao += 1
+
+    if qtd_alerta_renovacao:
+        messages.warning(
+            request,
+            f'{qtd_alerta_renovacao} assinatura(s) em janela de renovacao (ate 30 dias para vencer).',
+        )
+
+    if not lic:
+        licenca_action_label = 'Registrar'
+        licenca_action_url = '/licencas/registrar/'
+    elif lic.status == Licenca.Status.ATIVA:
+        licenca_action_label = 'Assinatura validada'
+        licenca_action_url = ''
+    else:
+        licenca_action_label = 'Selecionar plano / pagar'
+        licenca_action_url = '/licencas/renovar/'
+
+    pode_editar_excluir = bool(lic and lic.status != Licenca.Status.ATIVA)
+    if is_admin:
+        pode_editar_excluir = bool(lic)
 
     return render(
         request,
@@ -774,7 +861,15 @@ def licencas_page(request):
         {
             'titulo': 'Licenca',
             'licenca': lic,
-            'historico': Licenca.objects.all().order_by('-updated_at')[:20],
+            'licenca_atual': lic,
+            'licencas': historico_list,
+            'historico': historico_list,
+            'licenca_status_efetivo': lic.status if lic else '',
+            'licenca_status_label': lic.get_status_display() if lic else 'Sem assinatura',
+            'licenca_action_label': licenca_action_label,
+            'licenca_action_url': licenca_action_url,
+            'pode_editar_excluir': pode_editar_excluir,
+            'is_admin': is_admin,
         },
     )
 
@@ -1215,6 +1310,38 @@ class PlanejamentoListView(GestorRequiredMixin, ListView):
             qs = qs.filter(vencimento__lte=venc_fim)
         return qs
 
+    def _build_columns(self):
+        cols = []
+        req_order = (self.request.GET.get('o') or '').strip()
+        active_field = req_order[1:] if req_order.startswith('-') else req_order
+        is_desc = req_order.startswith('-')
+
+        base_params = self.request.GET.copy()
+        base_params.pop('page', None)
+
+        for col in (self.columns or []):
+            if isinstance(col, (list, tuple)) and len(col) >= 2:
+                label, field = col[0], col[1]
+            else:
+                label, field = str(col), str(col)
+
+            params = base_params.copy()
+            if active_field == field:
+                params['o'] = field if is_desc else f'-{field}'
+            else:
+                params['o'] = field
+
+            cols.append(
+                {
+                    'label': label,
+                    'field': field,
+                    'sort_query': params.urlencode(),
+                    'is_active': active_field == field,
+                    'is_desc': is_desc if active_field == field else False,
+                }
+            )
+        return cols
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['create_url_name'] = 'core:planejamento_create'
@@ -1396,6 +1523,38 @@ class PlanejamentoReportAnaliticoView(GestorRequiredMixin, ListView):
         if q:
             qs = qs.filter(Q(cliente__cliente__icontains=q) | Q(safra__safra__icontains=q) | Q(custo__nome__icontains=q))
         return qs
+
+    def _build_columns(self):
+        cols = []
+        req_order = (self.request.GET.get('o') or '').strip()
+        active_field = req_order[1:] if req_order.startswith('-') else req_order
+        is_desc = req_order.startswith('-')
+
+        base_params = self.request.GET.copy()
+        base_params.pop('page', None)
+
+        for col in (self.columns or []):
+            if isinstance(col, (list, tuple)) and len(col) >= 2:
+                label, field = col[0], col[1]
+            else:
+                label, field = str(col), str(col)
+
+            params = base_params.copy()
+            if active_field == field:
+                params['o'] = field if is_desc else f'-{field}'
+            else:
+                params['o'] = field
+
+            cols.append(
+                {
+                    'label': label,
+                    'field': field,
+                    'sort_query': params.urlencode(),
+                    'is_active': active_field == field,
+                    'is_desc': is_desc if active_field == field else False,
+                }
+            )
+        return cols
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -2555,6 +2714,38 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             qs = qs.filter(vencimento__lte=venc_fim)
         return qs
 
+    def _build_columns(self):
+        cols = []
+        req_order = (self.request.GET.get('o') or '').strip()
+        active_field = req_order[1:] if req_order.startswith('-') else req_order
+        is_desc = req_order.startswith('-')
+
+        base_params = self.request.GET.copy()
+        base_params.pop('page', None)
+
+        for col in (self.columns or []):
+            if isinstance(col, (list, tuple)) and len(col) >= 2:
+                label, field = col[0], col[1]
+            else:
+                label, field = str(col), str(col)
+
+            params = base_params.copy()
+            if active_field == field:
+                params['o'] = field if is_desc else f'-{field}'
+            else:
+                params['o'] = field
+
+            cols.append(
+                {
+                    'label': label,
+                    'field': field,
+                    'sort_query': params.urlencode(),
+                    'is_active': active_field == field,
+                    'is_desc': is_desc if active_field == field else False,
+                }
+            )
+        return cols
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         filtros_ativos = _filters_active(
@@ -3074,6 +3265,38 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
 
         return qs
 
+    def _build_columns(self):
+        cols = []
+        req_order = (self.request.GET.get('o') or '').strip()
+        active_field = req_order[1:] if req_order.startswith('-') else req_order
+        is_desc = req_order.startswith('-')
+
+        base_params = self.request.GET.copy()
+        base_params.pop('page', None)
+
+        for col in (self.columns or []):
+            if isinstance(col, (list, tuple)) and len(col) >= 2:
+                label, field = col[0], col[1]
+            else:
+                label, field = str(col), str(col)
+
+            params = base_params.copy()
+            if active_field == field:
+                params['o'] = field if is_desc else f'-{field}'
+            else:
+                params['o'] = field
+
+            cols.append(
+                {
+                    'label': label,
+                    'field': field,
+                    'sort_query': params.urlencode(),
+                    'is_active': active_field == field,
+                    'is_desc': is_desc if active_field == field else False,
+                }
+            )
+        return cols
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         filtros_ativos = _filters_active(
@@ -3286,29 +3509,77 @@ def conta_pagar_estornar_lote(request):
 class LicencaListView(GestorRequiredMixin, CrudListView):
     paginate_by = 15
     model = Licenca
+    template_name = 'core/licencas/crud_list.html'
     context_title = 'Licencas'
-    columns = [('cliente', 'Cliente'), ('status', 'Status'), ('inicio_vigencia', 'Inicio'), ('fim_vigencia', 'Fim')]
+    columns = [('Cliente', 'cliente'), ('Status', 'status'), ('Pagamento', 'data_pagamento'), ('Inicio', 'inicio_vigencia'), ('Fim', 'fim_vigencia')]
     create_url_name = 'core:licenca_create'
     edit_url_name = 'core:licenca_update'
     delete_url_name = 'core:licenca_delete'
     search_fields = ['cliente', 'cpf_cnpj', 'email']
     default_ordering = '-created_at'
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if getattr(self.request.user, 'effective_role', '') == 'SUPERVISOR':
+            perfil = getattr(self.request.user, 'perfil_licenca', None)
+            lic = perfil.licenca if perfil else None
+            if lic:
+                qs = qs.filter(pk=lic.pk)
+            else:
+                qs = qs.none()
+        return qs
+
 class LicencaCreateView(GestorRequiredMixin, CrudCreateView):
+    template_name = 'core/licencas/form_wizard.html'
     model = Licenca
     form_class = LicencaForm
     success_url = reverse_lazy('core:licenca_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
 
 
 class LicencaUpdateView(GestorRequiredMixin, CrudUpdateView):
+    template_name = 'core/licencas/form_wizard.html'
     model = Licenca
     form_class = LicencaForm
     success_url = reverse_lazy('core:licenca_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
+    def dispatch(self, request, *args, **kwargs):
+        lic = self.get_object()
+        if getattr(request.user, 'effective_role', '') == 'SUPERVISOR':
+            perfil = getattr(request.user, 'perfil_licenca', None)
+            if not perfil or perfil.licenca_id != lic.pk:
+                messages.error(request, 'Voce nao tem permissao para editar esta assinatura.')
+                return redirect('core:licencas_page')
+            if lic.status == Licenca.Status.ATIVA:
+                messages.warning(request, 'Assinatura validada nao pode ser editada pelo cliente.')
+                return redirect('core:licencas_page')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class LicencaDeleteView(GestorRequiredMixin, CrudDeleteView):
     model = Licenca
     success_url = reverse_lazy('core:licenca_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        lic = self.get_object()
+        if getattr(request.user, 'effective_role', '') == 'SUPERVISOR':
+            perfil = getattr(request.user, 'perfil_licenca', None)
+            if not perfil or perfil.licenca_id != lic.pk:
+                messages.error(request, 'Voce nao tem permissao para excluir esta assinatura.')
+                return redirect('core:licencas_page')
+            if lic.status == Licenca.Status.ATIVA:
+                messages.warning(request, 'Assinatura validada nao pode ser excluida pelo cliente.')
+                return redirect('core:licencas_page')
+        return super().dispatch(request, *args, **kwargs)
 
 # Vinculos Usuario-Licenca (CRUD)
 class PerfilUsuarioLicencaListView(GestorRequiredMixin, CrudListView):
@@ -3476,4 +3747,5 @@ class InviteUsuarioLicencaView(GestorRequiredMixin, FormView):
                 'whatsapp_url': whatsapp_url,
             },
         )
+
 

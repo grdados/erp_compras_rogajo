@@ -1,7 +1,12 @@
-﻿import unicodedata
+import unicodedata
+
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import timedelta
+import calendar
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from cadastros.models import (
     Categoria,
@@ -190,7 +195,7 @@ class ProdutorForm(StyledModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Permitir cadastrar Produtor sem Cliente (pedido do usuário).
+        # Permitir cadastrar Produtor sem Cliente (pedido do usuÃ¡rio).
         if 'cliente' in self.fields:
             self.fields['cliente'].required = False
 
@@ -541,20 +546,102 @@ class InviteUsuarioLicencaForm(forms.Form):
             self.add_error('password2', 'As senhas nao conferem.')
         return cleaned
 class LicencaForm(StyledModelForm):
+    @staticmethod
+    def _add_months(base_date, months):
+        if not base_date:
+            return base_date
+        month = base_date.month - 1 + int(months)
+        year = base_date.year + month // 12
+        month = month % 12 + 1
+        day = min(base_date.day, calendar.monthrange(year, month)[1])
+        return base_date.replace(year=year, month=month, day=day)
+
+    @staticmethod
+    def _format_decimal_br(value):
+        try:
+            dec = Decimal(value or 0).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except Exception:
+            dec = Decimal('0.00')
+        s = f'{dec:,.2f}'
+        return s.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+    @staticmethod
+    def _parse_decimal_robusto(raw_value):
+        if raw_value is None:
+            return Decimal('0.00')
+        raw = str(raw_value).strip().replace(' ', '')
+        if not raw:
+            return Decimal('0.00')
+
+        if ',' in raw and '.' in raw:
+            last_comma = raw.rfind(',')
+            last_dot = raw.rfind('.')
+            if last_comma > last_dot:
+                normalized = raw.replace('.', '').replace(',', '.')
+            else:
+                normalized = raw.replace(',', '')
+        elif ',' in raw:
+            normalized = raw.replace('.', '').replace(',', '.')
+        elif '.' in raw:
+            if raw.count('.') == 1:
+                normalized = raw
+            else:
+                head, tail = raw.rsplit('.', 1)
+                normalized = head.replace('.', '') + '.' + tail
+        else:
+            normalized = raw
+
+        try:
+            return Decimal(normalized).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError):
+            return Decimal('0.00')
+
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        # customer/subscription vem do Stripe via webhook; nao precisa digitar manualmente
-        for fn in ('stripe_customer_id', 'stripe_subscription_id'):
-            if fn in self.fields:
-                self.fields[fn].required = False
-                self.fields[fn].widget.attrs.update({'readonly': 'readonly', 'placeholder': 'Preenchido automaticamente pelo Stripe (webhook)'})
+        if 'valor_total' in self.fields:
+            self.fields['valor_total'].widget.attrs.update(
+                {
+                    'data-decimal-br': '0',
+                    'data-license-currency': '1',
+                    'data-decimals': '2',
+                    'placeholder': '0,00',
+                }
+            )
+            if not self.is_bound:
+                self.initial['valor_total'] = self._format_decimal_br(getattr(self.instance, 'valor_total', None))
 
-        # price ids: copie do Stripe > Produtos > Precos (Price ID)
-        for fn in ('stripe_price_id_semestral', 'stripe_price_id_anual', 'stripe_price_id'):
-            if fn in self.fields:
-                self.fields[fn].required = False
-                self.fields[fn].widget.attrs.update({'placeholder': 'Cole aqui o Price ID (ex.: price_...)'})
+        role_user = getattr(getattr(self, 'request', None), 'user', None)
+        effective_role = getattr(role_user, 'effective_role', '')
+        if effective_role != 'ADMIN' and 'status' in self.fields:
+            self.fields.pop('status')
+
+        # Datas automaticas
+        hoje = timezone.localdate()
+        data_emissao_base = getattr(self.instance, 'data_emissao', None) or hoje
+        plano_atual = getattr(self.instance, 'plano', None) or self.initial.get('plano')
+        data_pagamento_atual = getattr(self.instance, 'data_pagamento', None)
+
+        self.initial['data_emissao'] = data_emissao_base
+        self.initial['data_vencimento_pagamento'] = data_emissao_base + timedelta(days=7)
+        self.initial['data_pagamento'] = data_pagamento_atual
+        self.initial['inicio_vigencia'] = data_pagamento_atual
+
+        if data_pagamento_atual and plano_atual == Licenca.Plano.SEMESTRAL:
+            self.initial['fim_vigencia'] = self._add_months(data_pagamento_atual, 6)
+        elif data_pagamento_atual and plano_atual == Licenca.Plano.ANUAL:
+            self.initial['fim_vigencia'] = self._add_months(data_pagamento_atual, 12)
+
+        for fname in ('data_emissao', 'data_vencimento_pagamento', 'inicio_vigencia', 'fim_vigencia'):
+            if fname in self.fields:
+                self.fields[fname].disabled = True
+                self.fields[fname].widget.attrs.update({'readonly': 'readonly'})
+
+        if effective_role != 'ADMIN' and 'data_pagamento' in self.fields:
+            self.fields['data_pagamento'].disabled = True
+            self.fields['data_pagamento'].widget.attrs.update({'readonly': 'readonly'})
+
     class Meta:
         model = Licenca
         fields = [
@@ -569,14 +656,76 @@ class LicencaForm(StyledModelForm):
             'contato',
             'logo',
             'slogan',
+            'plano',
+            'forma_pagamento',
+            'valor_total',
+            'data_emissao',
+            'data_vencimento_pagamento',
+            'data_pagamento',
             'status',
             'inicio_vigencia',
             'fim_vigencia',
-            'stripe_customer_id',
-            'stripe_subscription_id',
-            'stripe_price_id',
-            'stripe_price_id_semestral',
-            'stripe_price_id_anual',
         ]
-        widgets = {'inicio_vigencia': forms.DateInput(), 'fim_vigencia': forms.DateInput()}
+        widgets = {
+            'data_emissao': forms.DateInput(),
+            'data_vencimento_pagamento': forms.DateInput(),
+            'data_pagamento': forms.DateInput(),
+            'inicio_vigencia': forms.DateInput(),
+            'fim_vigencia': forms.DateInput(),
+        }
 
+    def clean_valor_total(self):
+        value = self.cleaned_data.get('valor_total')
+        if isinstance(value, Decimal):
+            return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        raw = self.data.get(self.add_prefix('valor_total'))
+        return self._parse_decimal_robusto(raw)
+
+    def clean(self):
+        cleaned = super().clean()
+
+        role = getattr(getattr(self.request, 'user', None), 'effective_role', '')
+
+        # Data emissao fixa + vencimento de pagamento automatico (emissao + 7)
+        data_emissao = getattr(self.instance, 'data_emissao', None) or timezone.localdate()
+        cleaned['data_emissao'] = data_emissao
+        cleaned['data_vencimento_pagamento'] = data_emissao + timedelta(days=7)
+
+        plano_novo = cleaned.get('plano') or getattr(self.instance, 'plano', '')
+        plano_antigo = getattr(self.instance, 'plano', '')
+
+        # Nao permite mudar plano durante vigencia ativa.
+        if self.instance.pk and getattr(self.instance, 'status', '') == Licenca.Status.ATIVA and plano_novo and plano_novo != plano_antigo:
+            self.add_error('plano', 'Nao e permitido alterar o plano durante a vigencia ativa. Renove para um novo ciclo.')
+
+        # Data de pagamento: somente admin informa.
+        if role == 'ADMIN':
+            data_pagamento = cleaned.get('data_pagamento') or getattr(self.instance, 'data_pagamento', None)
+        else:
+            data_pagamento = getattr(self.instance, 'data_pagamento', None)
+            cleaned['data_pagamento'] = data_pagamento
+
+        if data_pagamento and data_pagamento < data_emissao:
+            self.add_error('data_pagamento', 'Data do pagamento nao pode ser menor que a data de emissao.')
+
+        status_novo = cleaned.get('status') if 'status' in cleaned else getattr(self.instance, 'status', '')
+        if status_novo == Licenca.Status.ATIVA and not data_pagamento:
+            self.add_error('data_pagamento', 'Informe a data do pagamento para ativar a assinatura.')
+
+        # Ao informar data de pagamento (admin), ativa automaticamente.
+        if role == 'ADMIN' and data_pagamento:
+            cleaned['status'] = Licenca.Status.ATIVA
+
+        # Inicio vigencia sempre = data de pagamento.
+        cleaned['inicio_vigencia'] = data_pagamento
+
+        # Fim vigencia automatico pela data de pagamento e plano.
+        if data_pagamento and plano_novo == Licenca.Plano.SEMESTRAL:
+            cleaned['fim_vigencia'] = self._add_months(data_pagamento, 6)
+        elif data_pagamento and plano_novo == Licenca.Plano.ANUAL:
+            cleaned['fim_vigencia'] = self._add_months(data_pagamento, 12)
+        else:
+            cleaned['fim_vigencia'] = None
+
+        return cleaned

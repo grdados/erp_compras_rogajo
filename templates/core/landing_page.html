@@ -1,4 +1,6 @@
 ﻿{% load static %}
+{% load licenca_tags %}
+{% empresa_cadastrada as tem_empresa %}
 <!doctype html>
 <html lang="pt-BR">
   <head>
@@ -383,7 +385,7 @@
             <a href="/dashboard/" class="hidden rounded-xl bg-[var(--brand-300)] px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(55,164,87,.30)] md:inline-flex">Painel</a>
             <a href="/accounts/logout/" class="hidden rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-[var(--brand-300)]/35 hover:bg-white/10 md:inline-flex">Sair</a>
           {% else %}
-            <a href="/accounts/login/" class="hidden rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-[var(--brand-300)]/35 hover:bg-white/10 md:inline-flex">Login</a>
+            <a href="{% if tem_empresa %}/accounts/login/{% else %}/licencas/registrar/{% endif %}" class="hidden rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-[var(--brand-300)]/35 hover:bg-white/10 md:inline-flex">{% if tem_empresa %}Login{% else %}Registrar{% endif %}</a>
           {% endif %}
           <button
             id="menu-toggle"
@@ -435,8 +437,8 @@
             class="rounded-xl px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/5"
             >Contato</a
           >
-          <a href="/accounts/login/" class="button-primary mt-2 text-sm"
-            >Acessar sistema</a
+          <a href="{% if tem_empresa %}/accounts/login/{% else %}/licencas/registrar/{% endif %}" class="button-primary mt-2 text-sm"
+            >{% if tem_empresa %}Login{% else %}Registrar{% endif %}</a
           >
         </div>
       </div>
@@ -1219,3 +1221,7 @@
     </script>
   </body>
 </html>
+
+
+
+

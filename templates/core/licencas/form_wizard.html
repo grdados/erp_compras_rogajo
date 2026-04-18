@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block title %}Licenca | ERP Compras{% endblock %}
+{% block top_title %}Licenca{% endblock %}
+{% block content %}
+<section class="space-y-3">
+  <div>
+    <p class="text-xl text-slate-600">Preencha os blocos e salve.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="rounded-3xl border border-slate-300 bg-[#f7f8f9] p-6 shadow-sm" id="licenca-wizard-form">
+    {% csrf_token %}
+
+    <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-3">
+      <div class="grid gap-2 md:grid-cols-4">
+        <button type="button" class="wizard-nav-btn rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-2 text-left text-[14px] font-bold text-emerald-900" data-step-nav="0">
+          1. Identificacao
+        </button>
+        <button type="button" class="wizard-nav-btn rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-[14px] font-normal text-slate-700" data-step-nav="1">
+          2. Endereco e Marca
+        </button>
+        <button type="button" class="wizard-nav-btn rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-[14px] font-normal text-slate-700" data-step-nav="2">
+          3. Plano e Cobranca
+        </button>
+        <button type="button" class="wizard-nav-btn rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-[14px] font-normal text-slate-700" data-step-nav="3">
+          4. Datas Automaticas
+        </button>
+      </div>
+    </div>
+
+    <div class="wizard-step space-y-4" data-step="0">
+      <h3 class="text-[18px] font-bold text-slate-900">Identificacao</h3>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% for field in form %}
+          {% if field.name == 'cliente' or field.name == 'cpf_cnpj' or field.name == 'email' or field.name == 'contato' %}
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-800">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<p class="mt-1 text-xs text-red-600">{{ field.errors|join:', ' }}</p>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="wizard-step hidden space-y-4" data-step="1">
+      <h3 class="text-[18px] font-bold text-slate-900">Endereco e Marca</h3>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% for field in form %}
+          {% if field.name == 'endereco' or field.name == 'numero' or field.name == 'cep' or field.name == 'cidade' or field.name == 'uf' or field.name == 'logo' or field.name == 'slogan' %}
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-800">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<p class="mt-1 text-xs text-red-600">{{ field.errors|join:', ' }}</p>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="wizard-step hidden space-y-4" data-step="2">
+      <h3 class="text-[18px] font-bold text-slate-900">Plano e Cobranca</h3>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% for field in form %}
+          {% if field.name == 'plano' or field.name == 'forma_pagamento' or field.name == 'valor_total' or field.name == 'status' %}
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-800">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<p class="mt-1 text-xs text-red-600">{{ field.errors|join:', ' }}</p>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="wizard-step hidden space-y-4" data-step="3">
+      <h3 class="text-[18px] font-bold text-slate-900">Datas Automaticas</h3>
+      <p class="text-[14px] text-slate-600">Data emissao e vencimento sao fixos. Admin informa data do pagamento e o sistema calcula vigencia automaticamente.</p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% for field in form %}
+          {% if field.name == 'data_emissao' or field.name == 'data_vencimento_pagamento' or field.name == 'data_pagamento' or field.name == 'inicio_vigencia' or field.name == 'fim_vigencia' %}
+            <div>
+              <label class="mb-1 block text-sm font-medium text-slate-800">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<p class="mt-1 text-xs text-red-600">{{ field.errors|join:', ' }}</p>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="inline-flex gap-2">
+        <button type="button" id="wizard-prev" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-[14px] font-medium text-slate-700 hover:bg-slate-100">Anterior</button>
+        <button type="button" id="wizard-next" class="rounded-xl border border-emerald-700 bg-emerald-50 px-4 py-2 text-[14px] font-bold text-emerald-900 hover:bg-emerald-100">Proximo</button>
+      </div>
+
+      <div class="inline-flex gap-3">
+        <button type="submit" class="rounded-xl bg-[#56d741] px-6 py-2.5 text-base font-bold text-[#0d2f19] hover:brightness-95">Salvar</button>
+        <a href="{% url 'core:licenca_list' %}" class="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-100">Cancelar</a>
+      </div>
+    </div>
+  </form>
+</section>
+
+<script>
+  (function () {
+    const form = document.getElementById('licenca-wizard-form');
+    if (!form) return;
+
+    const steps = Array.from(form.querySelectorAll('.wizard-step'));
+    const navBtns = Array.from(form.querySelectorAll('.wizard-nav-btn'));
+    const prevBtn = document.getElementById('wizard-prev');
+    const nextBtn = document.getElementById('wizard-next');
+    let activeStep = 0;
+
+    const hasErrors = form.querySelector('.text-red-600');
+    if (hasErrors) {
+      const errorStep = hasErrors.closest('.wizard-step');
+      if (errorStep && errorStep.dataset.step) activeStep = parseInt(errorStep.dataset.step, 10) || 0;
+    }
+
+    function paintNav() {
+      navBtns.forEach((btn, idx) => {
+        if (idx === activeStep) {
+          btn.classList.remove('border-slate-300', 'bg-white', 'text-slate-700', 'font-normal');
+          btn.classList.add('border-emerald-600', 'bg-emerald-50', 'text-emerald-900', 'font-bold');
+        } else {
+          btn.classList.remove('border-emerald-600', 'bg-emerald-50', 'text-emerald-900', 'font-bold');
+          btn.classList.add('border-slate-300', 'bg-white', 'text-slate-700', 'font-normal');
+        }
+      });
+    }
+
+    function paintSteps() {
+      steps.forEach((step, idx) => {
+        step.classList.toggle('hidden', idx !== activeStep);
+      });
+      prevBtn.disabled = activeStep === 0;
+      prevBtn.classList.toggle('opacity-50', activeStep === 0);
+      nextBtn.disabled = activeStep === (steps.length - 1);
+      nextBtn.classList.toggle('opacity-50', activeStep === (steps.length - 1));
+    }
+
+    function goStep(idx) {
+      const lim = Math.max(0, Math.min(idx, steps.length - 1));
+      activeStep = lim;
+      paintNav();
+      paintSteps();
+    }
+
+    navBtns.forEach((btn) => {
+      btn.addEventListener('click', () => goStep(parseInt(btn.dataset.stepNav || '0', 10)));
+    });
+    prevBtn.addEventListener('click', () => goStep(activeStep - 1));
+    nextBtn.addEventListener('click', () => goStep(activeStep + 1));
+    goStep(activeStep);
+
+    // Moeda BR do campo Valor Total: aceita 1.234,56 e 1234.56 sem inflar valor.
+    const valorInput = document.getElementById('id_valor_total');
+    if (!valorInput) return;
+
+    function normalizeToDot(raw) {
+      const txt = (raw || '').toString().trim().replace(/\s/g, '');
+      if (!txt) return '';
+      if (txt.includes(',') && txt.includes('.')) {
+        return (txt.lastIndexOf(',') > txt.lastIndexOf('.'))
+          ? txt.replace(/\./g, '').replace(',', '.')
+          : txt.replace(/,/g, '');
+      }
+      if (txt.includes(',')) return txt.replace(/\./g, '').replace(',', '.');
+      if ((txt.match(/\./g) || []).length > 1) {
+        const i = txt.lastIndexOf('.');
+        return txt.slice(0, i).replace(/\./g, '') + '.' + txt.slice(i + 1);
+      }
+      return txt;
+    }
+
+    function toPtBr(raw) {
+      const dot = normalizeToDot(raw);
+      const num = Number(dot);
+      if (!Number.isFinite(num)) return '';
+      return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    valorInput.addEventListener('blur', function () {
+      const pretty = toPtBr(valorInput.value);
+      if (pretty) valorInput.value = pretty;
+    });
+
+    if (valorInput.value) {
+      const pretty = toPtBr(valorInput.value);
+      if (pretty) valorInput.value = pretty;
+    }
+
+    form.addEventListener('submit', function () {
+      const dot = normalizeToDot(valorInput.value);
+      if (dot) valorInput.value = dot;
+    });
+  })();
+</script>
+{% endblock %}

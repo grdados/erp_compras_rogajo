@@ -12,6 +12,9 @@ class LicencaAtivaMiddleware:
         '/admin/',
         '/accounts/login',
         '/accounts/logout',
+        '/licencas/registrar/',
+        '/licencas/confirmar-email/',
+        '/licencas/politica-privacidade/',
         '/licencas/renovar',
         '/licencas/checkout/',
         '/licencas/webhook/',
@@ -42,10 +45,16 @@ class LicencaAtivaMiddleware:
             # não derruba o login com erro 500.
             return self.get_response(request)
 
+        if licenca and licenca.pagamento_pendente_expirado:
+            licenca.delete()
+            return redirect('core:licencas_page')
+
         if not licenca:
-            return redirect('licencas:primeiro_acesso')
+            return redirect('core:licencas_page')
 
         if not licenca.esta_vigente:
-            return redirect('licencas:renovar')
+            # Qualquer status diferente de ATIVA:
+            # usuario fica restrito ao painel de Licenca ate validacao.
+            return redirect('core:licencas_page')
 
         return self.get_response(request)

@@ -1,65 +1,97 @@
-﻿import json
+import json
 import os
+import uuid
 from datetime import datetime, timedelta
 
 import stripe
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import DatabaseError, transaction
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import Licenca, PerfilUsuarioLicenca
-from .forms import PrimeiroAcessoLicencaForm, PrimeiroAcessoPublicForm
+from .forms import CompletarCadastroLicencaForm, RegistroContaForm
+from .models import ConfirmacaoEmailCadastro, Licenca, PerfilUsuarioLicenca
 from .pricing import valor_anual, valor_mensal, valor_semestral
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
-def primeiro_acesso(request):
-    """Tela de ativacao de licenca (primeiro acesso).
 
-    - Se o usuario ja estiver logado: cria a licenca e vincula ao usuario atual.
-    - Se estiver anonimo (fluxo do login): cria usuario (SUPERVISOR) + licenca e loga automaticamente.
+
+def _periodo_para_valor(periodo):
+    if periodo == 'anual':
+        return valor_anual(), Licenca.Plano.ANUAL
+    return valor_semestral(), Licenca.Plano.SEMESTRAL
+
+
+def _enviar_email_confirmacao(request, usuario, token_obj):
+    confirmar_url = request.build_absolute_uri(reverse('licencas:confirmar_email', kwargs={'token': token_obj.token}))
+    assunto = 'Confirme seu cadastro - Rogajo'
+    mensagem = (
+        f'Ola, {usuario.username}!\n\n'
+        'Recebemos seu cadastro. Para confirmar seu email, acesse:\n'
+        f'{confirmar_url}\n\n'
+        'Se voce nao solicitou este cadastro, ignore esta mensagem.\n'
+    )
+    remetente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@rogajo.local')
+    send_mail(assunto, mensagem, remetente, [usuario.email], fail_silently=False)
+
+
+def registrar(request):
+    """Fluxo unico:
+    - Anonimo: cria conta e envia confirmacao de email.
+    - Logado: completa dados da empresa/pessoa e cria licenca.
     """
 
     if request.user.is_authenticated:
         if getattr(request.user, 'effective_role', '') == 'ADMIN':
             return redirect('core:dashboard')
 
-        try:
-            perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
-        except DatabaseError:
-            messages.error(request, 'Banco de dados ainda está sincronizando. Tente novamente em alguns segundos.')
-            return render(request, 'licencas/primeiro_acesso.html', {'form': PrimeiroAcessoLicencaForm(), 'modo_publico': False})
+        perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
         if perfil and perfil.licenca:
-            lic = perfil.licenca
-            if getattr(lic, 'esta_vigente', False):
-                return redirect('core:dashboard')
-            return redirect('licencas:renovar')
+            if perfil.licenca.pagamento_pendente_expirado:
+                perfil.licenca.delete()
+                messages.warning(
+                    request,
+                    'Sua solicitacao expirou por falta de pagamento em 7 dias. Cadastre novamente sua assinatura.',
+                )
+            else:
+                if perfil.licenca.esta_vigente:
+                    return redirect('core:dashboard')
+                return redirect('licencas:renovar')
 
-        form = PrimeiroAcessoLicencaForm(request.POST or None)
+        initial = {'email': request.user.email or ''}
+        form = CompletarCadastroLicencaForm(request.POST or None, initial=initial)
         if request.method == 'POST' and form.is_valid():
             try:
-                lic = Licenca.objects.create(
-                    cliente=form.cleaned_data['cliente'],
-                    cpf_cnpj=form.cleaned_data['cpf_cnpj'],
-                    email=form.cleaned_data['email'],
-                    contato=form.cleaned_data['contato'],
-                    status=Licenca.Status.EXPIRADA,
-                )
-                PerfilUsuarioLicenca.objects.create(usuario=request.user, licenca=lic)
+                with transaction.atomic():
+                    lic = Licenca.objects.create(
+                        cliente=form.cleaned_data['cliente'],
+                        cpf_cnpj=form.cleaned_data['cpf_cnpj'],
+                        endereco=form.cleaned_data['endereco'],
+                        numero=form.cleaned_data['numero'],
+                        cep=form.cleaned_data['cep'],
+                        cidade=form.cleaned_data['cidade'],
+                        uf=(form.cleaned_data['uf'] or '').upper(),
+                        email=form.cleaned_data['email'],
+                        contato=form.cleaned_data['contato'],
+                        status=Licenca.Status.EXPIRADA,
+                    )
+                    PerfilUsuarioLicenca.objects.create(usuario=request.user, licenca=lic)
+                messages.success(request, 'Dados da empresa salvos. Agora escolha o plano da assinatura.')
                 return redirect('licencas:renovar')
             except DatabaseError:
-                messages.error(request, 'Não foi possível salvar agora. Banco em sincronização ou configuração pendente.')
+                messages.error(request, 'Nao foi possivel salvar agora. Tente novamente em instantes.')
 
-        return render(request, 'licencas/primeiro_acesso.html', {'form': form, 'modo_publico': False})
+        return render(request, 'licencas/registrar.html', {'form': form, 'modo_publico': False})
 
-    form = PrimeiroAcessoPublicForm(request.POST or None)
+    form = RegistroContaForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         User = get_user_model()
         try:
@@ -69,34 +101,77 @@ def primeiro_acesso(request):
                     password=form.cleaned_data['password1'],
                     email=form.cleaned_data['email'],
                     role=User.Role.SUPERVISOR,
+                    is_active=False,
                 )
-                lic = Licenca.objects.create(
-                    cliente=form.cleaned_data['cliente'],
-                    cpf_cnpj=form.cleaned_data['cpf_cnpj'],
-                    email=form.cleaned_data['email'],
-                    contato=form.cleaned_data['contato'],
-                    status=Licenca.Status.EXPIRADA,
+                ConfirmacaoEmailCadastro.objects.filter(usuario=user, usado_em__isnull=True).delete()
+                token_obj = ConfirmacaoEmailCadastro.objects.create(
+                    usuario=user,
+                    token=uuid.uuid4().hex,
+                    expira_em=timezone.now() + timedelta(hours=24),
                 )
-                PerfilUsuarioLicenca.objects.create(usuario=user, licenca=lic)
-
-            login(request, user)
-            return redirect('licencas:renovar')
+            try:
+                _enviar_email_confirmacao(request, user, token_obj)
+            except Exception:
+                # Em ambientes sem SMTP, evita bloquear o cadastro.
+                confirmar_url = request.build_absolute_uri(
+                    reverse('licencas:confirmar_email', kwargs={'token': token_obj.token})
+                )
+                messages.warning(
+                    request,
+                    f'Conta criada, mas o email nao foi enviado neste ambiente. Link de confirmacao: {confirmar_url}',
+                )
+            messages.success(
+                request,
+                'Cadastro criado! Enviamos um email de confirmacao. Confirme para liberar o primeiro login.',
+            )
+            return redirect('/accounts/login/')
         except DatabaseError:
-            messages.error(request, 'Não foi possível ativar a licença agora. Banco em sincronização ou configuração pendente.')
+            messages.error(request, 'Nao foi possivel concluir o cadastro agora. Tente novamente.')
 
-    return render(request, 'licencas/primeiro_acesso.html', {'form': form, 'modo_publico': True})
+    return render(request, 'licencas/registrar.html', {'form': form, 'modo_publico': True})
 
 
+def primeiro_acesso(request):
+    # Compatibilidade com URL antiga
+    return redirect('licencas:registrar')
+
+
+def confirmar_email(request, token):
+    confirmacao = get_object_or_404(ConfirmacaoEmailCadastro, token=token)
+    if not confirmacao.esta_valida:
+        messages.error(request, 'Link de confirmacao invalido ou expirado. Faca um novo cadastro.')
+        return redirect('licencas:registrar')
+
+    user = confirmacao.usuario
+    user.is_active = True
+    user.save(update_fields=['is_active'])
+    confirmacao.usado_em = timezone.now()
+    confirmacao.save(update_fields=['usado_em', 'updated_at'])
+
+    messages.success(request, 'Email confirmado com sucesso. Agora faca login para continuar.')
+    return redirect('/accounts/login/')
+
+
+def politica_privacidade(request):
+    return render(request, 'licencas/politica_privacidade.html')
 
 
 @login_required
 def renovar_licenca(request):
-    """Renovacao de licenca (manual/Stripe)."""
+    """Selecao de plano e pagamento (manual por enquanto; Stripe opcional)."""
 
     perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
     licenca = perfil.licenca if perfil else None
     if not licenca:
-        return redirect('licencas:primeiro_acesso')
+        return redirect('licencas:registrar')
+
+    if licenca.pagamento_pendente_expirado:
+        licenca.delete()
+        messages.warning(
+            request,
+            'Sua solicitacao expirou por falta de pagamento em 7 dias. Faça um novo cadastro de assinatura.',
+        )
+        return redirect('licencas:registrar')
 
     def resolve_price_id(periodo: str) -> str:
         periodo = (periodo or 'semestral').strip().lower()
@@ -104,9 +179,7 @@ def renovar_licenca(request):
             pid = (os.getenv('STRIPE_PRICE_ID_ANUAL', '') or '').strip() or (licenca.stripe_price_id_anual or '').strip()
         else:
             pid = (os.getenv('STRIPE_PRICE_ID_SEMESTRAL', '') or '').strip() or (licenca.stripe_price_id_semestral or '').strip()
-
         if not pid:
-            # fallback legado
             pid = (os.getenv('STRIPE_PRICE_ID', '') or '').strip() or (licenca.stripe_price_id or '').strip()
         return pid
 
@@ -129,50 +202,105 @@ def renovar_licenca(request):
 
     if checkout_enabled and not (resolve_price_id('semestral') or resolve_price_id('anual')):
         checkout_enabled = False
-        setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL no .env (ou no cadastro da licenca).'
+        setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL.'
 
     if request.method == 'POST':
-        if settings.LICENCA_MANUAL_MODE:
-            periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
-            if periodo not in {'semestral', 'anual'}:
-                periodo = 'semestral'
-
-            forma_pagamento = (request.POST.get('forma_pagamento') or 'PIX').strip().upper()
-            if forma_pagamento not in {'PIX', 'BOLETO'}:
-                forma_pagamento = 'PIX'
-
-            licenca.status = Licenca.Status.AGUARDANDO_CONFIRMACAO
-            licenca.save(update_fields=['status', 'updated_at'])
-
-            if forma_pagamento == 'PIX':
-                messages.success(
-                    request,
-                    f'Solicitacao registrada! Status: Aguardando confirmacao. '
-                    f'Pague via PIX (chave: {manual_pix_key}) e aguarde liberacao do administrador.',
-                )
-            else:
-                messages.success(
-                    request,
-                    'Solicitacao registrada! Status: Aguardando confirmacao. '
-                    'O boleto sera enviado por email ou WhatsApp.',
-                )
-            return redirect('core:licencas_page')
-
         periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
         if periodo not in {'semestral', 'anual'}:
             periodo = 'semestral'
 
-        price_id = resolve_price_id(periodo)
+        forma_pagamento = (request.POST.get('forma_pagamento') or 'PIX').strip().upper()
+        if forma_pagamento not in {'PIX', 'BOLETO'}:
+            forma_pagamento = 'PIX'
 
+        valor_total, plano = _periodo_para_valor(periodo)
+        hoje = timezone.localdate()
+        venc = hoje + timedelta(days=7)
+
+        if settings.LICENCA_MANUAL_MODE:
+            licenca.plano = plano
+            licenca.forma_pagamento = forma_pagamento
+            licenca.valor_total = valor_total
+            licenca.data_emissao = hoje
+            licenca.data_vencimento_pagamento = venc
+            licenca.status = Licenca.Status.AGUARDANDO_CONFIRMACAO
+            licenca.save(
+                update_fields=[
+                    'plano',
+                    'forma_pagamento',
+                    'valor_total',
+                    'data_emissao',
+                    'data_vencimento_pagamento',
+                    'status',
+                    'updated_at',
+                ]
+            )
+
+            detalhes_pagamento = (
+                f'Empresa/Pessoa: {licenca.cliente}\n'
+                f'Plano: {licenca.get_plano_display()}\n'
+                f'Forma de pagamento: {licenca.get_forma_pagamento_display()}\n'
+                f'Valor total: R$ {valor_total}\n'
+                f'Data de emissao: {hoje.strftime("%d/%m/%Y")}\n'
+                f'Vencimento para confirmacao: {venc.strftime("%d/%m/%Y")}\n'
+            )
+            if forma_pagamento == 'PIX':
+                detalhes_pagamento += f'\nPIX: {manual_pix_key}\n'
+            else:
+                detalhes_pagamento += '\nBoleto: sera enviado por email ou WhatsApp.\n'
+
+            try:
+                send_mail(
+                    'Dados para pagamento da assinatura - Rogajo',
+                    detalhes_pagamento,
+                    getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@rogajo.local'),
+                    [licenca.email],
+                    fail_silently=False,
+                )
+            except Exception:
+                messages.warning(request, 'Nao foi possivel enviar o email de pagamento neste ambiente.')
+
+            if forma_pagamento == 'PIX':
+                messages.success(
+                    request,
+                    f'Solicitacao registrada! Status: pagamento pendente ate {venc.strftime("%d/%m/%Y")}. '
+                    f'Pague via PIX (chave: {manual_pix_key}).',
+                )
+            else:
+                messages.success(
+                    request,
+                    f'Solicitacao registrada! Status: pagamento pendente ate {venc.strftime("%d/%m/%Y")}. '
+                    'O boleto sera enviado por email ou WhatsApp.',
+                )
+            return redirect('core:licencas_page')
+
+        price_id = resolve_price_id(periodo)
         if not settings.STRIPE_SECRET_KEY:
             messages.error(request, 'Stripe nao configurado. Contate o suporte para liberar o checkout.')
         elif not price_id:
             messages.error(request, 'Price ID do Stripe nao configurado para o periodo selecionado.')
         else:
+            licenca.plano = plano
+            licenca.forma_pagamento = forma_pagamento
+            licenca.valor_total = valor_total
+            licenca.data_emissao = hoje
+            licenca.data_vencimento_pagamento = venc
+            licenca.status = Licenca.Status.AGUARDANDO_CONFIRMACAO
+            licenca.save(
+                update_fields=[
+                    'plano',
+                    'forma_pagamento',
+                    'valor_total',
+                    'data_emissao',
+                    'data_vencimento_pagamento',
+                    'status',
+                    'updated_at',
+                ]
+            )
+
             stripe.api_key = settings.STRIPE_SECRET_KEY
             success_url = request.build_absolute_uri(reverse('licencas:checkout_sucesso'))
             cancel_url = request.build_absolute_uri(reverse('licencas:checkout_cancelado'))
-
             checkout_session = stripe.checkout.Session.create(
                 mode='subscription',
                 customer_email=licenca.email,
@@ -196,6 +324,7 @@ def renovar_licenca(request):
             'beneficiario': beneficiario,
             'manual_pix_key': manual_pix_key,
             'manual_mode': settings.LICENCA_MANUAL_MODE,
+            'licenca': licenca,
         },
     )
 
@@ -280,7 +409,6 @@ def _handle_checkout_completed(session):
     licenca.status = Licenca.Status.ATIVA
     licenca.inicio_vigencia = timezone.localdate()
 
-    # fallback: se por algum motivo o webhook de subscription nao chegar, damos 30 dias.
     if not licenca.fim_vigencia:
         licenca.fim_vigencia = timezone.localdate() + timedelta(days=30)
 

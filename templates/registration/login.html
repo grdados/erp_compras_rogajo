@@ -1,4 +1,7 @@
-﻿{% load static %}
+{% load static %}
+{% load licenca_tags %}
+{% empresa_cadastrada as tem_empresa %}
+{% resumo_login_licenca as resumo_login %}
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -10,24 +13,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      :root {
-        --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
-        --brand-900: #1f5f3a;
-        --brand-800: #236b43;
-        --brand-500: #37a457;
-        --brand-300: #64d26f;
-      }
-      .field-glow {
-        transition: box-shadow .22s ease, border-color .22s ease, transform .22s ease;
-      }
-      .field-glow:focus {
-        border-color: var(--brand-300);
-        box-shadow: 0 0 0 3px rgba(100, 210, 111, 0.18), 0 8px 24px rgba(55, 164, 87, 0.28);
-        transform: translateY(-1px);
-      }
-          body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
-      .ui-title { font-size: 18px; font-weight: 700; }
-      .ui-text { font-size: 14px; font-weight: 400; }
+      :root { --font-ui: 'Lato', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans', 'Liberation Sans', sans-serif; --brand-300: #64d26f; }
+      body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
+      .field-glow { transition: box-shadow .2s ease, border-color .2s ease; }
+      .field-glow:focus { border-color: var(--brand-300); box-shadow: 0 0 0 3px rgba(100, 210, 111, 0.18); }
     </style>
   </head>
   <body class="min-h-screen bg-[#010707] text-white">
@@ -48,9 +37,7 @@
           <form method="post" class="mt-6 space-y-5">
             {% csrf_token %}
             {% if form.non_field_errors %}
-              <div class="rounded-lg border border-red-300/40 bg-red-500/20 px-3 py-2 text-sm text-red-100">
-                {{ form.non_field_errors }}
-              </div>
+              <div class="rounded-lg border border-red-300/40 bg-red-500/20 px-3 py-2 text-sm text-red-100">{{ form.non_field_errors }}</div>
             {% endif %}
 
             <div>
@@ -65,11 +52,10 @@
 
             {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
 
-            <button type="submit" class="w-full rounded-xl bg-[var(--brand-300)] px-5 py-3 text-base font-bold text-[#10301e] transition hover:-translate-y-0.5 hover:bg-[#79df83] hover:shadow-[0_12px_28px_rgba(55,164,87,0.35)]">
-              Entrar
+            <button type="submit" class="w-full rounded-xl bg-[var(--brand-300)] px-5 py-3 text-base font-bold text-[#10301e] transition hover:bg-[#79df83]">
+              Login
             </button>
           </form>
-          </div>
 
           <div class="my-5 flex items-center gap-3">
             <div class="h-px flex-1 bg-white/10"></div>
@@ -77,15 +63,73 @@
             <div class="h-px flex-1 bg-white/10"></div>
           </div>
 
-            <div class="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-200">
-              <div class="font-bold">Nao tem licenca ainda?</div>
-              <div class="mt-1 text-slate-300">Clique abaixo para criar sua conta e ativar sua licenca (primeiro acesso).</div>
-              <a href="/licencas/primeiro-acesso/" class="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-base font-bold text-white transition hover:bg-white/15">Ativar licenca (primeiro acesso)</a>
-            </div>
+          <div class="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-200">
+            {% if resumo_login.mostrar_resumo %}
+              <div class="font-bold">Dados da Licenca</div>
+              <div class="mt-2 space-y-1 text-slate-300">
+                <div><span class="text-white/70">Status:</span> <span class="font-semibold text-white">{{ resumo_login.status }}</span></div>
+                <div><span class="text-white/70">Cliente:</span> <span class="font-semibold text-white">{{ resumo_login.cliente }}</span></div>
+                <div><span class="text-white/70">CNPJ/CPF:</span> <span class="font-semibold text-white">{{ resumo_login.cpf_cnpj }}</span></div>
+              </div>
+            {% else %}
+              <div class="font-bold">Nao tem conta ainda ?</div>
+              <div class="mt-3 text-slate-300">Sua senha deve ter:</div>
+              <ul id="password-validator" class="mt-1 space-y-1 text-slate-300">
+                <li data-rule="len" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>8 caracteres ou mais</li>
+                <li data-rule="case" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>Letras maiusculas e minusculas</li>
+                <li data-rule="num" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>Pelo menos um numero</li>
+                <li data-rule="special" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>Pelo menos um caractere especial</li>
+              </ul>
+            {% endif %}
+            {% if not resumo_login.mostrar_resumo %}
+              <a href="{% if tem_empresa %}/accounts/login/{% else %}/licencas/registrar/{% endif %}" class="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-base font-bold text-white transition hover:bg-white/15">
+                {% if tem_empresa %}Login{% else %}Registrar{% endif %}
+              </a>
+            {% endif %}
+          </div>
         </div>
       </div>
     </main>
+    <script>
+      (function(){
+        const pass = document.querySelector('input[name="password"]');
+        const wrap = document.getElementById('password-validator');
+        if(!pass || !wrap) return;
+
+        function mark(rule, ok){
+          const li = wrap.querySelector('li[data-rule="'+rule+'"]');
+          if(!li) return;
+          const icon = li.querySelector('.rule-icon');
+          if(ok){
+            li.classList.remove('text-slate-300');
+            li.classList.add('text-emerald-300');
+            if(icon){
+              icon.textContent = '✓';
+              icon.classList.remove('text-red-300');
+              icon.classList.add('text-emerald-300');
+            }
+          } else {
+            li.classList.remove('text-emerald-300');
+            li.classList.add('text-slate-300');
+            if(icon){
+              icon.textContent = '•';
+              icon.classList.remove('text-emerald-300');
+              icon.classList.add('text-red-300');
+            }
+          }
+        }
+
+        function validate(){
+          const v = pass.value || '';
+          mark('len', v.length >= 8);
+          mark('case', /[A-Z]/.test(v) && /[a-z]/.test(v));
+          mark('num', /\d/.test(v));
+          mark('special', /[^A-Za-z0-9]/.test(v));
+        }
+
+        pass.addEventListener('input', validate);
+        validate();
+      })();
+    </script>
   </body>
 </html>
-
-
