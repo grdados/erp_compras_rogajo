@@ -12,7 +12,7 @@
   <div class="grid gap-3 sm:grid-cols-2">
     <a href="/app/licencas/crud/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-semibold hover:bg-emerald-500/10">CRUD de Licencas</a>
     <a href="/app/licencas/vinculos/" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-semibold hover:bg-emerald-500/10">Vinculos de Usuarios</a>
-    <a href="/licencas/renovar/" class="rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-3 text-[14px] font-semibold text-emerald-800 hover:bg-emerald-500/20">Fluxo de Renovacao Stripe</a>
+    <a href="/licencas/renovar/" class="rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-4 py-3 text-[14px] font-semibold text-emerald-800 hover:bg-emerald-500/20">Fluxo de Renovacao Manual</a>
   </div>
   {% endif %}
 
@@ -46,6 +46,7 @@
       <div class="rounded-xl border border-slate-200 p-4
         {% if licenca_status_efetivo == 'ATIVA' %} bg-emerald-50 border-emerald-200
         {% elif licenca_status_efetivo == 'INADIMPLENTE' %} bg-amber-50 border-amber-200
+        {% elif licenca_status_efetivo == 'AGUARDANDO_CONFIRMACAO' %} bg-sky-50 border-sky-200
         {% elif licenca_status_efetivo == 'EXPIRADA' %} bg-red-50 border-red-200
         {% else %} bg-slate-50{% endif %}
       ">
@@ -53,6 +54,8 @@
         <div class="mt-2">
           {% if licenca_status_efetivo == 'ATIVA' %}
             <span class="inline-flex rounded-md bg-emerald-100 px-3 py-1 text-[14px] font-bold text-emerald-900 ring-1 ring-emerald-200">{{ licenca_status_label }}</span>
+          {% elif licenca_status_efetivo == 'AGUARDANDO_CONFIRMACAO' %}
+            <span class="inline-flex rounded-md bg-sky-100 px-3 py-1 text-[14px] font-bold text-sky-900 ring-1 ring-sky-200">{{ licenca_status_label }}</span>
           {% elif licenca_status_efetivo == 'INADIMPLENTE' %}
             <span class="inline-flex rounded-md bg-amber-100 px-3 py-1 text-[14px] font-bold text-amber-900 ring-1 ring-amber-200">{{ licenca_status_label }}</span>
           {% elif licenca_status_efetivo == 'EXPIRADA' %}

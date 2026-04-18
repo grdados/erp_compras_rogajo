@@ -7,6 +7,7 @@ from core.models import TimestampedModel
 class Licenca(TimestampedModel):
     class Status(models.TextChoices):
         ATIVA = 'ATIVA', 'Ativa'
+        AGUARDANDO_CONFIRMACAO = 'AGUARDANDO_CONFIRMACAO', 'Aguardando confirmacao'
         INADIMPLENTE = 'INADIMPLENTE', 'Inadimplente'
         EXPIRADA = 'EXPIRADA', 'Expirada'
         CANCELADA = 'CANCELADA', 'Cancelada'
@@ -24,7 +25,7 @@ class Licenca(TimestampedModel):
     logo = models.ImageField(upload_to='licencas/logos/', blank=True, null=True)
     slogan = models.CharField(max_length=200, blank=True)
 
-    status = models.CharField(max_length=15, choices=Status.choices, default=Status.EXPIRADA)
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.EXPIRADA)
     inicio_vigencia = models.DateField(blank=True, null=True)
     fim_vigencia = models.DateField(blank=True, null=True)
     stripe_customer_id = models.CharField(max_length=80, blank=True)

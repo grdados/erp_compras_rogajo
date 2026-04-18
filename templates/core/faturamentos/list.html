@@ -24,23 +24,42 @@
 
   <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
     <div id="faturamento-filtros" class="hidden">
-      <div class="grid gap-3 lg:grid-cols-4">
+      <form id="filtros" method="get" class="grid gap-3 lg:grid-cols-4">
+        <input type="hidden" name="show_filters" value="1" />
         <div class="lg:col-span-2">
           <label class="mb-1 block text-slate-600">Busca</label>
-          <input type="text" name="q" form="filtros" value="{{ current_q }}" placeholder="Buscar nota, pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar nota, pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Cultura</label>
+          <select name="cultura" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_cultura %}selected{% endif %}>Todos</option>
+            {% for c in culturas %}
+              <option value="{{ c.pk }}" {% if filtro_cultura|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Safra</label>
-          <select name="safra" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
-            <option value="" {% if not filtro_safra %}selected{% endif %}>Todas</option>
+          <select name="safra" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_safra %}selected{% endif %}>Todos</option>
             {% for s in safras %}
               <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
             {% endfor %}
           </select>
         </div>
         <div>
+          <label class="mb-1 block text-slate-600">Categoria</label>
+          <select name="categoria" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_categoria %}selected{% endif %}>Todos</option>
+            {% for cat in categorias %}
+              <option value="{{ cat.pk }}" {% if filtro_categoria|add:'' == cat.pk|add:'' %}selected{% endif %}>{{ cat.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
           <label class="mb-1 block text-slate-600">Cliente</label>
-          <select name="cliente" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <select name="cliente" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
             <option value="" {% if not filtro_cliente %}selected{% endif %}>Todos</option>
             {% for c in clientes %}
               <option value="{{ c.pk }}" {% if filtro_cliente|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.cliente }}</option>
@@ -49,7 +68,7 @@
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Produtor</label>
-          <select name="produtor" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <select name="produtor" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
             <option value="" {% if not filtro_produtor %}selected{% endif %}>Todos</option>
             {% for p in produtores %}
               <option value="{{ p.pk }}" {% if filtro_produtor|add:'' == p.pk|add:'' %}selected{% endif %}>{{ p }}</option>
@@ -58,7 +77,7 @@
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Fornecedor</label>
-          <select name="fornecedor" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <select name="fornecedor" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
             <option value="" {% if not filtro_fornecedor %}selected{% endif %}>Todos</option>
             {% for f in fornecedores %}
               <option value="{{ f.pk }}" {% if filtro_fornecedor|add:'' == f.pk|add:'' %}selected{% endif %}>{{ f.fornecedor }}</option>
@@ -66,41 +85,48 @@
           </select>
         </div>
         <div>
-          <label class="mb-1 block text-slate-600">Categoria</label>
-          <select name="categoria" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
-            <option value="" {% if not filtro_categoria %}selected{% endif %}>Todas</option>
-            {% for cat in categorias %}
-              <option value="{{ cat.pk }}" {% if filtro_categoria|add:'' == cat.pk|add:'' %}selected{% endif %}>{{ cat.nome }}</option>
+          <label class="mb-1 block text-slate-600">Custo</label>
+          <select name="custo" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_custo %}selected{% endif %}>Todos</option>
+            {% for c in custos %}
+              <option value="{{ c.pk }}" {% if filtro_custo|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
             {% endfor %}
           </select>
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Pedido</label>
-          <input type="text" name="pedido" form="filtros" value="{{ filtro_pedido }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="text" name="pedido" value="{{ filtro_pedido }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Nota Fiscal</label>
-          <input type="text" name="nota_fiscal" form="filtros" value="{{ filtro_nota_fiscal }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="text" name="nota_fiscal" value="{{ filtro_nota_fiscal }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Status</label>
+          <select name="status" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_status %}selected{% endif %}>Todos</option>
+            {% for v,l in status_choices %}
+              <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Vencimento de</label>
-          <input type="date" name="venc_ini" form="filtros" value="{{ filtro_venc_ini }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="date" name="venc_ini" value="{{ filtro_venc_ini }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Vencimento ate</label>
-          <input type="date" name="venc_fim" form="filtros" value="{{ filtro_venc_fim }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="date" name="venc_fim" value="{{ filtro_venc_fim }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
         </div>
         <div class="flex items-end gap-2 lg:col-span-4">
-          <form id="filtros" method="get"></form>
-          <input type="hidden" name="show_filters" value="1" form="filtros" />
-          <button type="submit" name="apply" value="1" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+          <button type="submit" name="apply" value="1" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
           <a href="{% url 'core:faturamento_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
-          {% if current_sort %}<input type="hidden" name="sort" form="filtros" value="{{ current_sort }}" />{% endif %}
+          {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
         </div>
-      </div>
+      </form>
     </div>
 
-    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
         <div class="flex items-start justify-between">
           <div class="text-sky-700">Nº Notas</div>
@@ -127,6 +153,15 @@
           </div>
         </div>
         <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_preco_medio|decimal_br:2 }}</div>
+      </div>
+      <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div class="flex items-start justify-between">
+          <div class="text-indigo-700">A pagar</div>
+          <div class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 12h12"/></svg>
+          </div>
+        </div>
+        <div class="mt-2 text-[18px] font-bold text-slate-900">{{ card_a_pagar|decimal_br:2 }}</div>
       </div>
       <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
         <div class="flex items-start justify-between">
@@ -293,6 +328,22 @@
 </div>
 
 <script>
+(function(){
+  const form = document.getElementById('filtros');
+  if (form) {
+    const params = new URLSearchParams(window.location.search || '');
+    [
+      'q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo',
+      'status', 'pedido', 'nota_fiscal', 'venc_ini', 'venc_fim'
+    ].forEach(function(name){
+      const control = form.querySelector('[name="' + name + '"]');
+      if (!control) return;
+      const value = params.get(name);
+      control.value = value === null ? '' : value;
+    });
+  }
+})();
+
 (function(){
   const btn = document.getElementById('toggle-filtros-fat');
   const wrap = document.getElementById('faturamento-filtros');

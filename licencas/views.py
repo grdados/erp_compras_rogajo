@@ -91,7 +91,7 @@ def primeiro_acesso(request):
 
 @login_required
 def renovar_licenca(request):
-    """Renovacao via Stripe (sem loop de redirect quando Stripe/Price nao estiver configurado)."""
+    """Renovacao de licenca (manual/Stripe)."""
 
     perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
     licenca = perfil.licenca if perfil else None
@@ -111,11 +111,18 @@ def renovar_licenca(request):
         return pid
 
     setup_error = None
+    manual_pix_key = '67998698159'
+    beneficiario = {
+        'nome': 'Elvis Correia dos Santos',
+        'endereco': 'Av. 22 de Abril, Laguna Carapa/MS',
+        'contato': '(67) 99869-8159',
+        'pix': manual_pix_key,
+    }
     checkout_enabled = True
 
     if settings.LICENCA_MANUAL_MODE:
         checkout_enabled = False
-        setup_error = 'Licenciamento manual ativo. A liberacao da licenca e feita pela equipe (sem Stripe).'
+        setup_error = 'Licenciamento manual ativo. Selecione plano + forma de pagamento para gerar sua solicitacao.'
     elif not settings.STRIPE_SECRET_KEY:
         checkout_enabled = False
         setup_error = 'Stripe ainda nao esta configurado (STRIPE_SECRET_KEY). Contate o suporte para ativar o checkout.'
@@ -126,7 +133,29 @@ def renovar_licenca(request):
 
     if request.method == 'POST':
         if settings.LICENCA_MANUAL_MODE:
-            messages.info(request, 'Modo manual ativo: solicite a liberacao da licenca para a equipe responsavel.')
+            periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
+            if periodo not in {'semestral', 'anual'}:
+                periodo = 'semestral'
+
+            forma_pagamento = (request.POST.get('forma_pagamento') or 'PIX').strip().upper()
+            if forma_pagamento not in {'PIX', 'BOLETO'}:
+                forma_pagamento = 'PIX'
+
+            licenca.status = Licenca.Status.AGUARDANDO_CONFIRMACAO
+            licenca.save(update_fields=['status', 'updated_at'])
+
+            if forma_pagamento == 'PIX':
+                messages.success(
+                    request,
+                    f'Solicitacao registrada! Status: Aguardando confirmacao. '
+                    f'Pague via PIX (chave: {manual_pix_key}) e aguarde liberacao do administrador.',
+                )
+            else:
+                messages.success(
+                    request,
+                    'Solicitacao registrada! Status: Aguardando confirmacao. '
+                    'O boleto sera enviado por email ou WhatsApp.',
+                )
             return redirect('core:licencas_page')
 
         periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
@@ -164,6 +193,9 @@ def renovar_licenca(request):
             'valor_anual': valor_anual(),
             'checkout_enabled': checkout_enabled,
             'setup_error': setup_error,
+            'beneficiario': beneficiario,
+            'manual_pix_key': manual_pix_key,
+            'manual_mode': settings.LICENCA_MANUAL_MODE,
         },
     )
 

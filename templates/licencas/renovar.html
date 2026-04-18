@@ -10,7 +10,9 @@
   <div class="mt-4 rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-[14px] font-normal text-amber-100">{{ setup_error }}</div>
 {% endif %}
 
-  <p class="mt-2 text-[14px] font-normal text-slate-300">Escolha o periodo e finalize no Stripe. Suporte e atualizacoes ja estao incluidos na licenca.</p>
+  <p class="mt-2 text-[14px] font-normal text-slate-300">
+    Escolha o plano e a forma de pagamento. Suporte e atualizacoes ja estao incluidos na licenca.
+  </p>
 
   <div class="mt-4 grid gap-3 md:grid-cols-2">
     <label class="cursor-pointer rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-slate-100 hover:bg-slate-950/60">
@@ -47,10 +49,25 @@
     <div class="mt-1 text-[14px] font-normal text-slate-300">Hora tecnica: <span class="font-bold text-white">R$ 120,00</span> (minimo <span class="font-bold text-white">4 horas</span>).</div>
   </div>
 
+  <div class="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4 text-slate-100">
+    <div class="text-[14px] font-bold">Desenvolvimento / Beneficiario</div>
+    <div class="mt-1 text-[14px] font-normal">{{ beneficiario.nome }}</div>
+    <div class="text-[14px] font-normal">{{ beneficiario.endereco }}</div>
+    <div class="text-[14px] font-normal">Contato: {{ beneficiario.contato }}</div>
+    <div class="mt-1 text-[14px] font-bold text-emerald-300">Chave PIX: {{ manual_pix_key }}</div>
+  </div>
+
   <form method="post" class="mt-6 flex flex-wrap items-center gap-3">
     {% csrf_token %}
     <input type="hidden" name="periodo" id="periodo" value="semestral">
-    <button type="submit" {% if not checkout_enabled %}disabled{% endif %} class="rounded-lg bg-emerald-400 px-5 py-3 text-[14px] font-bold text-slate-900 {% if not checkout_enabled %}opacity-60 cursor-not-allowed{% endif %}">{% if checkout_enabled %}Ir para checkout Stripe{% else %}Checkout indisponivel{% endif %}</button>
+    <label class="text-[14px] font-normal text-slate-300">Forma de pagamento</label>
+    <select name="forma_pagamento" class="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-[14px] text-white">
+      <option value="PIX">PIX</option>
+      <option value="BOLETO">Boleto</option>
+    </select>
+    <button type="submit" {% if not checkout_enabled and not manual_mode %}disabled{% endif %} class="rounded-lg bg-emerald-400 px-5 py-3 text-[14px] font-bold text-slate-900 {% if not checkout_enabled and not manual_mode %}opacity-60 cursor-not-allowed{% endif %}">
+      {% if checkout_enabled %}Ir para checkout Stripe{% else %}Solicitar liberacao manual{% endif %}
+    </button>
     <a href="/app/licencas/" class="rounded-lg border border-slate-500 px-5 py-3 text-[14px] font-bold text-slate-100 hover:bg-slate-800/40">Voltar</a>
   </form>
 </div>

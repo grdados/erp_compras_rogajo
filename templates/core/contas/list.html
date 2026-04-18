@@ -32,26 +32,36 @@
 
     <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm max-h-[800px] overflow-hidden">
       <div id="filtros-wrap" class="hidden">
-      <form method="get" class="grid gap-3 lg:grid-cols-4">
+      <form id="filtros" method="get" class="grid gap-3 lg:grid-cols-4">
       <input type="hidden" name="show_filters" value="1" />
       <div class="lg:col-span-2">
         <label class="mb-1 block text-slate-600">Busca</label>
         <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar nota, cliente, pedido..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
       </div>
       <div>
-        <label class="mb-1 block text-slate-600">Status</label>
-        <select name="status" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
-          {% for v,l in op_status %}
-            <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ l }}</option>
+        <label class="mb-1 block text-slate-600">Cultura</label>
+        <select name="cultura" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <option value="" {% if not filtro_cultura %}selected{% endif %}>Todos</option>
+          {% for c in culturas %}
+            <option value="{{ c.pk }}" {% if filtro_cultura|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
           {% endfor %}
         </select>
       </div>
       <div>
         <label class="mb-1 block text-slate-600">Safra</label>
         <select name="safra" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
-          <option value="" {% if not filtro_safra %}selected{% endif %}>Todas</option>
+          <option value="" {% if not filtro_safra %}selected{% endif %}>Todos</option>
           {% for s in safras %}
             <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Categoria</label>
+        <select name="categoria" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <option value="" {% if not filtro_categoria %}selected{% endif %}>Todos</option>
+          {% for c in categorias %}
+            <option value="{{ c.pk }}" {% if filtro_categoria|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
           {% endfor %}
         </select>
       </div>
@@ -89,6 +99,14 @@
       <div>
         <label class="mb-1 block text-slate-600">Nota Fiscal</label>
         <input type="text" name="nota_fiscal" value="{{ filtro_nota_fiscal }}" placeholder="NF..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+      </div>
+      <div>
+        <label class="mb-1 block text-slate-600">Status</label>
+        <select name="status" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          {% for v,l in op_status %}
+            <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div>
         <label class="mb-1 block text-slate-600">Vencimento de</label>
@@ -528,7 +546,21 @@
   const filtrosWrap = document.getElementById('filtros-wrap');
   const eyeOpen = document.getElementById('icon-eye-open-contas');
   const eyeClosed = document.getElementById('icon-eye-closed-contas');
+  const form = document.getElementById('filtros');
   if (toggleFiltros && filtrosWrap) {
+    if (form) {
+      const filterParams = new URLSearchParams(window.location.search || '');
+      [
+        'q', 'cultura', 'safra', 'categoria', 'cliente', 'produtor', 'fornecedor',
+        'pedido', 'nota_fiscal', 'status', 'venc_ini', 'venc_fim'
+      ].forEach(function(name){
+        const control = form.querySelector('[name="' + name + '"]');
+        if (!control) return;
+        const value = filterParams.get(name);
+        control.value = value === null ? '' : value;
+      });
+    }
+
     const params = new URLSearchParams(window.location.search || '');
     function setState(isOpen){
       if(isOpen){

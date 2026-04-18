@@ -24,23 +24,42 @@
 
   <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
     <div id="planejamento-filtros" class="hidden">
-      <div class="grid gap-3 lg:grid-cols-4">
+      <form id="filtros" method="get" autocomplete="off" class="grid gap-3 lg:grid-cols-4">
+        <input type="hidden" name="show_filters" value="1" />
         <div class="lg:col-span-2">
           <label class="mb-1 block text-slate-600">Busca</label>
-          <input type="text" name="q" form="filtros" value="{{ current_q }}" placeholder="Buscar cliente, safra, custo..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="text" name="q" value="{{ current_q }}" autocomplete="off" placeholder="Buscar cliente, safra, custo..." class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Cultura</label>
+          <select name="cultura" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_cultura %}selected{% endif %}>Todos</option>
+            {% for c in culturas %}
+              <option value="{{ c.pk }}" {% if filtro_cultura|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
+            {% endfor %}
+          </select>
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Safra</label>
-          <select name="safra" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
-            <option value="" {% if not filtro_safra %}selected{% endif %}>Todas</option>
-            {% for s in safras %}
-              <option value="{{ s.pk }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+          <select id="filtro-safra-planejamento" name="safra" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_safra %}selected{% endif %}>Todos</option>
+            {% for s in safras_all %}
+              <option value="{{ s.pk }}" data-cultura="{{ s.cultura_id }}" {% if filtro_safra|add:'' == s.pk|add:'' %}selected{% endif %}>{{ s.safra }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-slate-600">Categoria</label>
+          <select name="categoria" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+            <option value="" {% if not filtro_categoria %}selected{% endif %}>Todos</option>
+            {% for c in categorias %}
+              <option value="{{ c.pk }}" {% if filtro_categoria|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
             {% endfor %}
           </select>
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Cliente</label>
-          <select name="cliente" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <select name="cliente" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
             <option value="" {% if not filtro_cliente %}selected{% endif %}>Todos</option>
             {% for c in clientes %}
               <option value="{{ c.pk }}" {% if filtro_cliente|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.cliente }}</option>
@@ -49,7 +68,7 @@
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Custo</label>
-          <select name="custo" form="filtros" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
+          <select name="custo" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2">
             <option value="" {% if not filtro_custo %}selected{% endif %}>Todos</option>
             {% for c in custos %}
               <option value="{{ c.pk }}" {% if filtro_custo|add:'' == c.pk|add:'' %}selected{% endif %}>{{ c.nome }}</option>
@@ -58,19 +77,17 @@
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Vencimento de</label>
-          <input type="date" name="venc_ini" form="filtros" value="{{ filtro_venc_ini }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="date" name="venc_ini" value="{{ filtro_venc_ini }}" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
         </div>
         <div>
           <label class="mb-1 block text-slate-600">Vencimento ate</label>
-          <input type="date" name="venc_fim" form="filtros" value="{{ filtro_venc_fim }}" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
+          <input type="date" name="venc_fim" value="{{ filtro_venc_fim }}" autocomplete="off" class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2" />
         </div>
         <div class="flex items-end gap-2 lg:col-span-4">
-          <form id="filtros" method="get" autocomplete="off"></form>
-          <input type="hidden" name="show_filters" value="1" form="filtros" />
-          <button type="submit" name="apply" value="1" form="filtros" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
-          <a href="{% url 'core:planejamento_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
+          <button id="apply-filtros-pl" type="submit" name="apply" value="1" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">Aplicar filtros</button>
+          <a id="clear-filtros-pl" href="{% url 'core:planejamento_list' %}?show_filters=1" class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-slate-700 hover:bg-slate-100">Limpar</a>
         </div>
-      </div>
+      </form>
     </div>
 
     <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -265,6 +282,68 @@
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape') closeModal();
   });
+})();
+</script>
+
+<script>
+(function(){
+  const form = document.getElementById('filtros');
+  if(!form) return;
+
+  const params = new URLSearchParams(window.location.search || '');
+  const names = ['q', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'venc_ini', 'venc_fim'];
+  names.forEach((name) => {
+    const control = form.querySelector(`[name="${name}"]`);
+    if(!control) return;
+    const value = params.get(name);
+    control.value = value === null ? '' : value;
+  });
+})();
+
+(function(){
+  const culturaSel = document.querySelector("#filtros select[name='cultura']");
+  const safraSel = document.getElementById('filtro-safra-planejamento');
+
+  if (culturaSel && safraSel) {
+    const allOptions = Array.from(safraSel.querySelectorAll('option')).map(function(opt){
+      return {
+        value: opt.value,
+        text: opt.textContent,
+        cultura: opt.dataset.cultura || '',
+        selected: opt.selected,
+      };
+    });
+
+    function rebuildSafraOptions() {
+      const cultura = (culturaSel.value || '').trim();
+      const current = (safraSel.value || '').trim();
+      safraSel.innerHTML = '';
+
+      allOptions.forEach(function(opt){
+        if (!opt.value) {
+          const o = document.createElement('option');
+          o.value = '';
+          o.textContent = 'Todos';
+          if (!current) o.selected = true;
+          safraSel.appendChild(o);
+          return;
+        }
+        if (cultura && opt.cultura !== cultura) return;
+        const o = document.createElement('option');
+        o.value = opt.value;
+        o.textContent = opt.text;
+        if (current && current === opt.value) o.selected = true;
+        safraSel.appendChild(o);
+      });
+
+      if (current && !Array.from(safraSel.options).some(o => o.value === current)) {
+        safraSel.value = '';
+      }
+    }
+
+    culturaSel.addEventListener('change', rebuildSafraOptions);
+    rebuildSafraOptions();
+  }
 })();
 </script>
 

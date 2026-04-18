@@ -107,6 +107,19 @@ def _parse_decimal_br(value) -> Decimal:
         return Decimal('0')
 
 
+def _normalize_filter_value(value) -> str:
+    raw = (value or '').strip()
+    if raw.lower() in {'todos', 'todas', 'all'}:
+        return ''
+    return raw
+
+
+def _filters_active(request, keys) -> bool:
+    if _normalize_filter_value(request.GET.get('apply')):
+        return True
+    return any(_normalize_filter_value(request.GET.get(k)) for k in keys)
+
+
 def landing_page(request):
     return render(request, 'core/landing_page.html')
 
@@ -119,17 +132,12 @@ def _build_dashboard_context(request):
     user = request.user
     role = getattr(user, 'effective_role', None)
 
-    # Filtros (conceito "por safra", com defaults amigaveis).
-    filtro_cultura = (request.GET.get('cultura') or '').strip()
-    filtro_safra = (request.GET.get('safra') or '').strip()
-    filtro_categoria = (request.GET.get('categoria') or '').strip()
-    filtro_cliente = (request.GET.get('cliente') or '').strip()
-
-    # Default: usar a ultima safra cadastrada (evita dashboard "vazio" em base grande).
-    if not filtro_safra:
-        s = Safra.objects.order_by('-ano', 'safra').first()
-        if s:
-            filtro_safra = str(s.pk)
+    # Filtros: so aplicam ao clicar em "Aplicar" (apply=1).
+    filtros_ativos = _filters_active(request, ['cultura', 'safra', 'categoria', 'cliente'])
+    filtro_cultura = _normalize_filter_value(request.GET.get('cultura')) if filtros_ativos else ''
+    filtro_safra = _normalize_filter_value(request.GET.get('safra')) if filtros_ativos else ''
+    filtro_categoria = _normalize_filter_value(request.GET.get('categoria')) if filtros_ativos else ''
+    filtro_cliente = _normalize_filter_value(request.GET.get('cliente')) if filtros_ativos else ''
 
     def _to_decimal(v):
         try:
@@ -1169,16 +1177,21 @@ class PlanejamentoListView(GestorRequiredMixin, ListView):
             .order_by('-data', '-id')
         )
 
-        apply_filters = (self.request.GET.get('apply') or '').strip()
-        if not apply_filters:
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'venc_ini', 'venc_fim'],
+        )
+        if not filtros_ativos:
             return qs
 
-        q = (self.request.GET.get('q') or '').strip()
-        safra_id = (self.request.GET.get('safra') or '').strip()
-        cliente_id = (self.request.GET.get('cliente') or '').strip()
-        custo_id = (self.request.GET.get('custo') or '').strip()
-        venc_ini = (self.request.GET.get('venc_ini') or '').strip()
-        venc_fim = (self.request.GET.get('venc_fim') or '').strip()
+        q = _normalize_filter_value(self.request.GET.get('q'))
+        cultura_id = _normalize_filter_value(self.request.GET.get('cultura'))
+        safra_id = _normalize_filter_value(self.request.GET.get('safra'))
+        categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
+        cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
+        custo_id = _normalize_filter_value(self.request.GET.get('custo'))
+        venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
         if q:
             qs = qs.filter(
@@ -1186,8 +1199,12 @@ class PlanejamentoListView(GestorRequiredMixin, ListView):
                 | Q(safra__safra__icontains=q)
                 | Q(custo__nome__icontains=q)
             )
+        if cultura_id:
+            qs = qs.filter(safra__cultura_id=cultura_id)
         if safra_id:
             qs = qs.filter(safra_id=safra_id)
+        if categoria_id:
+            qs = qs.filter(itens__produto_cadastro__categoria_id=categoria_id).distinct()
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
         if custo_id:
@@ -1207,19 +1224,32 @@ class PlanejamentoListView(GestorRequiredMixin, ListView):
         ctx['report_resumo_url_name'] = 'core:planejamento_report_resumo'
         ctx['report_analitico_url_name'] = 'core:planejamento_report_analitico'
 
-        apply_filters = (self.request.GET.get('apply') or '').strip()
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'venc_ini', 'venc_fim'],
+        )
 
         # Filtros (padrao igual Faturamento/Pedidos)
-        ctx['safras'] = Safra.objects.all().order_by('-ano', 'safra')
+        ctx['culturas'] = Cultura.objects.all().order_by('nome')
+        safras_qs = Safra.objects.select_related('cultura').all().order_by('-ano', 'safra')
+        ctx['safras_all'] = safras_qs
+        filtro_cultura = _normalize_filter_value(self.request.GET.get('cultura')) if filtros_ativos else ''
+        if filtro_cultura:
+            ctx['safras'] = safras_qs.filter(cultura_id=filtro_cultura)
+        else:
+            ctx['safras'] = safras_qs
+        ctx['categorias'] = Categoria.objects.all().order_by('nome')
         ctx['clientes'] = Cliente.objects.all().order_by('cliente')
         ctx['custos'] = Custo.objects.all().order_by('nome')
 
-        ctx['current_q'] = self.request.GET.get('q', '') if apply_filters else ''
-        ctx['filtro_safra'] = self.request.GET.get('safra', '') if apply_filters else ''
-        ctx['filtro_cliente'] = self.request.GET.get('cliente', '') if apply_filters else ''
-        ctx['filtro_custo'] = self.request.GET.get('custo', '') if apply_filters else ''
-        ctx['filtro_venc_ini'] = self.request.GET.get('venc_ini', '') if apply_filters else ''
-        ctx['filtro_venc_fim'] = self.request.GET.get('venc_fim', '') if apply_filters else ''
+        ctx['current_q'] = _normalize_filter_value(self.request.GET.get('q')) if filtros_ativos else ''
+        ctx['filtro_cultura'] = filtro_cultura
+        ctx['filtro_safra'] = _normalize_filter_value(self.request.GET.get('safra')) if filtros_ativos else ''
+        ctx['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria')) if filtros_ativos else ''
+        ctx['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente')) if filtros_ativos else ''
+        ctx['filtro_custo'] = _normalize_filter_value(self.request.GET.get('custo')) if filtros_ativos else ''
+        ctx['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini')) if filtros_ativos else ''
+        ctx['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim')) if filtros_ativos else ''
 
         params = self.request.GET.copy()
         params.pop('page', None)
@@ -1509,19 +1539,25 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
 
         # Padrao: quando abrir a tela, nao "grudar" filtros antigos.
         # Os filtros so entram em vigor quando o usuario clica em "Aplicar filtros" (apply=1).
-        apply_filters = (self.request.GET.get('apply') or '').strip()
-        if not apply_filters:
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'pedido', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'produtor', 'fornecedor', 'status', 'venc_ini', 'venc_fim'],
+        )
+        if not filtros_ativos:
             return qs
 
-        q = (self.request.GET.get('q') or '').strip()
-        pedido_num = (self.request.GET.get('pedido') or '').strip()
-        safra_id = (self.request.GET.get('safra') or '').strip()
-        cliente_id = (self.request.GET.get('cliente') or '').strip()
-        produtor_id = (self.request.GET.get('produtor') or '').strip()
-        fornecedor_id = (self.request.GET.get('fornecedor') or '').strip()
-        status = (self.request.GET.get('status') or '').strip()
-        venc_ini = (self.request.GET.get('venc_ini') or '').strip()
-        venc_fim = (self.request.GET.get('venc_fim') or '').strip()
+        q = _normalize_filter_value(self.request.GET.get('q'))
+        pedido_num = _normalize_filter_value(self.request.GET.get('pedido'))
+        cultura_id = _normalize_filter_value(self.request.GET.get('cultura'))
+        safra_id = _normalize_filter_value(self.request.GET.get('safra'))
+        categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
+        cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
+        custo_id = _normalize_filter_value(self.request.GET.get('custo'))
+        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        status = _normalize_filter_value(self.request.GET.get('status'))
+        venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
         if q:
             qs = qs.filter(
@@ -1532,10 +1568,16 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             )
         if pedido_num:
             qs = qs.filter(pedido__icontains=pedido_num)
+        if cultura_id:
+            qs = qs.filter(safra__cultura_id=cultura_id)
         if safra_id:
             qs = qs.filter(safra_id=safra_id)
+        if categoria_id:
+            qs = qs.filter(itens__produto_cadastro__categoria_id=categoria_id).distinct()
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
+        if custo_id:
+            qs = qs.filter(custo_id=custo_id)
         if produtor_id:
             qs = qs.filter(produtor_id=produtor_id)
         if fornecedor_id:
@@ -1551,8 +1593,10 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-
-        apply_filters = (self.request.GET.get('apply') or '').strip()
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'pedido', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'produtor', 'fornecedor', 'status', 'venc_ini', 'venc_fim'],
+        )
         qs = self.get_queryset()
 
         # Cards (padrao igual Faturamento)
@@ -1560,6 +1604,13 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         qtd_total = itens_qs.aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
         total_itens = itens_qs.aggregate(total=Sum('total_item'))['total'] or Decimal('0')
         total_pedidos = qs.aggregate(total=Sum('valor_total'))['total'] or Decimal('0')
+        card_a_pagar = (
+            ContaPagar.objects
+            .filter((Q(pedido__in=qs) | Q(faturamento__pedido__in=qs)), pago=False, saldo_aberto__gt=0)
+            .aggregate(total=Sum('saldo_aberto'))
+            .get('total')
+            or Decimal('0')
+        )
 
         try:
             qtd_total = Decimal(qtd_total)
@@ -1609,24 +1660,30 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['edit_url_name'] = 'core:pedido_update'
         ctx['delete_url_name'] = 'core:pedido_delete'
 
-        ctx['current_q'] = self.request.GET.get('q', '') if apply_filters else ''
+        ctx['current_q'] = _normalize_filter_value(self.request.GET.get('q'))
         ctx['current_sort'] = self.request.GET.get('sort', '')
 
         # Filtros (igual Faturamento)
+        ctx['culturas'] = Cultura.objects.all().order_by('nome')
         ctx['safras'] = Safra.objects.all().order_by('-ano', 'safra')
+        ctx['categorias'] = Categoria.objects.all().order_by('nome')
         ctx['clientes'] = Cliente.objects.all().order_by('cliente')
+        ctx['custos'] = Custo.objects.all().order_by('nome')
         ctx['produtores'] = Produtor.objects.all().order_by('produtor', 'fazenda')
         ctx['fornecedores'] = Fornecedor.objects.all().order_by('fornecedor')
         ctx['status_choices'] = StatusPedidoCompra.choices
 
-        ctx['filtro_safra'] = self.request.GET.get('safra', '') if apply_filters else ''
-        ctx['filtro_cliente'] = self.request.GET.get('cliente', '') if apply_filters else ''
-        ctx['filtro_produtor'] = self.request.GET.get('produtor', '') if apply_filters else ''
-        ctx['filtro_fornecedor'] = self.request.GET.get('fornecedor', '') if apply_filters else ''
-        ctx['filtro_status'] = self.request.GET.get('status', '') if apply_filters else ''
-        ctx['filtro_pedido'] = self.request.GET.get('pedido', '') if apply_filters else ''
-        ctx['filtro_venc_ini'] = self.request.GET.get('venc_ini', '') if apply_filters else ''
-        ctx['filtro_venc_fim'] = self.request.GET.get('venc_fim', '') if apply_filters else ''
+        ctx['filtro_cultura'] = _normalize_filter_value(self.request.GET.get('cultura'))
+        ctx['filtro_safra'] = _normalize_filter_value(self.request.GET.get('safra'))
+        ctx['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
+        ctx['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente'))
+        ctx['filtro_custo'] = _normalize_filter_value(self.request.GET.get('custo'))
+        ctx['filtro_produtor'] = _normalize_filter_value(self.request.GET.get('produtor'))
+        ctx['filtro_fornecedor'] = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        ctx['filtro_status'] = _normalize_filter_value(self.request.GET.get('status'))
+        ctx['filtro_pedido'] = _normalize_filter_value(self.request.GET.get('pedido'))
+        ctx['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        ctx['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
         # Para paginacao / relatorios manter filtros sem page
         params = self.request.GET.copy()
@@ -1642,6 +1699,7 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['card_pedidos'] = qs.count()
         ctx['card_quantidade'] = qtd_total
         ctx['card_preco_medio'] = preco_medio
+        ctx['card_a_pagar'] = card_a_pagar
         ctx['card_total_pedidos'] = total_pedidos
 
         return ctx
@@ -2442,20 +2500,26 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         qs = super().get_queryset().select_related('safra', 'produtor', 'fornecedor', 'pedido').order_by('-data', '-id')
 
         # Padrao: filtros somente quando clicar em "Aplicar filtros" (apply=1)
-        apply_filters = (self.request.GET.get('apply') or '').strip()
-        if not apply_filters:
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo', 'pedido', 'nota_fiscal', 'status', 'venc_ini', 'venc_fim'],
+        )
+        if not filtros_ativos:
             return qs
 
-        q = (self.request.GET.get('q') or '').strip()
-        safra_id = (self.request.GET.get('safra') or '').strip()
-        cliente_id = (self.request.GET.get('cliente') or '').strip()
-        produtor_id = (self.request.GET.get('produtor') or '').strip()
-        fornecedor_id = (self.request.GET.get('fornecedor') or '').strip()
-        categoria_id = (self.request.GET.get('categoria') or '').strip()
-        pedido_txt = (self.request.GET.get('pedido') or '').strip()
-        nota_fiscal = (self.request.GET.get('nota_fiscal') or '').strip()
-        venc_ini = (self.request.GET.get('venc_ini') or '').strip()
-        venc_fim = (self.request.GET.get('venc_fim') or '').strip()
+        q = _normalize_filter_value(self.request.GET.get('q'))
+        cultura_id = _normalize_filter_value(self.request.GET.get('cultura'))
+        safra_id = _normalize_filter_value(self.request.GET.get('safra'))
+        cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
+        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
+        custo_id = _normalize_filter_value(self.request.GET.get('custo'))
+        pedido_txt = _normalize_filter_value(self.request.GET.get('pedido'))
+        nota_fiscal = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
+        status = _normalize_filter_value(self.request.GET.get('status'))
+        venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
         if q:
             qs = qs.filter(
@@ -2465,6 +2529,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                 | Q(fornecedor__fornecedor__icontains=q)
                 | Q(cliente__cliente__icontains=q)
             )
+        if cultura_id:
+            qs = qs.filter(safra__cultura_id=cultura_id)
         if safra_id:
             qs = qs.filter(safra_id=safra_id)
         if cliente_id:
@@ -2475,6 +2541,10 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             qs = qs.filter(fornecedor_id=fornecedor_id)
         if categoria_id:
             qs = qs.filter(itens__produto_cadastro__categoria_id=categoria_id).distinct()
+        if custo_id:
+            qs = qs.filter(custo_id=custo_id)
+        if status:
+            qs = qs.filter(status=status)
         if pedido_txt:
             qs = qs.filter(pedido__pedido__icontains=pedido_txt)
         if nota_fiscal:
@@ -2487,11 +2557,21 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        apply_filters = (self.request.GET.get('apply') or '').strip()
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo', 'pedido', 'nota_fiscal', 'status', 'venc_ini', 'venc_fim'],
+        )
         qs = self.get_queryset()
         itens_qs = FaturamentoItem.objects.filter(faturamento__in=qs)
         qtd_total = itens_qs.aggregate(total=Sum('quantidade'))['total'] or 0
         total_fat = qs.aggregate(total=Sum('valor_total'))['total'] or 0
+        total_a_pagar = (
+            ContaPagar.objects
+            .filter(faturamento__in=qs, pago=False, saldo_aberto__gt=0)
+            .aggregate(total=Sum('saldo_aberto'))
+            .get('total')
+            or Decimal('0')
+        )
         preco_medio = 0
         if qtd_total:
             try:
@@ -2503,21 +2583,31 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         context['edit_url_name'] = 'core:faturamento_update'
         context['delete_url_name'] = 'core:faturamento_delete'
 
-        context['current_q'] = self.request.GET.get('q', '') if apply_filters else ''
-        context['filtro_safra'] = self.request.GET.get('safra', '') if apply_filters else ''
-        context['filtro_cliente'] = self.request.GET.get('cliente', '') if apply_filters else ''
-        context['filtro_produtor'] = self.request.GET.get('produtor', '') if apply_filters else ''
-        context['filtro_fornecedor'] = self.request.GET.get('fornecedor', '') if apply_filters else ''
-        context['filtro_categoria'] = self.request.GET.get('categoria', '') if apply_filters else ''
-        context['filtro_pedido'] = self.request.GET.get('pedido', '') if apply_filters else ''
-        context['filtro_nota_fiscal'] = self.request.GET.get('nota_fiscal', '') if apply_filters else ''
-        context['filtro_venc_ini'] = self.request.GET.get('venc_ini', '') if apply_filters else ''
-        context['filtro_venc_fim'] = self.request.GET.get('venc_fim', '') if apply_filters else ''
+        context['current_q'] = _normalize_filter_value(self.request.GET.get('q'))
+        context['filtro_cultura'] = _normalize_filter_value(self.request.GET.get('cultura'))
+        context['filtro_safra'] = _normalize_filter_value(self.request.GET.get('safra'))
+        context['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente'))
+        context['filtro_produtor'] = _normalize_filter_value(self.request.GET.get('produtor'))
+        context['filtro_fornecedor'] = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        context['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
+        context['filtro_custo'] = _normalize_filter_value(self.request.GET.get('custo'))
+        context['filtro_pedido'] = _normalize_filter_value(self.request.GET.get('pedido'))
+        context['filtro_nota_fiscal'] = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
+        context['filtro_status'] = _normalize_filter_value(self.request.GET.get('status'))
+        context['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        context['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim'))
+        context['culturas'] = Cultura.objects.all().order_by('nome')
         context['safras'] = Safra.objects.all().order_by('-ano', 'safra')
         context['clientes'] = Cliente.objects.all().order_by('cliente')
         context['produtores'] = Produtor.objects.all().order_by('produtor', 'fazenda')
         context['fornecedores'] = Fornecedor.objects.all().order_by('fornecedor')
         context['categorias'] = Categoria.objects.all().order_by('nome')
+        context['custos'] = Custo.objects.all().order_by('nome')
+        context['status_choices'] = [
+            ('', 'Todos'),
+            (Faturamento.Status.A_RECEBER, 'A Pagar'),
+            (Faturamento.Status.PAGO, 'Pago'),
+        ]
 
         params = self.request.GET.copy()
         params.pop('page', None)
@@ -2527,6 +2617,7 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         context['card_notas'] = qs.count()
         context['card_quantidade'] = qtd_total
         context['card_preco_medio'] = preco_medio
+        context['card_a_pagar'] = total_a_pagar
         context['card_total_faturado'] = total_fat
         context['total_registros'] = qs.count()
         return context
@@ -2916,22 +3007,38 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         # Isso evita manter o documento do pedido quando ele ja foi totalmente substituido por notas fiscais.
         ContaPagar.objects.filter(origem=ContaPagar.Origem.PEDIDO, saldo_aberto__lte=0).delete()
 
-        qs = super().get_queryset().select_related('cliente', 'produtor', 'pedido', 'safra', 'fornecedor')
-        apply_filters = (self.request.GET.get('apply') or '').strip()
-        if not apply_filters:
+        qs = super().get_queryset().select_related('cliente', 'produtor', 'pedido', 'safra', 'fornecedor', 'custo')
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'cultura', 'safra', 'categoria', 'cliente', 'produtor', 'fornecedor', 'pedido', 'nota_fiscal', 'status', 'venc_ini', 'venc_fim'],
+        )
+        if not filtros_ativos:
             return qs
 
-        status = (self.request.GET.get('status') or '').strip()
-        safra_id = (self.request.GET.get('safra') or '').strip()
-        cliente_id = (self.request.GET.get('cliente') or '').strip()
-        produtor_id = (self.request.GET.get('produtor') or '').strip()
-        fornecedor_id = (self.request.GET.get('fornecedor') or '').strip()
-        pedido_txt = (self.request.GET.get('pedido') or '').strip()
-        nota_fiscal = (self.request.GET.get('nota_fiscal') or '').strip()
-        venc_ini = (self.request.GET.get('venc_ini') or '').strip()
-        venc_fim = (self.request.GET.get('venc_fim') or '').strip()
+        q = _normalize_filter_value(self.request.GET.get('q'))
+        status = _normalize_filter_value(self.request.GET.get('status'))
+        safra_id = _normalize_filter_value(self.request.GET.get('safra'))
+        cultura_id = _normalize_filter_value(self.request.GET.get('cultura'))
+        categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
+        cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
+        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        pedido_txt = _normalize_filter_value(self.request.GET.get('pedido'))
+        nota_fiscal = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
+        venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
         today = date.today()
+
+        if q:
+            qs = qs.filter(
+                Q(nota_fiscal__icontains=q)
+                | Q(cliente__cliente__icontains=q)
+                | Q(produtor__produtor__icontains=q)
+                | Q(fornecedor__fornecedor__icontains=q)
+                | Q(pedido__pedido__icontains=q)
+                | Q(origem__icontains=q)
+            )
 
         if status:
             if status == 'VENCIDO':
@@ -2943,6 +3050,13 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
 
         if safra_id:
             qs = qs.filter(safra_id=safra_id)
+        if cultura_id:
+            qs = qs.filter(safra__cultura_id=cultura_id)
+        if categoria_id:
+            qs = qs.filter(
+                Q(pedido__itens__produto_cadastro__categoria_id=categoria_id) |
+                Q(faturamento__itens__produto_cadastro__categoria_id=categoria_id)
+            ).distinct()
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
         if produtor_id:
@@ -2962,7 +3076,10 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        apply_filters = (self.request.GET.get('apply') or '').strip()
+        filtros_ativos = _filters_active(
+            self.request,
+            ['q', 'cultura', 'safra', 'categoria', 'cliente', 'produtor', 'fornecedor', 'pedido', 'nota_fiscal', 'status', 'venc_ini', 'venc_fim'],
+        )
         qs = self.get_queryset()
         today = date.today()
 
@@ -2972,19 +3089,22 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         total_faturado = qs.filter(origem=ContaPagar.Origem.FATURAMENTO).aggregate(total=Sum('valor_total'))['total'] or 0
         total_pago = qs.filter(status=ContaPagar.Status.PAGO).aggregate(total=Sum('valor_total'))['total'] or 0
         total_vencido = _sum(qs.filter(pago=False, saldo_aberto__gt=0, vencimento__lt=today))
-        total_a_pagar = _sum(qs.filter(pago=False, saldo_aberto__gt=0, vencimento__gte=today))
+        # "A pagar" precisa refletir todo saldo em aberto (pendente + vencido).
+        total_a_pagar = _sum(qs.filter(pago=False, saldo_aberto__gt=0))
 
-        context['filtro_status'] = self.request.GET.get('status', '') if apply_filters else ''
-        context['filtro_safra'] = self.request.GET.get('safra', '') if apply_filters else ''
-        context['filtro_cliente'] = self.request.GET.get('cliente', '') if apply_filters else ''
-        context['filtro_produtor'] = self.request.GET.get('produtor', '') if apply_filters else ''
-        context['filtro_fornecedor'] = self.request.GET.get('fornecedor', '') if apply_filters else ''
-        context['filtro_pedido'] = self.request.GET.get('pedido', '') if apply_filters else ''
-        context['filtro_nota_fiscal'] = self.request.GET.get('nota_fiscal', '') if apply_filters else ''
-        context['filtro_venc_ini'] = self.request.GET.get('venc_ini', '') if apply_filters else ''
-        context['filtro_venc_fim'] = self.request.GET.get('venc_fim', '') if apply_filters else ''
+        context['filtro_status'] = _normalize_filter_value(self.request.GET.get('status'))
+        context['filtro_cultura'] = _normalize_filter_value(self.request.GET.get('cultura'))
+        context['filtro_safra'] = _normalize_filter_value(self.request.GET.get('safra'))
+        context['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
+        context['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente'))
+        context['filtro_produtor'] = _normalize_filter_value(self.request.GET.get('produtor'))
+        context['filtro_fornecedor'] = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        context['filtro_pedido'] = _normalize_filter_value(self.request.GET.get('pedido'))
+        context['filtro_nota_fiscal'] = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
+        context['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        context['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
-        context['current_q'] = self.request.GET.get('q', '') if apply_filters else ''
+        context['current_q'] = _normalize_filter_value(self.request.GET.get('q'))
 
         params = self.request.GET.copy()
         params.pop('page', None)
@@ -2998,10 +3118,12 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
             ('VENCIDO', 'Vencido'),
             (ContaPagar.Status.PAGO, 'Pago'),
         ]
+        context['culturas'] = Cultura.objects.all().order_by('nome')
         context['safras'] = Safra.objects.all().order_by('-ano', 'safra')
         context['clientes'] = Cliente.objects.all().order_by('cliente')
         context['produtores'] = Produtor.objects.all().order_by('produtor', 'fazenda')
         context['fornecedores'] = Fornecedor.objects.all().order_by('fornecedor')
+        context['categorias'] = Categoria.objects.all().order_by('nome')
 
         context['card_total_faturado'] = total_faturado
         context['card_total_a_pagar'] = total_a_pagar
@@ -3354,3 +3476,4 @@ class InviteUsuarioLicencaView(GestorRequiredMixin, FormView):
                 'whatsapp_url': whatsapp_url,
             },
         )
+
