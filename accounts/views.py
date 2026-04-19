@@ -1,4 +1,10 @@
-﻿from django.contrib.auth.views import LoginView
+﻿from django.contrib.auth.views import (
+    LoginView,
+    PasswordResetConfirmView,
+    PasswordResetCompleteView,
+    PasswordResetDoneView,
+    PasswordResetView,
+)
 from django.utils import timezone
 
 from accounts.models import User
@@ -7,6 +13,7 @@ from licencas.models import ConfirmacaoEmailCadastro, PerfilUsuarioLicenca
 
 class StatusLoginView(LoginView):
     template_name = 'registration/login.html'
+    redirect_authenticated_user = True
 
     def _build_account_status(self, username: str):
         username = (username or '').strip()
@@ -41,9 +48,9 @@ class StatusLoginView(LoginView):
         if not lic:
             return {
                 'existe': True,
-                'status': 'Sem assinatura cadastrada',
-                'status_class': 'bg-slate-600/20 text-slate-200 border-slate-300/20',
-                'detalhe': 'Acesse Registrar para cadastrar a assinatura.',
+                'status': 'Email confirmado',
+                'status_class': 'bg-emerald-500/20 text-emerald-100 border-emerald-300/40',
+                'detalhe': 'Email confirmado. Faca login para concluir o registro da assinatura.',
                 'can_resend': False,
             }
 
@@ -81,3 +88,30 @@ class StatusLoginView(LoginView):
         ctx['status_lookup_username'] = username
         ctx['account_status'] = self._build_account_status(username)
         return ctx
+
+    def get_success_url(self):
+        force_uid = self.request.session.pop('force_registrar_user_id', None)
+        if force_uid and self.request.user.is_authenticated and str(self.request.user.id) == str(force_uid):
+            return '/licencas/registrar/'
+        return super().get_success_url()
+
+
+class BrandedPasswordResetView(PasswordResetView):
+    template_name = 'registration/password_reset_form.html'
+    email_template_name = 'registration/password_reset_email.html'
+    html_email_template_name = 'registration/password_reset_email_html.html'
+    subject_template_name = 'registration/password_reset_subject.txt'
+    success_url = '/accounts/password_reset/done/'
+
+
+class BrandedPasswordResetDoneView(PasswordResetDoneView):
+    template_name = 'registration/password_reset_done.html'
+
+
+class BrandedPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = 'registration/password_reset_confirm.html'
+    success_url = '/accounts/reset/done/'
+
+
+class BrandedPasswordResetCompleteView(PasswordResetCompleteView):
+    template_name = 'registration/password_reset_complete.html'

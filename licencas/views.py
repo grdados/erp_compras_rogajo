@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import stripe
 from django.conf import settings
@@ -34,7 +35,7 @@ def _periodo_para_valor(periodo):
 
 def _enviar_email_confirmacao(request, usuario, token_obj):
     confirmar_url = request.build_absolute_uri(reverse('licencas:confirmar_email', kwargs={'token': token_obj.token}))
-    logo_url = request.build_absolute_uri(static('img/rogajo-logo.jpeg'))
+    logo_url = request.build_absolute_uri(static('img/logo-grdados.png'))
     assunto = 'Confirme seu cadastro - Rogajo'
     contexto = {
         'username': usuario.username,
@@ -51,6 +52,9 @@ def _enviar_email_confirmacao(request, usuario, token_obj):
         to=[usuario.email],
     )
     email.attach_alternative(mensagem_html, 'text/html')
+    politica_path = Path(settings.BASE_DIR) / 'static' / 'docs' / 'politica_privacidade.docx'
+    if politica_path.exists():
+        email.attach_file(str(politica_path))
     email.send(fail_silently=False)
 
 
@@ -168,6 +172,8 @@ def confirmar_email(request, token):
     user.save(update_fields=['is_active'])
     confirmacao.usado_em = timezone.now()
     confirmacao.save(update_fields=['usado_em', 'updated_at'])
+    request.session['force_registrar_user_id'] = str(user.id)
+    request.session['login_status_username'] = user.username
 
     messages.success(request, 'Email confirmado com sucesso. Agora faca login para continuar.')
     return redirect('/accounts/login/')
