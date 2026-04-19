@@ -8,7 +8,10 @@ register = template.Library()
 
 @register.simple_tag
 def empresa_cadastrada():
-    return Licenca.objects.exists()
+    # Se ja existe conta de cliente (SUPERVISOR) ou licenca cadastrada,
+    # o fluxo da landing deve priorizar LOGIN para concluir cadastro/plano.
+    tem_cliente = User.objects.filter(role=User.Role.SUPERVISOR).exists()
+    return tem_cliente or Licenca.objects.exists()
 
 
 @register.simple_tag
