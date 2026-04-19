@@ -173,6 +173,44 @@ def confirmar_email(request, token):
     return redirect('/accounts/login/')
 
 
+@require_POST
+def reenviar_confirmacao_email(request):
+    username = (request.POST.get('username') or '').strip()
+    if username:
+        request.session['login_status_username'] = username
+
+    if not username:
+        messages.warning(request, 'Informe o usuario para reenviar o email de verificacao.')
+        return redirect('/accounts/login/')
+
+    User = get_user_model()
+    user = User.objects.filter(username__iexact=username).first()
+    if not user or user.is_active:
+        # Resposta neutra para nao expor existencia de conta.
+        messages.info(request, 'Se a conta estiver pendente, enviaremos um novo email de verificacao.')
+        return redirect('/accounts/login/')
+
+    ConfirmacaoEmailCadastro.objects.filter(usuario=user, usado_em__isnull=True).delete()
+    token_obj = ConfirmacaoEmailCadastro.objects.create(
+        usuario=user,
+        token=uuid.uuid4().hex,
+        expira_em=timezone.now() + timedelta(hours=24),
+    )
+    try:
+        _enviar_email_confirmacao(request, user, token_obj)
+        messages.success(request, 'Reenviamos o email de verificacao. Confira sua caixa de entrada e spam.')
+    except Exception as exc:
+        confirmar_url = request.build_absolute_uri(
+            reverse('licencas:confirmar_email', kwargs={'token': token_obj.token})
+        )
+        messages.warning(
+            request,
+            'Nao foi possivel enviar o email agora. '
+            f'Motivo tecnico: {exc}. Link de confirmacao: {confirmar_url}',
+        )
+    return redirect('/accounts/login/')
+
+
 def politica_privacidade(request):
     return render(request, 'licencas/politica_privacidade.html')
 

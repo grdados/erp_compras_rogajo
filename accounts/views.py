@@ -20,8 +20,7 @@ class StatusLoginView(LoginView):
                 'status': 'Conta nao encontrada',
                 'status_class': 'bg-slate-600/20 text-slate-200 border-slate-300/20',
                 'detalhe': 'Verifique o usuario informado ou faca o cadastro.',
-                'cliente': '-',
-                'cpf_cnpj': '-',
+                'can_resend': False,
             }
 
         if not user.is_active:
@@ -34,8 +33,7 @@ class StatusLoginView(LoginView):
                 'status': 'Aguardando confirmacao de email',
                 'status_class': 'bg-amber-500/20 text-amber-100 border-amber-300/40',
                 'detalhe': detalhe,
-                'cliente': '-',
-                'cpf_cnpj': '-',
+                'can_resend': True,
             }
 
         perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=user).first()
@@ -46,8 +44,7 @@ class StatusLoginView(LoginView):
                 'status': 'Sem assinatura cadastrada',
                 'status_class': 'bg-slate-600/20 text-slate-200 border-slate-300/20',
                 'detalhe': 'Acesse Registrar para cadastrar a assinatura.',
-                'cliente': '-',
-                'cpf_cnpj': '-',
+                'can_resend': False,
             }
 
         if lic.status == lic.Status.AGUARDANDO_CONFIRMACAO:
@@ -68,8 +65,7 @@ class StatusLoginView(LoginView):
             'status': status,
             'status_class': status_class,
             'detalhe': detalhe,
-            'cliente': lic.cliente or '-',
-            'cpf_cnpj': lic.cpf_cnpj or '-',
+            'can_resend': False,
         }
 
     def get_context_data(self, **kwargs):

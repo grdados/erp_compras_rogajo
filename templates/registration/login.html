@@ -61,23 +61,21 @@
           </div>
 
           <div class="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-200">
-            <div class="flex items-center justify-between gap-3">
-              <div class="font-bold">Status da Conta</div>
-              {% if status_lookup_username %}
-                <span class="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/90">{{ status_lookup_username }}</span>
-              {% endif %}
-            </div>
+            <div class="font-bold">Status da Conta</div>
             {% if account_status %}
               <div class="mt-2 inline-flex rounded-lg border px-2.5 py-1 text-xs font-bold {{ account_status.status_class }}">{{ account_status.status }}</div>
-              <div class="mt-2 space-y-1 text-slate-300">
-                <div>{{ account_status.detalhe }}</div>
-                <div><span class="text-white/70">Cliente:</span> <span class="font-semibold text-white">{{ account_status.cliente }}</span></div>
-                <div><span class="text-white/70">CNPJ/CPF:</span> <span class="font-semibold text-white">{{ account_status.cpf_cnpj }}</span></div>
-              </div>
+              {% if account_status.can_resend and status_lookup_username %}
+                <form method="post" action="{% url 'licencas:reenviar_confirmacao_email' %}" class="mt-3">
+                  {% csrf_token %}
+                  <input type="hidden" name="username" value="{{ status_lookup_username }}">
+                  <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/15">
+                    Reenviar email de verificacao
+                  </button>
+                </form>
+              {% endif %}
             {% else %}
               <div class="mt-2 text-slate-300">Digite seu usuario e clique em Login para consultar o status (confirmacao de email, pagamento ou ativo).</div>
             {% endif %}
-            <a href="/licencas/registrar/" class="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-base font-bold text-white transition hover:bg-white/15">Registrar</a>
           </div>
         </div>
       </div>
