@@ -14,6 +14,20 @@
       body { font-family: var(--font-ui); font-size: 14px; font-weight: 400; }
       .rule-icon { transition: transform .18s ease, color .18s ease; }
       .rule-ok .rule-icon { transform: scale(1.12); }
+      form input,
+      form select,
+      form textarea {
+        transition: border-color .2s ease, box-shadow .25s ease, transform .2s ease, background-color .2s ease;
+      }
+      form input:focus,
+      form select:focus,
+      form textarea:focus {
+        border-color: rgba(100, 210, 111, 0.7) !important;
+        box-shadow: 0 0 0 3px rgba(100, 210, 111, 0.2), 0 8px 20px rgba(12, 44, 27, 0.22);
+        transform: translateY(-1px);
+        background-color: #f8fbf9;
+        outline: none;
+      }
     </style>
   </head>
   <body class="min-h-screen bg-[#010707] text-white">
