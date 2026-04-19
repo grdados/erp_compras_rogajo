@@ -109,21 +109,31 @@ def registrar(request):
                     token=uuid.uuid4().hex,
                     expira_em=timezone.now() + timedelta(hours=24),
                 )
+            email_enviado = False
             try:
                 _enviar_email_confirmacao(request, user, token_obj)
-            except Exception:
+                email_enviado = True
+            except Exception as exc:
                 # Em ambientes sem SMTP, evita bloquear o cadastro.
                 confirmar_url = request.build_absolute_uri(
                     reverse('licencas:confirmar_email', kwargs={'token': token_obj.token})
                 )
                 messages.warning(
                     request,
-                    f'Conta criada, mas o email nao foi enviado neste ambiente. Link de confirmacao: {confirmar_url}',
+                    'Conta criada, mas o email de confirmacao nao foi enviado. '
+                    f'Motivo tecnico: {exc}. Link de confirmacao: {confirmar_url}',
                 )
-            messages.success(
-                request,
-                'Cadastro criado! Enviamos um email de confirmacao. Confirme para liberar o primeiro login.',
-            )
+            if email_enviado:
+                messages.success(
+                    request,
+                    'Cadastro criado! Enviamos um email de confirmacao. Confirme para liberar o primeiro login.',
+                )
+            else:
+                messages.info(
+                    request,
+                    'Cadastro criado com sucesso. Assim que o SMTP estiver liberado, reenvie a confirmacao por email.',
+                )
+            request.session['login_status_username'] = user.username
             return redirect('/accounts/login/')
         except DatabaseError:
             messages.error(request, 'Nao foi possivel concluir o cadastro agora. Tente novamente.')

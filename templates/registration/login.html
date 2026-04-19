@@ -1,7 +1,4 @@
-{% load static %}
-{% load licenca_tags %}
-{% empresa_cadastrada as tem_empresa %}
-{% resumo_login_licenca as resumo_login %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -42,7 +39,7 @@
 
             <div>
               <label class="mb-2 block text-sm font-semibold text-slate-200">Usuario</label>
-              <input type="text" name="username" class="field-glow w-full rounded-xl border border-white/20 bg-black/25 px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none" placeholder="Digite seu usuario" required />
+              <input type="text" name="username" value="{{ form.username.value|default:'' }}" class="field-glow w-full rounded-xl border border-white/20 bg-black/25 px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none" placeholder="Digite seu usuario" required />
             </div>
 
             <div>
@@ -64,72 +61,26 @@
           </div>
 
           <div class="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-200">
-            {% if resumo_login.mostrar_resumo %}
-              <div class="font-bold">Dados da Licenca</div>
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-bold">Status da Conta</div>
+              {% if status_lookup_username %}
+                <span class="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/90">{{ status_lookup_username }}</span>
+              {% endif %}
+            </div>
+            {% if account_status %}
+              <div class="mt-2 inline-flex rounded-lg border px-2.5 py-1 text-xs font-bold {{ account_status.status_class }}">{{ account_status.status }}</div>
               <div class="mt-2 space-y-1 text-slate-300">
-                <div><span class="text-white/70">Status:</span> <span class="font-semibold text-white">{{ resumo_login.status }}</span></div>
-                <div><span class="text-white/70">Cliente:</span> <span class="font-semibold text-white">{{ resumo_login.cliente }}</span></div>
-                <div><span class="text-white/70">CNPJ/CPF:</span> <span class="font-semibold text-white">{{ resumo_login.cpf_cnpj }}</span></div>
+                <div>{{ account_status.detalhe }}</div>
+                <div><span class="text-white/70">Cliente:</span> <span class="font-semibold text-white">{{ account_status.cliente }}</span></div>
+                <div><span class="text-white/70">CNPJ/CPF:</span> <span class="font-semibold text-white">{{ account_status.cpf_cnpj }}</span></div>
               </div>
             {% else %}
-              <div class="font-bold">Nao tem conta ainda ?</div>
-              <div class="mt-3 text-slate-300">Sua senha deve ter:</div>
-              <ul id="password-validator" class="mt-1 space-y-1 text-slate-300">
-                <li data-rule="len" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>8 caracteres ou mais</li>
-                <li data-rule="case" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>Letras maiusculas e minusculas</li>
-                <li data-rule="num" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>Pelo menos um numero</li>
-                <li data-rule="special" class="inline-flex items-center gap-2"><span class="rule-icon text-red-300">•</span>Pelo menos um caractere especial</li>
-              </ul>
+              <div class="mt-2 text-slate-300">Digite seu usuario e clique em Login para consultar o status (confirmacao de email, pagamento ou ativo).</div>
             {% endif %}
-            {% if not resumo_login.mostrar_resumo %}
-              <a href="{% if tem_empresa %}/accounts/login/{% else %}/licencas/registrar/{% endif %}" class="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-base font-bold text-white transition hover:bg-white/15">
-                {% if tem_empresa %}Login{% else %}Registrar{% endif %}
-              </a>
-            {% endif %}
+            <a href="/licencas/registrar/" class="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-base font-bold text-white transition hover:bg-white/15">Registrar</a>
           </div>
         </div>
       </div>
     </main>
-    <script>
-      (function(){
-        const pass = document.querySelector('input[name="password"]');
-        const wrap = document.getElementById('password-validator');
-        if(!pass || !wrap) return;
-
-        function mark(rule, ok){
-          const li = wrap.querySelector('li[data-rule="'+rule+'"]');
-          if(!li) return;
-          const icon = li.querySelector('.rule-icon');
-          if(ok){
-            li.classList.remove('text-slate-300');
-            li.classList.add('text-emerald-300');
-            if(icon){
-              icon.textContent = '✓';
-              icon.classList.remove('text-red-300');
-              icon.classList.add('text-emerald-300');
-            }
-          } else {
-            li.classList.remove('text-emerald-300');
-            li.classList.add('text-slate-300');
-            if(icon){
-              icon.textContent = '•';
-              icon.classList.remove('text-emerald-300');
-              icon.classList.add('text-red-300');
-            }
-          }
-        }
-
-        function validate(){
-          const v = pass.value || '';
-          mark('len', v.length >= 8);
-          mark('case', /[A-Z]/.test(v) && /[a-z]/.test(v));
-          mark('num', /\d/.test(v));
-          mark('special', /[^A-Za-z0-9]/.test(v));
-        }
-
-        pass.addEventListener('input', validate);
-        validate();
-      })();
-    </script>
   </body>
 </html>
