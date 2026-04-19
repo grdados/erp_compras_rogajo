@@ -38,7 +38,7 @@
             <div class="text-[18px] font-bold text-emerald-300">R$ {{ valor_anual|decimal_br:2 }}</div>
           </div>
           <div class="mt-1 text-[14px] font-normal text-slate-300">12 meses com 8% de desconto.</div>
-          <div class="mt-1 text-[14px] font-normal text-slate-400">Mensal base: R$ {{ valor_mensal|decimal_br:2 }}</div>
+          <div class="mt-1 text-[14px] font-normal text-slate-400">Mensal base: R$ {{ valor_mensal_anual|decimal_br:2 }}</div>
         </div>
       </div>
     </label>
@@ -46,7 +46,17 @@
 
   <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950/30 p-4 text-slate-200">
     <div class="text-[14px] font-bold">Melhorias (fora da licenca)</div>
-    <div class="mt-1 text-[14px] font-normal text-slate-300">Hora tecnica: <span class="font-bold text-white">R$ 120,00</span> (minimo <span class="font-bold text-white">4 horas</span>).</div>
+    <div class="mt-1 text-[14px] font-normal text-slate-300">
+      Hora tecnica: <span class="font-bold text-white">R$ {{ valor_hora_tecnica|decimal_br:2 }}</span>
+      (8% do salario minimo, minimo <span class="font-bold text-white">{{ horas_minimas_melhoria }} horas</span>).
+    </div>
+    <div class="mt-1 text-[14px] font-normal text-slate-300">
+      Investimento minimo por demanda: <span class="font-bold text-white">R$ {{ valor_minimo_melhoria|decimal_br:2 }}</span>.
+    </div>
+    <div class="mt-2 rounded-lg border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-100">
+      Para novos modulos, campos e relatorios e necessario levantamento de requisitos e custos com parceiros de hospedagem.
+      Essas evolucoes aumentam carga de dados e desempenho dos servidores, impactando diretamente o custo mensal do sistema.
+    </div>
   </div>
 
   <div class="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4 text-slate-100">

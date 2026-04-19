@@ -22,7 +22,15 @@ from django.views.decorators.http import require_POST
 
 from .forms import CompletarCadastroLicencaForm, RegistroContaForm
 from .models import ConfirmacaoEmailCadastro, Licenca, PerfilUsuarioLicenca
-from .pricing import valor_anual, valor_mensal, valor_semestral
+from .pricing import (
+    horas_minimas_melhoria,
+    valor_anual,
+    valor_hora_tecnica,
+    valor_mensal,
+    valor_mensal_anual,
+    valor_minimo_melhoria,
+    valor_semestral,
+)
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -398,8 +406,12 @@ def renovar_licenca(request):
         {
             'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
             'valor_mensal': valor_mensal(),
+            'valor_mensal_anual': valor_mensal_anual(),
             'valor_semestral': valor_semestral(),
             'valor_anual': valor_anual(),
+            'valor_hora_tecnica': valor_hora_tecnica(),
+            'horas_minimas_melhoria': horas_minimas_melhoria(),
+            'valor_minimo_melhoria': valor_minimo_melhoria(),
             'checkout_enabled': checkout_enabled,
             'setup_error': setup_error,
             'beneficiario': beneficiario,
