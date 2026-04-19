@@ -93,6 +93,13 @@ class StatusLoginView(LoginView):
         force_uid = self.request.session.pop('force_registrar_user_id', None)
         if force_uid and self.request.user.is_authenticated and str(self.request.user.id) == str(force_uid):
             return '/licencas/registrar/'
+        if self.request.user.is_authenticated and getattr(self.request.user, 'effective_role', '') != 'ADMIN':
+            perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=self.request.user).first()
+            licenca = perfil.licenca if perfil else None
+            if not licenca:
+                return '/licencas/registrar/'
+            if not licenca.esta_vigente:
+                return '/app/licencas/'
         return super().get_success_url()
 
 
