@@ -8,10 +8,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.db import DatabaseError, transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -32,15 +34,24 @@ def _periodo_para_valor(periodo):
 
 def _enviar_email_confirmacao(request, usuario, token_obj):
     confirmar_url = request.build_absolute_uri(reverse('licencas:confirmar_email', kwargs={'token': token_obj.token}))
+    logo_url = request.build_absolute_uri(static('img/rogajo-logo.jpeg'))
     assunto = 'Confirme seu cadastro - Rogajo'
-    mensagem = (
-        f'Ola, {usuario.username}!\n\n'
-        'Recebemos seu cadastro. Para confirmar seu email, acesse:\n'
-        f'{confirmar_url}\n\n'
-        'Se voce nao solicitou este cadastro, ignore esta mensagem.\n'
-    )
+    contexto = {
+        'username': usuario.username,
+        'confirmar_url': confirmar_url,
+        'logo_url': logo_url,
+    }
+    mensagem = render_to_string('licencas/emails/confirmacao_email.txt', contexto)
+    mensagem_html = render_to_string('licencas/emails/confirmacao_email.html', contexto)
     remetente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@rogajo.local')
-    send_mail(assunto, mensagem, remetente, [usuario.email], fail_silently=False)
+    email = EmailMultiAlternatives(
+        subject=assunto,
+        body=mensagem,
+        from_email=remetente,
+        to=[usuario.email],
+    )
+    email.attach_alternative(mensagem_html, 'text/html')
+    email.send(fail_silently=False)
 
 
 def registrar(request):
