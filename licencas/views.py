@@ -35,7 +35,7 @@ def _periodo_para_valor(periodo):
 
 def _enviar_email_confirmacao(request, usuario, token_obj):
     confirmar_url = request.build_absolute_uri(reverse('licencas:confirmar_email', kwargs={'token': token_obj.token}))
-    logo_url = request.build_absolute_uri(static('img/logo-grdados.png'))
+    logo_url = request.build_absolute_uri(static('img/logo-grdados-bk.png'))
     assunto = 'Confirme seu cadastro - GR Dados'
     contexto = {
         'username': usuario.username,
@@ -64,7 +64,7 @@ def _formatar_valor_br(valor):
 
 
 def _enviar_email_pagamento_manual(request, licenca, vencimento, chave_pix):
-    logo_url = request.build_absolute_uri(static('img/logo-grdados.png'))
+    logo_url = request.build_absolute_uri(static('img/logo-grdados-bk.png'))
     assunto = 'Dados para pagamento da assinatura - GR Dados'
     contexto = {
         'cliente': licenca.cliente,
