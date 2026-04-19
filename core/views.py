@@ -859,7 +859,7 @@ def licencas_page(request):
         request,
         'core/licencas.html',
         {
-            'titulo': 'Licenca',
+            'titulo': 'Licenca de Uso, Suporte Tecnico e Manutencao',
             'licenca': lic,
             'licenca_atual': lic,
             'licencas': historico_list,
@@ -3510,7 +3510,7 @@ class LicencaListView(GestorRequiredMixin, CrudListView):
     paginate_by = 15
     model = Licenca
     template_name = 'core/licencas/crud_list.html'
-    context_title = 'Licencas'
+    context_title = 'Licenca de Uso, Suporte Tecnico e Manutencao'
     columns = [('Cliente', 'cliente'), ('Status', 'status'), ('Pagamento', 'data_pagamento'), ('Inicio', 'inicio_vigencia'), ('Fim', 'fim_vigencia')]
     create_url_name = 'core:licenca_create'
     edit_url_name = 'core:licenca_update'
@@ -3566,6 +3566,7 @@ class LicencaUpdateView(GestorRequiredMixin, CrudUpdateView):
 
 
 class LicencaDeleteView(GestorRequiredMixin, CrudDeleteView):
+    template_name = 'core/licencas/confirm_delete_modal.html'
     model = Licenca
     success_url = reverse_lazy('core:licenca_list')
 

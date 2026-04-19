@@ -36,7 +36,7 @@ def _periodo_para_valor(periodo):
 def _enviar_email_confirmacao(request, usuario, token_obj):
     confirmar_url = request.build_absolute_uri(reverse('licencas:confirmar_email', kwargs={'token': token_obj.token}))
     logo_url = request.build_absolute_uri(static('img/logo-grdados.png'))
-    assunto = 'Confirme seu cadastro - Rogajo'
+    assunto = 'Confirme seu cadastro - GR Dados'
     contexto = {
         'username': usuario.username,
         'confirmar_url': confirmar_url,
@@ -52,6 +52,41 @@ def _enviar_email_confirmacao(request, usuario, token_obj):
         to=[usuario.email],
     )
     email.attach_alternative(mensagem_html, 'text/html')
+    politica_path = Path(settings.BASE_DIR) / 'static' / 'docs' / 'politica_privacidade.docx'
+    if politica_path.exists():
+        email.attach_file(str(politica_path))
+    email.send(fail_silently=False)
+
+
+def _formatar_valor_br(valor):
+    txt = f'{valor:,.2f}'
+    return txt.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+def _enviar_email_pagamento_manual(request, licenca, vencimento, chave_pix):
+    logo_url = request.build_absolute_uri(static('img/logo-grdados.png'))
+    assunto = 'Dados para pagamento da assinatura - GR Dados'
+    contexto = {
+        'cliente': licenca.cliente,
+        'plano': licenca.get_plano_display(),
+        'forma_pagamento': licenca.get_forma_pagamento_display(),
+        'valor_total': _formatar_valor_br(licenca.valor_total or 0),
+        'data_emissao': (licenca.data_emissao or timezone.localdate()).strftime('%d/%m/%Y'),
+        'vencimento': vencimento.strftime('%d/%m/%Y'),
+        'pix_key': chave_pix,
+        'is_pix': licenca.forma_pagamento == Licenca.FormaPagamento.PIX,
+        'logo_url': logo_url,
+    }
+    texto = render_to_string('licencas/emails/pagamento_licenca.txt', contexto)
+    html = render_to_string('licencas/emails/pagamento_licenca.html', contexto)
+    remetente = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@rogajo.local')
+    email = EmailMultiAlternatives(
+        subject=assunto,
+        body=texto,
+        from_email=remetente,
+        to=[licenca.email],
+    )
+    email.attach_alternative(html, 'text/html')
     politica_path = Path(settings.BASE_DIR) / 'static' / 'docs' / 'politica_privacidade.docx'
     if politica_path.exists():
         email.attach_file(str(politica_path))
@@ -301,29 +336,10 @@ def renovar_licenca(request):
                 ]
             )
 
-            detalhes_pagamento = (
-                f'Empresa/Pessoa: {licenca.cliente}\n'
-                f'Plano: {licenca.get_plano_display()}\n'
-                f'Forma de pagamento: {licenca.get_forma_pagamento_display()}\n'
-                f'Valor total: R$ {valor_total}\n'
-                f'Data de emissao: {hoje.strftime("%d/%m/%Y")}\n'
-                f'Vencimento para confirmacao: {venc.strftime("%d/%m/%Y")}\n'
-            )
-            if forma_pagamento == 'PIX':
-                detalhes_pagamento += f'\nPIX: {manual_pix_key}\n'
-            else:
-                detalhes_pagamento += '\nBoleto: sera enviado por email ou WhatsApp.\n'
-
             try:
-                send_mail(
-                    'Dados para pagamento da assinatura - Rogajo',
-                    detalhes_pagamento,
-                    getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@rogajo.local'),
-                    [licenca.email],
-                    fail_silently=False,
-                )
-            except Exception:
-                messages.warning(request, 'Nao foi possivel enviar o email de pagamento neste ambiente.')
+                _enviar_email_pagamento_manual(request, licenca, venc, manual_pix_key)
+            except Exception as exc:
+                messages.warning(request, f'Nao foi possivel enviar o email de pagamento neste ambiente. Motivo: {exc}')
 
             if forma_pagamento == 'PIX':
                 messages.success(
