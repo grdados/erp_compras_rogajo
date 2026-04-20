@@ -6,6 +6,7 @@ from django.conf import settings
 
 PERIODO_SEMESTRAL_MESES = 6
 PERIODO_ANUAL_MESES = 12
+PERIODO_MENSAL_MESES = 1
 HORAS_MINIMAS_MELHORIA = 4
 
 
@@ -22,6 +23,10 @@ def salario_minimo_vigente() -> Decimal:
 def percentual_licenca() -> Decimal:
     return _d(getattr(settings, 'LICENCA_PERCENTUAL_SALARIO_MINIMO', '0.29') or '0.29')
 
+def percentual_licenca_mensal() -> Decimal:
+    # Plano mensal: 33,8% do salario minimo vigente
+    return _d(getattr(settings, 'LICENCA_PERCENTUAL_SALARIO_MINIMO_MENSAL', '0.338') or '0.338')
+
 
 def desconto_anual() -> Decimal:
     return _d(getattr(settings, 'LICENCA_DESCONTO_ANUAL', '0.08') or '0.08')
@@ -35,6 +40,19 @@ def valor_mensal() -> Decimal:
     # 29% do salario minimo vigente
     v = salario_minimo_vigente() * percentual_licenca()
     return v.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+def valor_mensal_plano() -> Decimal:
+    """
+    Valor do plano MENSAL.
+    Padrao: R$ 548,00 (aprox. 33,8% do salario minimo vigente atual).
+    """
+    valor_fixo = (getattr(settings, 'LICENCA_VALOR_MENSAL_PLANO', '') or '').strip()
+    if valor_fixo:
+        return _d(valor_fixo).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    v = salario_minimo_vigente() * percentual_licenca_mensal()
+    # Regra comercial solicitada: usar R$ 548,00 como valor do plano mensal.
+    return v.quantize(Decimal('1'), rounding=ROUND_HALF_UP).quantize(Decimal('0.01'))
 
 
 def valor_semestral() -> Decimal:

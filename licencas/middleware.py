@@ -3,6 +3,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 from .models import PerfilUsuarioLicenca
+from .services import excluir_licenca_sincronizada
 
 
 class LicencaAtivaMiddleware:
@@ -55,8 +56,10 @@ class LicencaAtivaMiddleware:
             return self.get_response(request)
 
         if licenca and licenca.pagamento_pendente_expirado:
-            licenca.delete()
-            return redirect('licencas:registrar')
+            ok, _ = excluir_licenca_sincronizada(licenca)
+            if ok:
+                return redirect('licencas:registrar')
+            return redirect('core:licencas_page')
 
         if not licenca:
             return redirect('licencas:registrar')

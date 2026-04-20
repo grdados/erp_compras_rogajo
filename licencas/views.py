@@ -23,11 +23,13 @@ from django.views.decorators.http import require_POST
 
 from .forms import CompletarCadastroLicencaForm, RegistroContaForm
 from .models import ConfirmacaoEmailCadastro, Licenca, PerfilUsuarioLicenca
+from .services import excluir_licenca_sincronizada
 from .pricing import (
     horas_minimas_melhoria,
     valor_anual,
     valor_hora_tecnica,
     valor_mensal,
+    valor_mensal_plano,
     valor_mensal_anual,
     valor_minimo_melhoria,
     valor_semestral,
@@ -37,6 +39,8 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 def _periodo_para_valor(periodo):
+    if periodo == 'mensal':
+        return valor_mensal_plano(), Licenca.Plano.MENSAL
     if periodo == 'anual':
         return valor_anual(), Licenca.Plano.ANUAL
     return valor_semestral(), Licenca.Plano.SEMESTRAL
@@ -233,7 +237,13 @@ def registrar(request):
         perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
         if perfil and perfil.licenca:
             if perfil.licenca.pagamento_pendente_expirado:
-                perfil.licenca.delete()
+                ok, detalhe = excluir_licenca_sincronizada(perfil.licenca)
+                if not ok:
+                    messages.error(
+                        request,
+                        f'Nao foi possivel expirar automaticamente sua solicitacao. {detalhe}',
+                    )
+                    return redirect('core:licencas_page')
                 messages.warning(
                     request,
                     'Sua solicitacao expirou por falta de pagamento em 7 dias. Cadastre novamente sua assinatura.',
@@ -393,7 +403,13 @@ def renovar_licenca(request):
         return redirect('licencas:registrar')
 
     if licenca.pagamento_pendente_expirado:
-        licenca.delete()
+        ok, detalhe = excluir_licenca_sincronizada(licenca)
+        if not ok:
+            messages.error(
+                request,
+                f'Nao foi possivel expirar automaticamente sua solicitacao. {detalhe}',
+            )
+            return redirect('core:licencas_page')
         messages.warning(
             request,
             'Sua solicitacao expirou por falta de pagamento em 7 dias. Faça um novo cadastro de assinatura.',
@@ -402,7 +418,9 @@ def renovar_licenca(request):
 
     def resolve_price_id(periodo: str) -> str:
         periodo = (periodo or 'semestral').strip().lower()
-        if periodo == 'anual':
+        if periodo == 'mensal':
+            pid = (os.getenv('STRIPE_PRICE_ID_MENSAL', '') or '').strip() or (licenca.stripe_price_id or '').strip()
+        elif periodo == 'anual':
             pid = (os.getenv('STRIPE_PRICE_ID_ANUAL', '') or '').strip() or (licenca.stripe_price_id_anual or '').strip()
         else:
             pid = (os.getenv('STRIPE_PRICE_ID_SEMESTRAL', '') or '').strip() or (licenca.stripe_price_id_semestral or '').strip()
@@ -431,9 +449,9 @@ def renovar_licenca(request):
         if not settings.STRIPE_SECRET_KEY:
             checkout_enabled = False
             setup_error = 'Stripe ainda nao esta configurado (STRIPE_SECRET_KEY). Contate o suporte para ativar o checkout.'
-        elif not (resolve_price_id('semestral') or resolve_price_id('anual')):
+        elif not (resolve_price_id('mensal') or resolve_price_id('semestral') or resolve_price_id('anual')):
             checkout_enabled = False
-            setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL.'
+            setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_MENSAL, STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL.'
     else:
         billing_provider = 'manual'
         checkout_enabled = False
@@ -441,7 +459,7 @@ def renovar_licenca(request):
 
     if request.method == 'POST':
         periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
-        if periodo not in {'semestral', 'anual'}:
+        if periodo not in {'mensal', 'semestral', 'anual'}:
             periodo = 'semestral'
 
         forma_pagamento = (request.POST.get('forma_pagamento') or 'PIX').strip().upper()
@@ -563,6 +581,7 @@ def renovar_licenca(request):
         {
             'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
             'valor_mensal': valor_mensal(),
+            'valor_mensal_plano': valor_mensal_plano(),
             'valor_mensal_anual': valor_mensal_anual(),
             'valor_semestral': valor_semestral(),
             'valor_anual': valor_anual(),
@@ -638,7 +657,12 @@ def _date_from_iso(v):
 
 def _ativar_licenca_por_pagamento(licenca, pagamento_data=None):
     inicio = pagamento_data or timezone.localdate()
-    meses = 12 if licenca.plano == Licenca.Plano.ANUAL else 6
+    if licenca.plano == Licenca.Plano.MENSAL:
+        meses = 1
+    elif licenca.plano == Licenca.Plano.ANUAL:
+        meses = 12
+    else:
+        meses = 6
     fim = _add_months(inicio, meses)
     licenca.data_pagamento = inicio
     licenca.inicio_vigencia = inicio

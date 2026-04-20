@@ -25,6 +25,7 @@ from cadastros.models import (
 from compras.models import CotacaoProduto, Planejamento, PlanejamentoItem, PedidoCompra, PedidoCompraItem
 from financeiro.models import ContaPagar, Faturamento, FaturamentoItem
 from licencas.models import Licenca, PerfilUsuarioLicenca
+from licencas.pricing import valor_anual, valor_mensal_plano, valor_semestral
 
 
 class StyledModelForm(forms.ModelForm):
@@ -596,6 +597,16 @@ class LicencaForm(StyledModelForm):
         except (InvalidOperation, ValueError):
             return Decimal('0.00')
 
+    @staticmethod
+    def _valor_por_plano(plano):
+        if plano == Licenca.Plano.MENSAL:
+            return Decimal(valor_mensal_plano()).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if plano == Licenca.Plano.ANUAL:
+            return Decimal(valor_anual()).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if plano == Licenca.Plano.SEMESTRAL:
+            return Decimal(valor_semestral()).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return Decimal('0.00')
+
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
@@ -607,10 +618,12 @@ class LicencaForm(StyledModelForm):
                     'data-license-currency': '1',
                     'data-decimals': '2',
                     'placeholder': '0,00',
+                    'readonly': 'readonly',
                 }
             )
             if not self.is_bound:
-                self.initial['valor_total'] = self._format_decimal_br(getattr(self.instance, 'valor_total', None))
+                plano_inicial = getattr(self.instance, 'plano', None) or self.initial.get('plano')
+                self.initial['valor_total'] = self._format_decimal_br(self._valor_por_plano(plano_inicial))
 
         role_user = getattr(getattr(self, 'request', None), 'user', None)
         effective_role = getattr(role_user, 'effective_role', '')
@@ -628,7 +641,9 @@ class LicencaForm(StyledModelForm):
         self.initial['data_pagamento'] = data_pagamento_atual
         self.initial['inicio_vigencia'] = data_pagamento_atual
 
-        if data_pagamento_atual and plano_atual == Licenca.Plano.SEMESTRAL:
+        if data_pagamento_atual and plano_atual == Licenca.Plano.MENSAL:
+            self.initial['fim_vigencia'] = self._add_months(data_pagamento_atual, 1)
+        elif data_pagamento_atual and plano_atual == Licenca.Plano.SEMESTRAL:
             self.initial['fim_vigencia'] = self._add_months(data_pagamento_atual, 6)
         elif data_pagamento_atual and plano_atual == Licenca.Plano.ANUAL:
             self.initial['fim_vigencia'] = self._add_months(data_pagamento_atual, 12)
@@ -694,6 +709,7 @@ class LicencaForm(StyledModelForm):
 
         plano_novo = cleaned.get('plano') or getattr(self.instance, 'plano', '')
         plano_antigo = getattr(self.instance, 'plano', '')
+        cleaned['valor_total'] = self._valor_por_plano(plano_novo)
 
         # Nao permite mudar plano durante vigencia ativa.
         if self.instance.pk and getattr(self.instance, 'status', '') == Licenca.Status.ATIVA and plano_novo and plano_novo != plano_antigo:
@@ -721,7 +737,9 @@ class LicencaForm(StyledModelForm):
         cleaned['inicio_vigencia'] = data_pagamento
 
         # Fim vigencia automatico pela data de pagamento e plano.
-        if data_pagamento and plano_novo == Licenca.Plano.SEMESTRAL:
+        if data_pagamento and plano_novo == Licenca.Plano.MENSAL:
+            cleaned['fim_vigencia'] = self._add_months(data_pagamento, 1)
+        elif data_pagamento and plano_novo == Licenca.Plano.SEMESTRAL:
             cleaned['fim_vigencia'] = self._add_months(data_pagamento, 6)
         elif data_pagamento and plano_novo == Licenca.Plano.ANUAL:
             cleaned['fim_vigencia'] = self._add_months(data_pagamento, 12)

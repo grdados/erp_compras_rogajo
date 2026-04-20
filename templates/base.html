@@ -40,11 +40,12 @@
       /* Sidebar collapse (desktop only) */
       @media (min-width: 1024px) {
         body.sidebar-collapsed aside { width: 92px !important; }
-        body.sidebar-collapsed aside nav { padding-left: 8px; padding-right: 8px; }
+        /* Keep a safe gap from the left collapse tab */
+        body.sidebar-collapsed aside nav { padding-left: 18px; padding-right: 8px; }
         /* when collapsed: icon with label BELOW (like the model) */
         body.sidebar-collapsed .menu-link { flex-direction: column; gap: 6px; justify-content: center; }
         body.sidebar-collapsed .menu-label { display: block; font-size: 11px; line-height: 1.1; text-align: center; }
-        body.sidebar-collapsed .menu-item { padding: 10px 8px; }
+        body.sidebar-collapsed .menu-item { padding: 10px 8px; margin-left: 2px; }
         body.sidebar-collapsed details > summary { justify-content: center; }
         body.sidebar-collapsed details > summary .caret { display: none; }
         body.sidebar-collapsed details > div { padding-left: 0 !important; }
@@ -60,18 +61,20 @@
         body.sidebar-collapsed #sidebar-logo-wrap { justify-content: center; }
         /* Django-admin like collapse tab on the LEFT edge */
         #sidebar-toggle {
-          left: -10px !important;
+          left: -2px !important;
           right: auto !important;
-          width: 14px !important;
-          height: 94px !important;
+          width: 18px !important;
+          height: 126px !important;
           border-left: 0 !important;
-          border-radius: 0 8px 8px 0 !important;
-          background: rgba(2, 20, 14, 0.78) !important;
-          border-color: rgba(255, 255, 255, 0.2) !important;
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+          border-radius: 0 10px 10px 0 !important;
+          background: linear-gradient(180deg, rgba(18, 48, 36, 0.98) 0%, rgba(8, 27, 20, 0.98) 100%) !important;
+          border-color: rgba(255, 255, 255, 0.35) !important;
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
         }
-        #sidebar-toggle:hover { background: rgba(7, 39, 28, 0.92) !important; }
-        body.sidebar-collapsed #sidebar-toggle { left: -10px !important; }
+        #sidebar-toggle:hover {
+          background: linear-gradient(180deg, rgba(30, 74, 57, 0.98) 0%, rgba(11, 37, 27, 0.98) 100%) !important;
+        }
+        body.sidebar-collapsed #sidebar-toggle { left: -2px !important; }
         body.sidebar-collapsed #sidebar-toggle .toggle-icon-open { display: none !important; }
         body:not(.sidebar-collapsed) #sidebar-toggle .toggle-icon-collapsed { display: none !important; }
         body.sidebar-collapsed #sidebar-user-card { text-align: center; }
@@ -184,8 +187,8 @@
 
         <!-- Toggle button: Django-admin style left edge tab -->
         <button id="sidebar-toggle" type="button" class="hidden lg:inline-flex absolute top-1/2 -translate-y-1/2 items-center justify-center border bg-transparent shadow-none" title="Recolher/Expandir menu" aria-label="Recolher/Expandir menu">
-          <span class="toggle-icon-open text-[12px] font-bold leading-none text-white/90">&laquo;</span>
-          <span class="toggle-icon-collapsed text-[12px] font-bold leading-none text-white/90">&raquo;</span>
+          <span class="toggle-icon-open text-[15px] font-black leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">&laquo;</span>
+          <span class="toggle-icon-collapsed text-[15px] font-black leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">&raquo;</span>
         </button>
 
         <!-- Only the nav scrolls; keep the user card always visible (prevents it from being cut off) -->

@@ -6,6 +6,7 @@ from core.models import TimestampedModel
 
 class Licenca(TimestampedModel):
     class Plano(models.TextChoices):
+        MENSAL = 'MENSAL', 'Mensal'
         SEMESTRAL = 'SEMESTRAL', 'Semestral'
         ANUAL = 'ANUAL', 'Anual'
 
@@ -16,6 +17,7 @@ class Licenca(TimestampedModel):
     class Status(models.TextChoices):
         ATIVA = 'ATIVA', 'Ativa'
         AGUARDANDO_CONFIRMACAO = 'AGUARDANDO_CONFIRMACAO', 'Aguardando confirmacao'
+        CANCELAMENTO_REMOTO_PENDENTE = 'CANCELAMENTO_REMOTO_PENDENTE', 'Cancelamento remoto pendente'
         INADIMPLENTE = 'INADIMPLENTE', 'Inadimplente'
         EXPIRADA = 'EXPIRADA', 'Expirada'
         CANCELADA = 'CANCELADA', 'Cancelada'
@@ -40,7 +42,7 @@ class Licenca(TimestampedModel):
     data_vencimento_pagamento = models.DateField(blank=True, null=True)
     data_pagamento = models.DateField(blank=True, null=True)
 
-    status = models.CharField(max_length=24, choices=Status.choices, default=Status.EXPIRADA)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.EXPIRADA)
     inicio_vigencia = models.DateField(blank=True, null=True)
     fim_vigencia = models.DateField(blank=True, null=True)
     stripe_customer_id = models.CharField(max_length=80, blank=True)

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 {% block title %}Licenca | ERP Compras{% endblock %}
 {% block top_title %}Licenca{% endblock %}
 {% block content %}
@@ -59,9 +60,27 @@
 
     <div class="wizard-step hidden space-y-4" data-step="2">
       <h3 class="text-[18px] font-bold text-slate-900">Plano e Cobranca</h3>
+      <div class="grid gap-3 md:grid-cols-3">
+        {% for p in plano_cards %}
+          <button
+            type="button"
+            class="plan-card rounded-xl border border-slate-300 bg-white p-3 text-left hover:border-emerald-500"
+            data-plan="{{ p.value }}"
+            data-price="{{ p.valor }}"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[16px] font-bold text-slate-900">{{ p.label }}</span>
+              <span class="text-[16px] font-bold text-emerald-700">R$ {{ p.valor|decimal_br:2 }}</span>
+            </div>
+            <p class="mt-1 text-[13px] text-slate-600">{{ p.descricao }}</p>
+          </button>
+        {% endfor %}
+      </div>
+
+      {% if form.plano %}<div class="hidden">{{ form.plano }}</div>{% endif %}
       <div class="grid gap-4 sm:grid-cols-2">
         {% for field in form %}
-          {% if field.name == 'plano' or field.name == 'forma_pagamento' or field.name == 'valor_total' or field.name == 'status' %}
+          {% if field.name == 'forma_pagamento' or field.name == 'valor_total' or field.name == 'status' %}
             <div>
               <label class="mb-1 block text-sm font-medium text-slate-800">{{ field.label }}</label>
               {{ field }}
@@ -157,6 +176,8 @@
 
     // Moeda BR do campo Valor Total: aceita 1.234,56 e 1234.56 sem inflar valor.
     const valorInput = document.getElementById('id_valor_total');
+    const planoSelect = document.getElementById('id_plano');
+    const planCards = Array.from(form.querySelectorAll('.plan-card'));
     if (!valorInput) return;
 
     function normalizeToDot(raw) {
@@ -182,6 +203,44 @@
       return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function setValorByPlan(planValue) {
+      const card = planCards.find(c => (c.dataset.plan || '') === (planValue || ''));
+      if (!card) return;
+      const pretty = toPtBr(card.dataset.price || '');
+      if (pretty) valorInput.value = pretty;
+    }
+
+    function paintPlanCards(planValue) {
+      planCards.forEach((card) => {
+        const isActive = (card.dataset.plan || '') === (planValue || '');
+        card.classList.toggle('border-emerald-600', isActive);
+        card.classList.toggle('bg-emerald-50', isActive);
+        card.classList.toggle('ring-1', isActive);
+        card.classList.toggle('ring-emerald-300', isActive);
+        card.classList.toggle('border-slate-300', !isActive);
+        card.classList.toggle('bg-white', !isActive);
+      });
+    }
+
+    if (planoSelect) {
+      planCards.forEach((card) => {
+        card.addEventListener('click', function () {
+          const plan = card.dataset.plan || '';
+          planoSelect.value = plan;
+          planoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      });
+
+      planoSelect.addEventListener('change', function () {
+        paintPlanCards(planoSelect.value);
+        setValorByPlan(planoSelect.value);
+      });
+
+      // init
+      paintPlanCards(planoSelect.value);
+      setValorByPlan(planoSelect.value);
+    }
+
     valorInput.addEventListener('blur', function () {
       const pretty = toPtBr(valorInput.value);
       if (pretty) valorInput.value = pretty;
@@ -193,6 +252,8 @@
     }
 
     form.addEventListener('submit', function () {
+      // enforce selected plan price before post
+      if (planoSelect) setValorByPlan(planoSelect.value);
       const dot = normalizeToDot(valorInput.value);
       if (dot) valorInput.value = dot;
     });

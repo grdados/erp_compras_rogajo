@@ -41,6 +41,8 @@ from financeiro.models import (
     PagamentoContaPagar,
 )
 from licencas.models import Licenca, PerfilUsuarioLicenca
+from licencas.pricing import valor_anual, valor_mensal_plano, valor_semestral
+from licencas.services import excluir_licenca_sincronizada
 
 from .models import BackupFile, BackupSettings
 from .backup_utils import compute_next_run, create_backup, parse_daily_time, restore_backup_from_zip
@@ -810,12 +812,18 @@ def licencas_page(request):
     if perfil:
         lic = perfil.licenca
         if lic and lic.pagamento_pendente_expirado:
-            lic.delete()
-            lic = None
-            messages.warning(
-                request,
-                'Assinatura expirada por falta de pagamento em 7 dias. Realize um novo registro.',
-            )
+            ok, detalhe = excluir_licenca_sincronizada(lic)
+            if ok:
+                lic = None
+                messages.warning(
+                    request,
+                    'Assinatura expirada por falta de pagamento em 7 dias. Realize um novo registro.',
+                )
+            else:
+                messages.error(
+                    request,
+                    f'Nao foi possivel expirar automaticamente a assinatura. {detalhe}',
+                )
 
     if is_admin:
         historico_qs = Licenca.objects.all().order_by('-updated_at')[:50]
@@ -3540,6 +3548,15 @@ class LicencaCreateView(GestorRequiredMixin, CrudCreateView):
         kwargs['request'] = self.request
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['plano_cards'] = [
+            {'value': Licenca.Plano.MENSAL, 'label': 'Mensal', 'descricao': '1 mes', 'valor': valor_mensal_plano()},
+            {'value': Licenca.Plano.SEMESTRAL, 'label': 'Semestral', 'descricao': '6 meses', 'valor': valor_semestral()},
+            {'value': Licenca.Plano.ANUAL, 'label': 'Anual', 'descricao': '12 meses', 'valor': valor_anual()},
+        ]
+        return ctx
+
 
 class LicencaUpdateView(GestorRequiredMixin, CrudUpdateView):
     template_name = 'core/licencas/form_wizard.html'
@@ -3551,6 +3568,15 @@ class LicencaUpdateView(GestorRequiredMixin, CrudUpdateView):
         kwargs = super().get_form_kwargs()
         kwargs['request'] = self.request
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['plano_cards'] = [
+            {'value': Licenca.Plano.MENSAL, 'label': 'Mensal', 'descricao': '1 mes', 'valor': valor_mensal_plano()},
+            {'value': Licenca.Plano.SEMESTRAL, 'label': 'Semestral', 'descricao': '6 meses', 'valor': valor_semestral()},
+            {'value': Licenca.Plano.ANUAL, 'label': 'Anual', 'descricao': '12 meses', 'valor': valor_anual()},
+        ]
+        return ctx
 
     def dispatch(self, request, *args, **kwargs):
         lic = self.get_object()
@@ -3581,6 +3607,15 @@ class LicencaDeleteView(GestorRequiredMixin, CrudDeleteView):
                 messages.warning(request, 'Assinatura validada nao pode ser excluida pelo cliente.')
                 return redirect('core:licencas_page')
         return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        ok, detalhe = excluir_licenca_sincronizada(self.object)
+        if not ok:
+            messages.error(request, f'Nao foi possivel excluir a assinatura. {detalhe}')
+            return redirect('core:licencas_page')
+        messages.success(request, 'Assinatura removida com sucesso.')
+        return redirect(self.get_success_url())
 
 # Vinculos Usuario-Licenca (CRUD)
 class PerfilUsuarioLicencaListView(GestorRequiredMixin, CrudListView):

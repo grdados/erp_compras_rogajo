@@ -50,6 +50,8 @@
                   <span class="inline-flex rounded-md bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-900 ring-1 ring-emerald-200">Ativo</span>
                 {% elif l.status == 'AGUARDANDO_CONFIRMACAO' %}
                   <span class="inline-flex rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-900 ring-1 ring-red-200">Aguardando pagamento</span>
+                {% elif l.status == 'CANCELAMENTO_REMOTO_PENDENTE' %}
+                  <span class="inline-flex rounded-md bg-orange-50 px-2 py-1 text-sm font-bold text-orange-900 ring-1 ring-orange-200">Cancelamento remoto pendente</span>
                 {% elif l.status == 'INADIMPLENTE' %}
                   <span class="inline-flex rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-900 ring-1 ring-red-200">Inadimplente</span>
                 {% elif l.status == 'EXPIRADA' %}
