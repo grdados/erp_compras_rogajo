@@ -48,6 +48,11 @@ class Licenca(TimestampedModel):
     stripe_price_id = models.CharField(max_length=80, blank=True)
     stripe_price_id_semestral = models.CharField(max_length=80, blank=True)
     stripe_price_id_anual = models.CharField(max_length=80, blank=True)
+    asaas_customer_id = models.CharField(max_length=80, blank=True)
+    asaas_payment_id = models.CharField(max_length=80, blank=True)
+    asaas_invoice_url = models.URLField(blank=True, default='')
+    asaas_bank_slip_url = models.URLField(blank=True, default='')
+    asaas_pix_qr_code_url = models.URLField(blank=True, default='')
 
     class Meta:
         ordering = ['cliente', '-updated_at']

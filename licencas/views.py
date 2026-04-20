@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import requests
 import stripe
 from django.conf import settings
 from django.contrib import messages
@@ -69,6 +70,124 @@ def _enviar_email_confirmacao(request, usuario, token_obj):
 def _formatar_valor_br(valor):
     txt = f'{valor:,.2f}'
     return txt.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+def _somente_digitos(v):
+    return ''.join(ch for ch in (v or '') if ch.isdigit())
+
+
+def _add_months(base_date, months):
+    month_index = (base_date.month - 1) + int(months)
+    year = base_date.year + month_index // 12
+    month = (month_index % 12) + 1
+    # clamp day by month length
+    if month in {1, 3, 5, 7, 8, 10, 12}:
+        max_day = 31
+    elif month in {4, 6, 9, 11}:
+        max_day = 30
+    else:
+        leap = (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+        max_day = 29 if leap else 28
+    day = min(base_date.day, max_day)
+    return base_date.replace(year=year, month=month, day=day)
+
+
+def _asaas_headers():
+    return {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'access_token': settings.ASAAS_API_KEY,
+    }
+
+
+def _asaas_enabled():
+    return bool(getattr(settings, 'LICENCA_ASAAS_MODE', False) and getattr(settings, 'ASAAS_API_KEY', ''))
+
+
+def _asaas_customer_payload(licenca):
+    return {
+        'name': licenca.cliente,
+        'cpfCnpj': _somente_digitos(licenca.cpf_cnpj),
+        'email': licenca.email,
+        'mobilePhone': _somente_digitos(licenca.contato),
+        'postalCode': _somente_digitos(licenca.cep),
+        'address': licenca.endereco,
+        'addressNumber': licenca.numero,
+        'province': licenca.cidade,
+    }
+
+
+def _asaas_get_or_create_customer(licenca):
+    if licenca.asaas_customer_id:
+        return licenca.asaas_customer_id
+
+    resp = requests.post(
+        f'{settings.ASAAS_BASE_URL}/customers',
+        headers=_asaas_headers(),
+        json=_asaas_customer_payload(licenca),
+        timeout=25,
+    )
+    resp.raise_for_status()
+    data = resp.json() or {}
+    customer_id = data.get('id')
+    if not customer_id:
+        raise ValueError('Asaas nao retornou customer id.')
+    licenca.asaas_customer_id = customer_id
+    licenca.save(update_fields=['asaas_customer_id', 'updated_at'])
+    return customer_id
+
+
+def _asaas_create_payment(licenca, due_date):
+    customer_id = _asaas_get_or_create_customer(licenca)
+    billing_type = 'PIX' if licenca.forma_pagamento == Licenca.FormaPagamento.PIX else 'BOLETO'
+    payload = {
+        'customer': customer_id,
+        'billingType': billing_type,
+        'value': float(licenca.valor_total or 0),
+        'dueDate': due_date.strftime('%Y-%m-%d'),
+        'description': f'Licenca {licenca.get_plano_display()} - ERP Compras Rogajo',
+        'externalReference': f'LIC-{licenca.id}',
+    }
+    resp = requests.post(
+        f'{settings.ASAAS_BASE_URL}/payments',
+        headers=_asaas_headers(),
+        json=payload,
+        timeout=25,
+    )
+    resp.raise_for_status()
+    data = resp.json() or {}
+    payment_id = data.get('id')
+    if not payment_id:
+        raise ValueError('Asaas nao retornou payment id.')
+
+    pix_qr_url = ''
+    if billing_type == 'PIX':
+        try:
+            pix_resp = requests.get(
+                f'{settings.ASAAS_BASE_URL}/payments/{payment_id}/pixQrCode',
+                headers=_asaas_headers(),
+                timeout=25,
+            )
+            if pix_resp.ok:
+                pix_data = pix_resp.json() or {}
+                pix_qr_url = pix_data.get('encodedImage') or pix_data.get('payload') or ''
+        except Exception:
+            pix_qr_url = ''
+
+    licenca.asaas_payment_id = payment_id
+    licenca.asaas_invoice_url = data.get('invoiceUrl') or ''
+    licenca.asaas_bank_slip_url = data.get('bankSlipUrl') or ''
+    licenca.asaas_pix_qr_code_url = pix_qr_url
+    licenca.save(
+        update_fields=[
+            'asaas_payment_id',
+            'asaas_invoice_url',
+            'asaas_bank_slip_url',
+            'asaas_pix_qr_code_url',
+            'updated_at',
+        ]
+    )
+    return data
 
 
 def _enviar_email_pagamento_manual(request, licenca, vencimento, chave_pix):
@@ -300,17 +419,25 @@ def renovar_licenca(request):
         'pix': manual_pix_key,
     }
     checkout_enabled = True
+    billing_provider = 'manual'
 
-    if settings.LICENCA_MANUAL_MODE:
+    if getattr(settings, 'LICENCA_ASAAS_MODE', False):
+        billing_provider = 'asaas'
+        if not _asaas_enabled():
+            checkout_enabled = False
+            setup_error = 'Asaas nao configurado. Defina ASAAS_API_KEY e ASAAS_BASE_URL.'
+    elif getattr(settings, 'LICENCA_STRIPE_MODE', False):
+        billing_provider = 'stripe'
+        if not settings.STRIPE_SECRET_KEY:
+            checkout_enabled = False
+            setup_error = 'Stripe ainda nao esta configurado (STRIPE_SECRET_KEY). Contate o suporte para ativar o checkout.'
+        elif not (resolve_price_id('semestral') or resolve_price_id('anual')):
+            checkout_enabled = False
+            setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL.'
+    else:
+        billing_provider = 'manual'
         checkout_enabled = False
         setup_error = 'Licenciamento manual ativo. Selecione plano + forma de pagamento para gerar sua solicitacao.'
-    elif not settings.STRIPE_SECRET_KEY:
-        checkout_enabled = False
-        setup_error = 'Stripe ainda nao esta configurado (STRIPE_SECRET_KEY). Contate o suporte para ativar o checkout.'
-
-    if checkout_enabled and not (resolve_price_id('semestral') or resolve_price_id('anual')):
-        checkout_enabled = False
-        setup_error = 'Price IDs do Stripe nao configurados. Configure STRIPE_PRICE_ID_SEMESTRAL e STRIPE_PRICE_ID_ANUAL.'
 
     if request.method == 'POST':
         periodo = (request.POST.get('periodo') or 'semestral').strip().lower()
@@ -325,7 +452,7 @@ def renovar_licenca(request):
         hoje = timezone.localdate()
         venc = hoje + timedelta(days=7)
 
-        if settings.LICENCA_MANUAL_MODE:
+        if billing_provider == 'manual':
             licenca.plano = plano
             licenca.forma_pagamento = forma_pagamento
             licenca.valor_total = valor_total
@@ -362,6 +489,36 @@ def renovar_licenca(request):
                     'O boleto sera enviado por email ou WhatsApp.',
                 )
             return redirect('core:licencas_page')
+
+        if billing_provider == 'asaas':
+            licenca.plano = plano
+            licenca.forma_pagamento = forma_pagamento
+            licenca.valor_total = valor_total
+            licenca.data_emissao = hoje
+            licenca.data_vencimento_pagamento = venc
+            licenca.status = Licenca.Status.AGUARDANDO_CONFIRMACAO
+            licenca.save(
+                update_fields=[
+                    'plano',
+                    'forma_pagamento',
+                    'valor_total',
+                    'data_emissao',
+                    'data_vencimento_pagamento',
+                    'status',
+                    'updated_at',
+                ]
+            )
+            try:
+                payment_data = _asaas_create_payment(licenca, venc)
+                _enviar_email_pagamento_manual(request, licenca, venc, manual_pix_key)
+                invoice_url = payment_data.get('invoiceUrl') or licenca.asaas_invoice_url
+                if invoice_url:
+                    return redirect(invoice_url)
+                messages.success(request, 'Cobranca Asaas gerada com sucesso. Consulte o painel de licenca para pagamento.')
+                return redirect('core:licencas_page')
+            except Exception as exc:
+                messages.error(request, f'Nao foi possivel gerar cobranca no Asaas: {exc}')
+                return redirect('licencas:renovar')
 
         price_id = resolve_price_id(periodo)
         if not settings.STRIPE_SECRET_KEY:
@@ -416,7 +573,8 @@ def renovar_licenca(request):
             'setup_error': setup_error,
             'beneficiario': beneficiario,
             'manual_pix_key': manual_pix_key,
-            'manual_mode': settings.LICENCA_MANUAL_MODE,
+            'manual_mode': billing_provider == 'manual',
+            'billing_provider': billing_provider,
             'licenca': licenca,
         },
     )
@@ -436,7 +594,7 @@ def checkout_cancelado(request):
 @csrf_exempt
 @require_POST
 def stripe_webhook(request):
-    if settings.LICENCA_MANUAL_MODE:
+    if not getattr(settings, 'LICENCA_STRIPE_MODE', False):
         return JsonResponse({'status': 'disabled', 'provider': 'manual'})
 
     payload = request.body
@@ -464,6 +622,86 @@ def stripe_webhook(request):
         _handle_payment_failed(data)
     elif event_type in ('invoice.paid',):
         _handle_invoice_paid(data)
+
+    return JsonResponse({'status': 'ok'})
+
+
+def _date_from_iso(v):
+    if not v:
+        return None
+    try:
+        # Asaas uses YYYY-MM-DD on most payment dates
+        return datetime.strptime(v[:10], '%Y-%m-%d').date()
+    except Exception:
+        return None
+
+
+def _ativar_licenca_por_pagamento(licenca, pagamento_data=None):
+    inicio = pagamento_data or timezone.localdate()
+    meses = 12 if licenca.plano == Licenca.Plano.ANUAL else 6
+    fim = _add_months(inicio, meses)
+    licenca.data_pagamento = inicio
+    licenca.inicio_vigencia = inicio
+    licenca.fim_vigencia = fim
+    licenca.status = Licenca.Status.ATIVA
+    licenca.save(
+        update_fields=[
+            'data_pagamento',
+            'inicio_vigencia',
+            'fim_vigencia',
+            'status',
+            'updated_at',
+        ]
+    )
+
+
+@csrf_exempt
+@require_POST
+def asaas_webhook(request):
+    if not getattr(settings, 'LICENCA_ASAAS_MODE', False):
+        return JsonResponse({'status': 'disabled', 'provider': 'not-asaas'})
+
+    token_expected = (getattr(settings, 'ASAAS_WEBHOOK_TOKEN', '') or '').strip()
+    token_received = (
+        request.META.get('HTTP_ASAAS_ACCESS_TOKEN')
+        or request.META.get('HTTP_ACCESS_TOKEN')
+        or ''
+    ).strip()
+    if token_expected and token_received != token_expected:
+        return HttpResponse(status=401)
+
+    try:
+        payload = json.loads((request.body or b'{}').decode('utf-8'))
+    except Exception:
+        return HttpResponse(status=400)
+
+    event = payload.get('event') or ''
+    payment = payload.get('payment') or {}
+    payment_id = payment.get('id') or ''
+    external_reference = (payment.get('externalReference') or '').strip()
+
+    licenca = None
+    if payment_id:
+        licenca = Licenca.objects.filter(asaas_payment_id=payment_id).first()
+    if not licenca and external_reference.startswith('LIC-'):
+        licenca_id = external_reference.replace('LIC-', '').strip()
+        licenca = Licenca.objects.filter(id=licenca_id).first()
+    if not licenca:
+        return JsonResponse({'status': 'ignored'})
+
+    pay_date = _date_from_iso(payment.get('confirmedDate')) or _date_from_iso(payment.get('paymentDate'))
+
+    if event in {'PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED_IN_CASH'}:
+        _ativar_licenca_por_pagamento(licenca, pay_date)
+    elif event in {'PAYMENT_OVERDUE'}:
+        licenca.status = Licenca.Status.INADIMPLENTE
+        licenca.save(update_fields=['status', 'updated_at'])
+    elif event in {'PAYMENT_DELETED', 'PAYMENT_REFUNDED', 'PAYMENT_REFUND_IN_PROGRESS', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE'}:
+        licenca.status = Licenca.Status.CANCELADA
+        licenca.save(update_fields=['status', 'updated_at'])
+    elif event in {'PAYMENT_AWAITING_RISK_ANALYSIS'}:
+        licenca.status = Licenca.Status.AGUARDANDO_CONFIRMACAO
+        licenca.save(update_fields=['status', 'updated_at'])
 
     return JsonResponse({'status': 'ok'})
 

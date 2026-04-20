@@ -26,6 +26,11 @@ Copie `.env.example` para `.env` e preencha:\n- Para rodar local sem Docker, man
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `STRIPE_PRICE_ID`
+- `LICENCA_BILLING_MODE` (`manual`, `stripe` ou `asaas`)
+- Asaas (quando `LICENCA_BILLING_MODE=asaas`):
+  - `ASAAS_API_KEY`
+  - `ASAAS_BASE_URL` (ex.: `https://sandbox.asaas.com/api/v3`)
+  - `ASAAS_WEBHOOK_TOKEN`
 
 ## Como executar (sem Docker)
 1. `python -m venv .venv`
@@ -36,6 +41,17 @@ Copie `.env.example` para `.env` e preencha:\n- Para rodar local sem Docker, man
 6. `python manage.py migrate`
 7. `python manage.py createsuperuser`
 8. `python manage.py runserver`
+
+## Modo simples (1 clique no Windows)
+Para usuario final abrir o sistema sem digitar comandos:
+
+1. Execute `Instalar_ERP_Local.bat` (somente na primeira vez).
+2. Depois, sempre abra com `Abrir_ERP_Local.bat`.
+
+Esse modo:
+- aplica migracoes automaticamente
+- abre o navegador em `http://127.0.0.1:8000/accounts/login/`
+- inicia o servidor local
 
 ## Como executar (Docker)
 1. `copy .env.example .env`

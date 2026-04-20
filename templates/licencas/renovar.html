@@ -76,7 +76,7 @@
       <option value="BOLETO">Boleto</option>
     </select>
     <button type="submit" {% if not checkout_enabled and not manual_mode %}disabled{% endif %} class="rounded-lg bg-emerald-400 px-5 py-3 text-[14px] font-bold text-slate-900 {% if not checkout_enabled and not manual_mode %}opacity-60 cursor-not-allowed{% endif %}">
-      {% if checkout_enabled %}Ir para checkout Stripe{% else %}Solicitar liberacao manual{% endif %}
+      {% if checkout_enabled and billing_provider == 'stripe' %}Ir para checkout Stripe{% elif checkout_enabled and billing_provider == 'asaas' %}Gerar cobranca Asaas{% else %}Solicitar liberacao manual{% endif %}
     </button>
     <a href="/app/licencas/" class="rounded-lg border border-slate-500 px-5 py-3 text-[14px] font-bold text-slate-100 hover:bg-slate-800/40">Voltar</a>
   </form>
