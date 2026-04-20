@@ -1,0 +1,189 @@
+{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+
+{% block title %}Dashboard - Economia do Planejamento{% endblock %}
+{% block header_title %}DASHBOARD - ECONOMIA DO PLANEJAMENTO{% endblock %}
+
+{% block extra_css %}
+@page { size: A4 landscape; margin: 8mm 4mm 6mm 4mm; }
+body { font-size: 14px; }
+.ui-title { font-size: 18px; }
+.rpt-sub { font-size: 12px; }
+.kpi { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; background: #ffffff; }
+.kpi .label { color:#475569; font-size: 12px; }
+.kpi .value { font-size: 20px; font-weight: 700; }
+.kpi .hint { font-size: 12px; color:#64748b; }
+.bar-wrap { height: 14px; border-radius: 999px; overflow:hidden; background:#e2e8f0; padding: 1px; }
+.bar { height: 100%; border-radius: 999px; }
+.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.legend { display:flex; gap:16px; align-items:center; justify-content:flex-end; font-size:12px; color:#334155; }
+.legend .sw { width:22px; height:10px; border-radius:4px; }
+.cat-row { display:grid; grid-template-columns: 210px 1fr 120px; gap: 10px; align-items:center; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+.cat-row:last-child { border-bottom:0; }
+.name { font-weight:700; }
+.muted { color:#64748b; }
+.mono { white-space: nowrap; }
+
+/* keep charts readable for older audiences */
+.section-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.box { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 10px; }
+
+/* safra indicator */
+.blink-dot { position: relative; width: 10px; height: 10px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.7); animation: blinkPulse 1.2s infinite; }
+@keyframes blinkPulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.7);} 70% { box-shadow: 0 0 0 10px rgba(34,197,94,0);} 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0);} }
+@media print { .blink-dot { animation: none !important; } }
+{% endblock %}
+
+{% block content %}
+  <div class="box" style="margin-top:8px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div>
+        <div class="ui-title">Safra em análise</div>
+        <div class="rpt-sub">Use esta informação para validar os números do relatório.</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="blink-dot" aria-hidden="true"></div>
+        <div class="mono" style="font-size:18px; font-weight:700;">
+          {% if safra_obj %}{{ safra_obj.safra }}{% else %}Todas{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:10px;" class="grid-3">
+    <div class="kpi">
+      <div class="label">Planejado (Orçamento)</div>
+      <div class="value">{{ planned_total|decimal_br:2 }}</div>
+      <div class="hint">Base do planejamento</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Realizado (Faturado)</div>
+      <div class="value">{{ realized_total|decimal_br:2 }}</div>
+      <div class="hint">Notas fiscais registradas</div>
+    </div>
+    <div class="kpi" style="border-color:#bbf7d0; background:#f0fdf4;">
+      <div class="label">Economia estimada</div>
+      <div class="value" style="color:#166534;">{{ economia|decimal_br:2 }}</div>
+      <div class="hint">Planejado menos realizado</div>
+    </div>
+  </div>
+
+  <div style="margin-top:10px;" class="grid-2">
+    <div class="box">
+      <div class="section-title">Planejado x Realizado</div>
+      <div style="display:grid; grid-template-columns: 160px 1fr 120px; gap:10px; align-items:center; padding:6px 2px;">
+        <div class="name">Planejado</div>
+        <div class="bar-wrap">
+          <div class="bar" style="width:100%; background:#14532d;"></div>
+        </div>
+        <div class="mono" style="text-align:right; font-weight:700;">{{ planned_total|decimal_br:2 }}</div>
+      </div>
+      <div style="display:grid; grid-template-columns: 160px 1fr 120px; gap:10px; align-items:center; padding:6px 2px;">
+        <div class="name">Realizado</div>
+        <div class="bar-wrap">
+          {% with pct=utilizado_pct|floatformat:0 %}
+          <div class="bar" style="width:{{ pct }}%; background:#1f7f6b;"></div>
+          {% endwith %}
+        </div>
+        <div class="mono" style="text-align:right; font-weight:700;">{{ realized_total|decimal_br:2 }}</div>
+      </div>
+      <div class="rpt-sub" style="margin-top:6px;">
+        Utilizado do orçamento: <strong>{{ utilizado_pct|floatformat:1 }}%</strong> | SC/HA: <strong>{{ sc_ha|floatformat:2 }}</strong> | Área planejada: <strong>{{ planned_area|floatformat:0 }}</strong> ha | Preço médio: <strong>{{ avg_preco_prod|decimal_br:2 }}</strong>
+      </div>
+    </div>
+
+    <div class="box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="section-title">Resumo de Categorias</div>
+        <div class="legend">
+          <div style="display:flex; align-items:center; gap:6px;"><span class="sw" style="background:#b08a00;"></span> Planejado</div>
+          <div style="display:flex; align-items:center; gap:6px;"><span class="sw" style="background:#1f7f6b;"></span> Realizado</div>
+        </div>
+      </div>
+      <div class="box" style="background:#f8fafc; padding:0; border-radius:10px;">
+        {% for r in categorias_rows %}
+          <div class="cat-row">
+            <div class="mono">
+              <div class="name">{{ r.obj.nome }}</div>
+              <div class="muted">({{ r.pct_total|floatformat:1 }}% do total)</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div class="bar-wrap">
+                <div class="bar" style="width:{{ r.pct_planejado }}%; background:#b08a00;"></div>
+              </div>
+              <div class="bar-wrap">
+                <div class="bar" style="width:{{ r.pct_realizado }}%; background:#1f7f6b;"></div>
+              </div>
+            </div>
+            <div class="mono" style="text-align:right;">
+              <div style="font-weight:700;">{{ r.planejado|decimal_br:2 }}</div>
+              <div style="font-weight:700;">{{ r.realizado|decimal_br:2 }}</div>
+            </div>
+          </div>
+        {% empty %}
+          <div style="padding:14px; text-align:center;" class="muted">Sem categorias para exibir.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:10px;" class="grid-2">
+    <div class="box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="section-title">Resumo de Produtos (Top por realizado)</div>
+      </div>
+      <div class="box" style="background:#f8fafc; padding:0; border-radius:10px;">
+        {% for r in produtos_rows %}
+          <div class="cat-row">
+            <div class="mono">
+              <div class="name">{{ r.nome }}</div>
+              <div class="muted">Realizado: {{ r.realizado|decimal_br:2 }}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div class="bar-wrap"><div class="bar" style="width:{{ r.pct_planejado }}%; background:#0ea5e9;"></div></div>
+              <div class="bar-wrap"><div class="bar" style="width:{{ r.pct_realizado }}%; background:#14532d;"></div></div>
+            </div>
+            <div class="mono" style="text-align:right;">
+              <div style="font-weight:700;">{{ r.planejado|decimal_br:2 }}</div>
+              <div style="font-weight:700;">{{ r.realizado|decimal_br:2 }}</div>
+            </div>
+          </div>
+        {% empty %}
+          <div style="padding:14px; text-align:center;" class="muted">Sem produtos para exibir.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="section-title">Ranking por Fornecedor</div>
+        <div class="legend">
+          <div style="display:flex; align-items:center; gap:6px;"><span class="sw" style="background:#b08a00;"></span> Planejado</div>
+          <div style="display:flex; align-items:center; gap:6px;"><span class="sw" style="background:#1f7f6b;"></span> Realizado</div>
+        </div>
+      </div>
+      <div class="box" style="background:#f8fafc; padding:0; border-radius:10px;">
+        {% for r in fornecedores_rows %}
+          <div class="cat-row">
+            <div class="mono">
+              <div class="name">{{ r.obj.fornecedor|default:"-" }}</div>
+              <div class="muted">({{ r.pct_total|floatformat:1 }}% do total)</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div class="bar-wrap"><div class="bar" style="width:{{ r.pct_planejado }}%; background:#b08a00;"></div></div>
+              <div class="bar-wrap"><div class="bar" style="width:{{ r.pct_realizado }}%; background:#1f7f6b;"></div></div>
+            </div>
+            <div class="mono" style="text-align:right;">
+              <div style="font-weight:700;">{{ r.planejado|decimal_br:2 }}</div>
+              <div style="font-weight:700;">{{ r.realizado|decimal_br:2 }}</div>
+            </div>
+          </div>
+        {% empty %}
+          <div style="padding:14px; text-align:center;" class="muted">Sem fornecedores para exibir.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

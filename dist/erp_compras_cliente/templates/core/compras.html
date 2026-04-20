@@ -1,0 +1,88 @@
+﻿{% extends 'base.html' %} {% block title %}Compras | ERP Compras{% endblock %}
+{% block content %}
+<section class="space-y-6">
+  <div class="rounded-3xl border border-slate-200 bg-white p-6">
+    <h1 class="text-3xl font-black">{{ titulo }}</h1>
+    <p class="mt-2 text-slate-600">
+      Pedidos e cotacoes de produtos em um só painel.
+    </p>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    <a
+      href="/app/pedidos/"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10"
+      >CRUD Pedidos de Compra</a
+    >
+    <a
+      href="/app/cotacoes/"
+      class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold hover:bg-brand-500/10"
+      >CRUD Cotações</a
+    >
+  </div>
+
+  <article class="rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="text-lg font-bold">Pedidos de Compra</h2>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500">
+          <tr>
+            <th>Pedido</th>
+            <th>Data</th>
+            <th>Cliente</th>
+            <th>Produtor</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+          <tr class="border-t border-slate-200">
+            <td class="py-2">{{ p.pedido }}</td>
+            <td>{{ p.data }}</td>
+            <td>{{ p.cliente }}</td>
+            <td>{{ p.produtor }}</td>
+            <td>{{ p.valor_total }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td class="py-3 text-slate-500" colspan="5">Sem pedidos</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="text-lg font-bold">Cotações</h2>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-500">
+          <tr>
+            <th>Data</th>
+            <th>Safra</th>
+            <th>Fornecedor</th>
+            <th>Produto</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cotacoes %}
+          <tr class="border-t border-slate-200">
+            <td class="py-2">{{ c.data }}</td>
+            <td>{{ c.safra }}</td>
+            <td>{{ c.fornecedor }}</td>
+            <td>{{ c.produto }}</td>
+            <td>{{ c.valor_total }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td class="py-3 text-slate-500" colspan="5">Sem cotacoes</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

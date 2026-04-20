@@ -1,0 +1,12 @@
+Ola, {{ username }}!
+
+Recebemos seu cadastro no ERP Compras Rogajo.
+Para confirmar seu email, clique no link abaixo:
+{{ confirmar_url }}
+
+Se voce nao solicitou este cadastro, ignore esta mensagem.
+
+GR Dados Business Intelligence
+WhatsApp: (67) 99869-8159
+Email: grdados.oficial@gmail.com
+Endereco: Av. 22 de Abril, 519 - Centro, Laguna Carapa/MS - CEP 79920-000

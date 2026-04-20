@@ -1,0 +1,170 @@
+{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Pedido de Compra - Analitico{% endblock %}
+{% block header_title %}Pedido de Compra Analitico{% endblock %}
+{% block content %}
+  <style>
+    .box { border:0.5px solid #cbd5e1; border-radius:6px; padding:10px; margin-top:10px; }
+    .row2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:end; }
+    .row3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; }
+    .lbl { font-size:10px; color:#111827; }
+    .val { font-size:12px; font-weight:700; }
+    .right { text-align:right; }
+    .mut { color:#64748b; font-size:10px; }
+
+    .leader { display:flex; align-items:baseline; gap:6px; }
+    .leader .name { font-weight:700; font-size:11px; }
+    .leader .dots { flex:1; border-bottom:1px dotted #111827; transform: translateY(-2px); }
+    .leader .amt { font-weight:700; font-size:11px; min-width:88px; text-align:right; }
+
+    .sec-title { text-align:center; font-weight:700; margin-top:12px; margin-bottom:6px; font-size:12px; }
+
+    .prod-box { border:0.5px solid #7aa8a0; border-radius:6px; margin-top:10px; overflow:hidden; }
+    .prod-hdr { background:#f1f3f4; padding:8px 10px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .forn-hdr { background:#9bbfb7; padding:6px 10px; font-weight:700; }
+
+    table.mini { width:100%; border-collapse:collapse; table-layout:fixed; }
+    table.mini thead th { background:#f6f7f8; font-size:9px; font-weight:700; padding:5px 5px; }
+    table.mini tbody td { font-size:9px; padding:5px 5px; }
+    table.mini tbody tr { border-bottom:0.5px solid #111827; }
+    table.mini tfoot td { background:#f6f7f8; font-size:10px; font-weight:700; padding:6px; }
+    table.mini tfoot td { white-space:nowrap; }
+    table.mini tbody td { overflow:hidden; text-overflow:ellipsis; }
+    table.mini tfoot td { overflow:visible; text-overflow:clip; }
+    .r { text-align:right; }
+    .c { text-align:center; }
+    .ellipsis { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    @media print {
+      .prod-box { break-inside: avoid; }
+      .box { break-inside: avoid; }
+    }
+  </style>
+
+  {% for g in report_groups %}
+    <div class="box">
+      <div class="row2">
+        <div>
+          <div class="lbl">Cliente</div>
+          <div class="val">{{ g.cliente_label }}</div>
+        </div>
+        <div class="row2" style="grid-template-columns: 1fr 120px;">
+          <div>
+            <div class="lbl">Safra</div>
+            <div class="val">{{ g.safra_label }}</div>
+          </div>
+          <div class="right">
+            <div class="lbl">Valor Total</div>
+            <div class="val">{{ g.total|decimal_br:2 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-2 row2" style="align-items:start;">
+        <div>
+          <div class="mut">Resumo por Produtor</div>
+          {% for p in g.produtores %}
+            <div class="leader">
+              <div class="name">{{ p.label }}</div>
+              <div class="dots"></div>
+              <div class="amt">{{ p.total|decimal_br:2 }}</div>
+            </div>
+          {% empty %}
+            <div class="mut">-</div>
+          {% endfor %}
+        </div>
+        <div>
+          <div class="mut">Resumo por Empresa</div>
+          {% for e in g.empresas %}
+            <div class="leader">
+              <div class="name">{{ e.label }}</div>
+              <div class="dots"></div>
+              <div class="amt">{{ e.total|decimal_br:2 }}</div>
+            </div>
+          {% empty %}
+            <div class="mut">-</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-title">Notas Fiscais - Faturamento</div>
+
+    {% for pg in g.nf_prod_groups %}
+      <div class="prod-box">
+        <div class="prod-hdr">
+          <div>
+            <div class="mut">Produtor</div>
+            <div class="val">{{ pg.produtor_label }}</div>
+          </div>
+          <div class="right">
+            <div class="mut">Valor Total</div>
+            <div class="val">{{ pg.total|decimal_br:2 }}</div>
+          </div>
+        </div>
+
+        {% for fg in pg.fornecedores %}
+          <div class="forn-hdr">{{ fg.fornecedor_label }}</div>
+          <table class="mini">
+            <colgroup>
+              <col style="width:50px">   {# Pedido #}
+              <col style="width:45px">   {# Nota #}
+              <col style="width:60px">   {# Data #}
+              <col style="width:70px">   {# Status #}
+              <col style="width:110px">  {# Produto #}
+              <col style="width:35px">   {# UN #}
+              <col style="width:65px">   {# Quantidade #}
+              <col style="width:55px">   {# Preco #}
+              <col style="width:45px">   {# Desc #}
+              <col style="width:80px">   {# Valor #}
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="c">Pedido</th>
+                <th class="c">Nota</th>
+                <th class="c">Data</th>
+                <th class="c">Status</th>
+                <th class="c">Produto</th>
+                <th class="c">UN</th>
+                <th class="c">Quantidade</th>
+                <th class="c">Preco</th>
+                <th class="c">Desc</th>
+                <th class="c">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ln in fg.linhas %}
+                <tr>
+                  <td class="c">{{ ln.pedido }}</td>
+                  <td class="c">{{ ln.nota }}</td>
+                  <td class="c">{{ ln.data|date:'d/m/Y' }}</td>
+                  <td class="c">{{ ln.status }}</td>
+                  <td class="ellipsis">{{ ln.produto }}</td>
+                  <td class="c">{{ ln.un }}</td>
+                  <td class="r">{{ ln.quantidade|decimal_br:0 }}</td>
+                  <td class="r">{{ ln.preco|decimal_br:2 }}</td>
+                  <td class="r">{{ ln.desconto|decimal_br:2 }}</td>
+                  <td class="r">{{ ln.valor_total|decimal_br:2 }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="10" class="c" style="padding:8px 6px; color:#64748b;">Sem itens.</td></tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="8"></td>
+                <td class="r" style="white-space:nowrap;">Total da {{ fg.fornecedor_label }}</td>
+                <td class="r" style="white-space:nowrap;">{{ fg.total|decimal_br:2 }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        {% empty %}
+          <div class="mut" style="padding:10px;">Sem fornecedores.</div>
+        {% endfor %}
+      </div>
+    {% empty %}
+      <div class="box mut">Sem notas fiscais vinculadas.</div>
+    {% endfor %}
+  {% empty %}
+    <div class="box mut">Sem registros.</div>
+  {% endfor %}
+{% endblock %}

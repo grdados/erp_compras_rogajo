@@ -1,0 +1,186 @@
+{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Pedido de Compra - A4{% endblock %}
+{% block header_title %}PEDIDO DE COMPRA{% endblock %}
+{% block content %}
+  <style>
+    .hdr-row { width:100%; border:0.5px solid #cbd5e1; padding:16px; margin-top:18px; }
+    /* Give "Produtor" more space to avoid wrapping */
+    .hdr-grid { display:grid; grid-template-columns: 2.0fr 1.0fr 2.4fr 1.2fr 1.0fr 1.2fr; gap:18px; align-items:start; }
+    .lbl { font-size:10px; color:#111827; }
+    .val { font-size:14px; font-weight:700; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .items { margin-top:22px; }
+    table.a4 { width:100%; border-collapse:collapse; table-layout:fixed; }
+    table.a4 thead th { background:#f1f3f4; font-size:10px; font-weight:700; padding:8px 6px; }
+    table.a4 tbody td { padding:8px 6px; font-size:10px; }
+    table.a4 tbody tr { border-bottom: 0.5px solid #111827; }
+    table.a4 tfoot td { background:#f1f3f4; font-size:12px; font-weight:700; padding:10px 6px; }
+    .r { text-align:right; }
+    .c { text-align:center; }
+    .ellipsis { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  </style>
+
+  <div class="hdr-row">
+    <div class="hdr-grid">
+      <div>
+        <div class="lbl">Cliente</div>
+        <div class="val">{{ pedido.cliente.cliente|default:pedido.cliente }}</div>
+      </div>
+      <div>
+        <div class="lbl">Safra</div>
+        <div class="val">{% if pedido.safra %}{{ pedido.safra.safra }}{% else %}-{% endif %}</div>
+      </div>
+      <div>
+        <div class="lbl">Produtor</div>
+        <div class="val">{{ pedido.produtor.produtor }}{% if pedido.produtor.fazenda %} - {{ pedido.produtor.fazenda }}{% endif %}</div>
+      </div>
+      <div>
+        <div class="lbl">Fornecedor</div>
+        <div class="val">{% if pedido.fornecedor %}{{ pedido.fornecedor.fornecedor }}{% else %}-{% endif %}</div>
+      </div>
+      <div>
+        <div class="lbl">Vencimento</div>
+        <div class="val">{{ pedido.vencimento|date:'d/m/Y' }}</div>
+      </div>
+      <div>
+        <div class="lbl">Valor Total</div>
+        <div class="val">{{ pedido.valor_total|decimal_br:2 }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="items">
+    <table class="a4">
+      <colgroup>
+        <col style="width:10%">
+        <col style="width:36%">
+        <col style="width:10%">
+        <col style="width:12%">
+        <col style="width:12%">
+        <col style="width:10%">
+        <col style="width:10%">
+        <col style="width:12%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="c">Status</th>
+          <th class="c">Produto</th>
+          <th class="c">Unidade</th>
+          <th class="c">Quantidade</th>
+          <th class="c">Saldo</th>
+          <th class="c">Preco</th>
+          <th class="c">Desconto</th>
+          <th class="c">Valor Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in itens %}
+          <tr>
+            <td class="c">{% if it.saldo_qtd and it.saldo_qtd|floatformat:'0' == '0' %}Entregue{% else %}Pendente{% endif %}</td>
+            <td class="ellipsis">{% if it.produto_cadastro %}{{ it.produto_cadastro.nome }}{% else %}{{ it.produto }}{% endif %}</td>
+            <td class="c">{% if it.unidade.unidade_abreviado %}{{ it.unidade.unidade_abreviado }}{% else %}{{ it.unidade }}{% endif %}</td>
+            <td class="r">{{ it.quantidade|decimal_br:0 }}</td>
+            <td class="r">{% if it.saldo_qtd %}{{ it.saldo_qtd|decimal_br:0 }}{% else %}{{ it.quantidade|decimal_br:0 }}{% endif %}</td>
+            <td class="r">{{ it.preco|decimal_br:2 }}</td>
+            <td class="r">{{ it.desconto|decimal_br:2 }}</td>
+            <td class="r">{{ it.total_item|decimal_br:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="c" style="padding:24px 8px; color:#64748b;">Sem itens.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5"></td>
+          <td colspan="2" class="r">Total ...:</td>
+          <td class="r">{{ pedido.valor_total|decimal_br:2 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <style>
+    .subttl { margin-top:16px; font-size:12px; font-weight:700; }
+    .mini { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .mini thead th { background:#f1f3f4; font-size:9px; font-weight:700; padding:6px 5px; }
+    .mini tbody td { font-size:9px; padding:6px 5px; }
+    .mini tbody tr { border-bottom:0.5px solid #111827; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:10px; }
+    @media print { .grid2 { gap:8px; } }
+  </style>
+
+  <div class="grid2">
+    <div>
+      <div class="subttl">Notas fiscais (Faturamento)</div>
+      <table class="mini">
+        <colgroup>
+          <col style="width:16%">
+          <col style="width:18%">
+          <col style="width:22%">
+          <col style="width:22%">
+          <col style="width:22%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="c">Nota</th>
+            <th class="c">Data</th>
+            <th class="c">Vencimento</th>
+            <th class="c">Valor</th>
+            <th class="c">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for nf in faturamentos %}
+            <tr>
+              <td class="c">{{ nf.nota_fiscal }}</td>
+              <td class="c">{{ nf.data|date:'d/m/Y' }}</td>
+              <td class="c">{{ nf.vencimento|date:'d/m/Y' }}</td>
+              <td class="r">{{ nf.valor_total|decimal_br:2 }}</td>
+              <td class="c">{{ nf.get_status_display }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="c" style="padding:10px 6px; color:#64748b;">Sem notas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <div class="subttl">Faturas (Contas a Pagar)</div>
+      <table class="mini">
+        <colgroup>
+          <col style="width:16%">
+          <col style="width:18%">
+          <col style="width:20%">
+          <col style="width:16%">
+          <col style="width:16%">
+          <col style="width:14%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="c">Doc</th>
+            <th class="c">Origem</th>
+            <th class="c">Vencimento</th>
+            <th class="c">Valor</th>
+            <th class="c">Saldo</th>
+            <th class="c">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in contas %}
+            <tr>
+              <td class="c">{{ c.nota_fiscal }}</td>
+              <td class="c">{{ c.get_origem_display }}</td>
+              <td class="c">{{ c.vencimento|date:'d/m/Y' }}</td>
+              <td class="r">{{ c.valor_total|decimal_br:2 }}</td>
+              <td class="r">{{ c.saldo_aberto|decimal_br:2 }}</td>
+              <td class="c">{{ c.status_label }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="c" style="padding:10px 6px; color:#64748b;">Sem faturas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

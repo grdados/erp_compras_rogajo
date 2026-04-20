@@ -1,6 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+set "TARGET_APP_VERSION=1.0.3"
 
 echo.
 echo ==========================================
@@ -8,20 +9,48 @@ echo  ERP Compras RogaJo - Instalacao Local
 echo ==========================================
 echo.
 
-where python >nul 2>nul
-if errorlevel 1 (
-  echo [ERRO] Python nao encontrado no PATH.
-  echo Instale o Python 3.11+ e marque a opcao "Add Python to PATH".
+set "PYTHON_CMD="
+where py >nul 2>nul
+if not errorlevel 1 (
+  py -3.13 --version >nul 2>nul && set "PYTHON_CMD=py -3.13"
+  if not defined PYTHON_CMD py -3.12 --version >nul 2>nul && set "PYTHON_CMD=py -3.12"
+  if not defined PYTHON_CMD py -3.11 --version >nul 2>nul && set "PYTHON_CMD=py -3.11"
+)
+if not defined PYTHON_CMD (
+  where python >nul 2>nul
+  if not errorlevel 1 (
+    for /f "tokens=2 delims= " %%V in ('python --version 2^>^&1') do set "PYVER_GLOBAL=%%V"
+    if /I "%PYVER_GLOBAL:~0,4%"=="3.13" set "PYTHON_CMD=python"
+    if /I "%PYVER_GLOBAL:~0,4%"=="3.12" set "PYTHON_CMD=python"
+    if /I "%PYVER_GLOBAL:~0,4%"=="3.11" set "PYTHON_CMD=python"
+  )
+)
+if not defined PYTHON_CMD (
+  echo [ERRO] Python compativel nao encontrado no PATH.
+  echo Versoes suportadas: 3.11, 3.12 ou 3.13.
+  echo A versao 3.14 nao e suportada por dependencias do ERP no Windows.
+  echo Instale o Python 3.13 - recomendado - e marque "Add Python to PATH".
   echo.
   pause
   exit /b 1
 )
 
+for /f "delims=" %%V in ('%PYTHON_CMD% --version 2^>^&1') do set "PYVER=%%V"
+echo [INFO] Python detectado: %PYVER%
+
+if exist ".venv" if not exist ".venv\Scripts\python.exe" (
+  echo [AVISO] Ambiente .venv incompleto/corrompido. Recriando...
+  rmdir /s /q ".venv"
+)
+
 if not exist ".venv\Scripts\python.exe" (
   echo [1/5] Criando ambiente virtual...
-  python -m venv .venv
+  %PYTHON_CMD% -m venv .venv
   if errorlevel 1 (
     echo [ERRO] Falha ao criar .venv
+    echo Tente manualmente no terminal:
+    echo   %PYTHON_CMD% -m venv .venv
+    echo Se continuar falhando, execute o instalador como Administrador.
     pause
     exit /b 1
   )
@@ -45,6 +74,12 @@ if not exist ".env" (
   copy /Y ".env.example" ".env" >nul
 ) else (
   echo [4/5] .env ja existe.
+)
+echo [4/5] Atualizando APP_VERSION para %TARGET_APP_VERSION%...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p='.env'; $v='APP_VERSION=%TARGET_APP_VERSION%'; if (!(Test-Path $p)) { New-Item -Path $p -ItemType File -Force | Out-Null }; $lines=@(); if (Test-Path $p) { $lines=Get-Content $p }; $out=@(); foreach($line in $lines){ if($line -notmatch '^\s*APP_VERSION\s*='){ $out += $line } }; $out += $v; Set-Content -Path $p -Value $out -Encoding UTF8"
+if errorlevel 1 (
+  echo [AVISO] Nao foi possivel atualizar APP_VERSION automaticamente.
+  echo Ajuste manualmente no .env: APP_VERSION=%TARGET_APP_VERSION%
 )
 
 echo [5/5] Aplicando migracoes...

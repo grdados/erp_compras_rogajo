@@ -1,0 +1,22 @@
+﻿Ola, {{ cliente }}!
+
+Recebemos sua solicitacao de assinatura no ERP Compras Rogajo.
+
+Plano: {{ plano }}
+Forma de pagamento: {{ forma_pagamento }}
+Valor total: R$ {{ valor_total }}
+Data de emissao: {{ data_emissao }}
+Vencimento para confirmacao: {{ vencimento }}
+
+{% if is_pix %}Pagamento via PIX
+Chave PIX: {{ pix_key }}
+{% else %}Pagamento via boleto
+O boleto sera enviado por email ou WhatsApp.
+{% endif %}
+
+Suporte tecnico e atualizacoes seguem o padrao da assinatura contratada.
+
+GR Dados Business Intelligence
+WhatsApp: (67) 99869-8159
+Email: grdados.oficial@gmail.com
+Endereco: Av. 22 de Abril, 519 - Centro, Laguna Carapa/MS - CEP 79920-000

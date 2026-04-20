@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Backup | ERP Compras{% endblock %}
+{% block top_title %}Backup{% endblock %}
+{% block content %}
+<section class="space-y-5 text-[14px] font-normal">
+  <div>
+    <h2 class="text-[18px] font-bold text-slate-900">Backup</h2>
+    <p class="text-slate-600">Agendamento diario, download e restauracao.</p>
+  </div>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-[18px] font-bold text-slate-900">Agendamento</div>
+          <div class="mt-1 text-slate-600">Proximo backup: <span class="font-semibold text-slate-900">{{ next_run|default:"-" }}</span></div>
+        </div>
+      </div>
+
+      <form method="post" class="mt-4 space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_settings" />
+        <div class="grid gap-3 sm:grid-cols-3">
+          <label class="block">
+            <div class="mb-1 text-slate-700">Ativo</div>
+            <select name="enabled" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+              <option value="1" {% if backup_settings.enabled %}selected{% endif %}>Sim</option>
+              <option value="0" {% if not backup_settings.enabled %}selected{% endif %}>Nao</option>
+            </select>
+          </label>
+          <label class="block">
+            <div class="mb-1 text-slate-700">Horario (diario)</div>
+            <input type="time" name="daily_time" value="{{ backup_settings.daily_time|time:'H:i' }}" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2" />
+          </label>
+          <label class="block">
+            <div class="mb-1 text-slate-700">Retencao (dias)</div>
+            <input type="number" min="1" max="365" name="retention_days" value="{{ backup_settings.retention_days }}" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2" />
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="submit" class="rounded-lg bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-emerald-950 hover:brightness-95">Salvar configuracao</button>
+        </div>
+      </form>
+
+      <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700">
+        <div class="font-semibold text-slate-900">Agendamento diario</div>
+        <div class="mt-1 text-sm">
+          Para rodar automaticamente, configure no Windows Task Scheduler uma tarefa para executar periodicamente:
+          <span class="font-mono">python manage.py backup_tick</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="text-[18px] font-bold text-slate-900">Acoes</div>
+      <div class="mt-1 text-slate-600">Gerar backup manual e restaurar.</div>
+
+      <form method="post" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="run_now" />
+        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-[14px] font-semibold text-white hover:bg-emerald-700">Gerar backup agora</button>
+      </form>
+
+      <div class="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-900">
+        <div class="font-semibold">Restauracao (impacto)</div>
+        <div class="mt-1 text-sm">
+          Esta acao apaga os dados atuais e importa o conteudo do backup. Apos restaurar, voce precisara fazer login novamente.
+        </div>
+        <form method="post" enctype="multipart/form-data" class="mt-3 grid gap-3 sm:grid-cols-[1fr_160px] sm:items-end">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="restore" />
+          <label class="block">
+            <div class="mb-1 text-sm text-red-900/90">Arquivo (.zip)</div>
+            <input type="file" name="backup_file" accept=".zip" class="block w-full text-sm" />
+          </label>
+          <label class="block">
+            <div class="mb-1 text-sm text-red-900/90">Confirmar (digite RESTORE)</div>
+            <input type="text" name="confirm" placeholder="RESTORE" class="w-full rounded-lg border border-red-200 bg-white px-3 py-2" />
+          </label>
+          <div class="sm:col-span-2">
+            <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-[14px] font-semibold text-white hover:bg-red-700">Restaurar backup</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <div class="text-[18px] font-bold text-slate-900">Arquivos de backup</div>
+        <div class="mt-1 text-slate-600">Ultimos 50 backups (download).</div>
+      </div>
+    </div>
+
+    <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200">
+      <table class="min-w-[720px] w-full text-left text-[14px]">
+        <thead class="bg-[#F1F3F4] text-slate-800">
+          <tr>
+            <th class="px-3 py-2 font-normal">Data</th>
+            <th class="px-3 py-2 font-normal">Tipo</th>
+            <th class="px-3 py-2 font-normal">Arquivo</th>
+            <th class="px-3 py-2 font-normal text-right">Tamanho</th>
+            <th class="px-3 py-2 font-normal text-center">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in backups %}
+            <tr class="{% if forloop.counter|divisibleby:2 %}bg-slate-50/40{% else %}bg-white{% endif %}">
+              <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ b.created_at|date:"d/m/Y H:i" }}</td>
+              <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ b.get_kind_display }}</td>
+              <td class="px-3 py-2.5 text-slate-700 font-mono">{{ b.file_name }}</td>
+              <td class="px-3 py-2.5 text-slate-700 text-right whitespace-nowrap">{{ b.size_bytes|floatformat:0 }} bytes</td>
+              <td class="px-3 py-2.5 text-center">
+                <a href="{% url 'core:backup_download' b.pk %}" class="inline-flex items-center justify-center rounded-md border border-slate-300 px-3 py-1.5 text-slate-700 hover:bg-slate-100">Baixar</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="px-3 py-10 text-center text-slate-500">Sem backups ainda.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

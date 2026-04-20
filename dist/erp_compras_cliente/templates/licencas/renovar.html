@@ -1,0 +1,109 @@
+﻿{% extends "base.html" %}
+{% load core_extras %}
+
+{% block title %}Renovar Licenca | ERP Compras{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
+  <h1 class="text-[18px] font-bold text-white">Renovar Licenca</h1>
+  {% if setup_error %}
+  <div class="mt-4 rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-[14px] font-normal text-amber-100">{{ setup_error }}</div>
+{% endif %}
+
+  <p class="mt-2 text-[14px] font-normal text-slate-300">
+    Escolha o plano e a forma de pagamento. Suporte e atualizacoes ja estao incluidos na licenca.
+  </p>
+
+  <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <label class="cursor-pointer rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-slate-100 hover:bg-slate-950/60">
+      <div class="flex items-start gap-3">
+        <input type="radio" name="periodo_pick" value="mensal" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <div class="text-[18px] font-bold">Mensal</div>
+            <div class="text-[18px] font-bold text-emerald-300">R$ {{ valor_mensal_plano|decimal_br:2 }}</div>
+          </div>
+          <div class="mt-1 text-[14px] font-normal text-slate-300">1 mes (33,8% do salario minimo vigente).</div>
+          <div class="mt-1 text-[14px] font-normal text-slate-400">Valor fixo do plano mensal.</div>
+        </div>
+      </div>
+    </label>
+
+    <label class="cursor-pointer rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-slate-100 hover:bg-slate-950/60">
+      <div class="flex items-start gap-3">
+        <input type="radio" name="periodo_pick" value="semestral" class="mt-1" checked>
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <div class="text-[18px] font-bold">Semestral</div>
+            <div class="text-[18px] font-bold text-emerald-300">R$ {{ valor_semestral|decimal_br:2 }}</div>
+          </div>
+          <div class="mt-1 text-[14px] font-normal text-slate-300">Equivale a 6 meses (29% do salario minimo vigente por mes).</div>
+          <div class="mt-1 text-[14px] font-normal text-slate-400">Mensal base: R$ {{ valor_mensal|decimal_br:2 }}</div>
+        </div>
+      </div>
+    </label>
+
+    <label class="cursor-pointer rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-slate-100 hover:bg-slate-950/60">
+      <div class="flex items-start gap-3">
+        <input type="radio" name="periodo_pick" value="anual" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <div class="text-[18px] font-bold">Anual</div>
+            <div class="text-[18px] font-bold text-emerald-300">R$ {{ valor_anual|decimal_br:2 }}</div>
+          </div>
+          <div class="mt-1 text-[14px] font-normal text-slate-300">12 meses com 8% de desconto.</div>
+          <div class="mt-1 text-[14px] font-normal text-slate-400">Mensal base: R$ {{ valor_mensal_anual|decimal_br:2 }}</div>
+        </div>
+      </div>
+    </label>
+  </div>
+
+  <div class="mt-4 rounded-xl border border-slate-700 bg-slate-950/30 p-4 text-slate-200">
+    <div class="text-[14px] font-bold">Melhorias (fora da licenca)</div>
+    <div class="mt-1 text-[14px] font-normal text-slate-300">
+      Hora tecnica: <span class="font-bold text-white">R$ {{ valor_hora_tecnica|decimal_br:2 }}</span>
+      (8% do salario minimo, minimo <span class="font-bold text-white">{{ horas_minimas_melhoria }} horas</span>).
+    </div>
+    <div class="mt-1 text-[14px] font-normal text-slate-300">
+      Investimento minimo por demanda: <span class="font-bold text-white">R$ {{ valor_minimo_melhoria|decimal_br:2 }}</span>.
+    </div>
+    <div class="mt-2 rounded-lg border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-100">
+      Para novos modulos, campos e relatorios e necessario levantamento de requisitos e custos com parceiros de hospedagem.
+      Essas evolucoes aumentam carga de dados e desempenho dos servidores, impactando diretamente o custo mensal do sistema.
+    </div>
+  </div>
+
+  <div class="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4 text-slate-100">
+    <div class="text-[14px] font-bold">Desenvolvimento / Beneficiario</div>
+    <div class="mt-1 text-[14px] font-normal">{{ beneficiario.nome }}</div>
+    <div class="text-[14px] font-normal">{{ beneficiario.endereco }}</div>
+    <div class="text-[14px] font-normal">Contato: {{ beneficiario.contato }}</div>
+    <div class="mt-1 text-[14px] font-bold text-emerald-300">Chave PIX: {{ manual_pix_key }}</div>
+  </div>
+
+  <form method="post" class="mt-6 flex flex-wrap items-center gap-3">
+    {% csrf_token %}
+    <input type="hidden" name="periodo" id="periodo" value="semestral">
+    <label class="text-[14px] font-normal text-slate-300">Forma de pagamento</label>
+    <select name="forma_pagamento" class="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-[14px] text-white">
+      <option value="PIX">PIX</option>
+      <option value="BOLETO">Boleto</option>
+    </select>
+    <button type="submit" {% if not checkout_enabled and not manual_mode %}disabled{% endif %} class="rounded-lg bg-emerald-400 px-5 py-3 text-[14px] font-bold text-slate-900 {% if not checkout_enabled and not manual_mode %}opacity-60 cursor-not-allowed{% endif %}">
+      {% if checkout_enabled and billing_provider == 'stripe' %}Ir para checkout Stripe{% elif checkout_enabled and billing_provider == 'asaas' %}Gerar cobranca Asaas{% else %}Solicitar liberacao manual{% endif %}
+    </button>
+    <a href="/app/licencas/" class="rounded-lg border border-slate-500 px-5 py-3 text-[14px] font-bold text-slate-100 hover:bg-slate-800/40">Voltar</a>
+  </form>
+</div>
+
+<script>
+(function(){
+  const hidden = document.getElementById('periodo');
+  document.addEventListener('change', function(e){
+    const r = e.target && e.target.name === 'periodo_pick' ? e.target : null;
+    if(!r) return;
+    hidden.value = r.value;
+  });
+})();
+</script>
+{% endblock %}

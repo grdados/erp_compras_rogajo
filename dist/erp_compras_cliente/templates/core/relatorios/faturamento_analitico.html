@@ -1,0 +1,64 @@
+﻿{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Faturamento - Analitico{% endblock %}
+{% block header_title %}Faturamento (Analitico){% endblock %}
+{% block content %}
+  <div class="rounded-xl border border-slate-200 bg-white p-5">
+    <div class="ui-title">Analitico</div>
+    <div class="mt-1 text-slate-600">Notas fiscais listadas com produtos.</div>
+  </div>
+
+  {% for nf in notas %}
+    <div class="mt-6 rounded-xl border border-slate-200 bg-white">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+        <div>
+          <div class="ui-title">Nota: <span class="text-emerald-700">{{ nf.nota_fiscal }}</span>{% if nf.serie %} <span class="text-slate-400">(Serie {{ nf.serie }})</span>{% endif %}</div>
+          <div class="text-slate-600">Data: {{ nf.data|date:'d/m/Y' }} | Vencimento: {{ nf.vencimento|date:'d/m/Y' }}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-slate-500">Total</div>
+          <div class="ui-title">R$ {{ nf.valor_total|decimal_br:2 }}</div>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-lg bg-slate-50 p-3"><div class="text-slate-500">Safra</div><div class="font-bold">{% if nf.safra %}{{ nf.safra.safra }}{% else %}-{% endif %}</div></div>
+          <div class="rounded-lg bg-slate-50 p-3"><div class="text-slate-500">Produtor</div><div class="font-bold">{% if nf.produtor %}{{ nf.produtor.produtor }}{% if nf.produtor.fazenda %} - {{ nf.produtor.fazenda }}{% endif %}{% else %}-{% endif %}</div></div>
+          <div class="rounded-lg bg-slate-50 p-3"><div class="text-slate-500">Fornecedor</div><div class="font-bold">{% if nf.fornecedor %}{{ nf.fornecedor.fornecedor }}{% else %}-{% endif %}</div></div>
+          <div class="rounded-lg bg-slate-50 p-3"><div class="text-slate-500">Pedido</div><div class="font-bold">{% if nf.pedido %}{{ nf.pedido.pedido }}{% else %}-{% endif %}</div></div>
+        </div>
+
+        <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full whitespace-nowrap text-left">
+            <thead>
+              <tr class="bg-slate-50 text-slate-700">
+                <th class="px-4 py-3 font-bold">Produto</th>
+                <th class="px-4 py-3 font-bold">Unidade</th>
+                <th class="px-4 py-3 font-bold">Quantidade</th>
+                <th class="px-4 py-3 font-bold">Preco</th>
+                <th class="px-4 py-3 font-bold">Desconto</th>
+                <th class="px-4 py-3 font-bold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in nf.itens.all %}
+                <tr class="border-t border-slate-200">
+                  <td class="px-4 py-3">{% if it.produto_cadastro %}{{ it.produto_cadastro.nome }}{% else %}{{ it.produto }}{% endif %}</td>
+                  <td class="px-4 py-3">{{ it.unidade }}</td>
+                  <td class="px-4 py-3">{{ it.quantidade|decimal_br:3 }}</td>
+                  <td class="px-4 py-3">{{ it.preco|decimal_br:5 }}</td>
+                  <td class="px-4 py-3">{{ it.desconto|decimal_br:2 }}</td>
+                  <td class="px-4 py-3 font-bold">{{ it.total_item|decimal_br:2 }}</td>
+                </tr>
+              {% empty %}
+                <tr><td class="px-4 py-6 text-slate-500" colspan="10">Sem itens.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="mt-6 rounded-xl border border-slate-200 bg-white p-5 text-slate-500">Sem registros.</div>
+  {% endfor %}
+{% endblock %}

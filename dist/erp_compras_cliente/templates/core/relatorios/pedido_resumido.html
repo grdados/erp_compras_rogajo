@@ -1,0 +1,74 @@
+{% extends 'core/relatorios/base.html' %}
+{% load core_extras %}
+{% block title %}Pedido de Compra - Resumido{% endblock %}
+{% block header_title %}Pedido de Compra Resumido{% endblock %}
+
+{% block content %}
+  <style>
+    table.a4 { width:100%; border-collapse:collapse; table-layout:fixed; margin-top:14px; }
+    table.a4 thead th { background:#f1f3f4; font-size:10px; font-weight:700; padding:8px 6px; }
+    table.a4 tbody td { padding:7px 6px; font-size:10px; }
+    table.a4 tbody tr { border-bottom:0.5px solid #111827; }
+    table.a4 tfoot td { font-size:11px; font-weight:700; padding:8px 6px; white-space:nowrap; border-top:0.5px solid #111827; }
+    .totcell { background:#f1f3f4; }
+    .r { text-align:right; }
+    .c { text-align:center; }
+    .ellipsis { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  </style>
+
+  <table class="a4">
+    <colgroup>
+      <col style="width:12%">
+      <col style="width:18%">
+      <col style="width:22%">
+      <col style="width:16%">
+      <col style="width:10%">
+      <col style="width:8%">
+      <col style="width:7%">
+      <col style="width:7%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="c">Safra</th>
+        <th class="c">Cliente</th>
+        <th class="c">Produtor</th>
+        <th class="c">Fornecedor</th>
+        <th class="c">Vencimento</th>
+        <th class="c">Pedidos</th>
+        <th class="c">Saldo</th>
+        <th class="c">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="c ellipsis">{{ r.safra__safra|default:"-" }}</td>
+          <td class="ellipsis">{{ r.cliente__cliente|default:"-" }}</td>
+          <td class="ellipsis">
+            {{ r.produtor__produtor|default:"-" }}{% if r.produtor__fazenda %} - {{ r.produtor__fazenda }}{% endif %}
+          </td>
+          <td class="ellipsis">{{ r.fornecedor__fornecedor|default:"-" }}</td>
+          <td class="c">{% if r.vencimento_min %}{{ r.vencimento_min|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+          <td class="c">{{ r.pedidos|default:0 }}</td>
+          <td class="r">{{ r.saldo|default:0|decimal_br:2 }}</td>
+          <td class="r">{{ r.total|default:0|decimal_br:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="c" style="padding:18px 6px; color:#64748b;">Sem registros.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        {# Saldo deve alinhar com a coluna "Saldo" (penultima) #}
+        <td colspan="6" class="r totcell">Saldo Geral:</td>
+        <td class="r totcell">{{ saldo_geral|decimal_br:2 }}</td>
+        <td class="totcell"></td>
+      </tr>
+      <tr>
+        {# Total deve alinhar com a coluna "Total" (ultima) #}
+        <td colspan="7" class="r totcell">Total Geral:</td>
+        <td class="r totcell">{{ total_geral|decimal_br:2 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+{% endblock %}
