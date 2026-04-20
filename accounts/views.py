@@ -5,6 +5,7 @@
     PasswordResetDoneView,
     PasswordResetView,
 )
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import User
@@ -87,6 +88,7 @@ class StatusLoginView(LoginView):
 
         ctx['status_lookup_username'] = username
         ctx['account_status'] = self._build_account_status(username)
+        ctx['app_version'] = getattr(settings, 'APP_VERSION', '1.0.0')
         return ctx
 
     def get_success_url(self):

@@ -195,13 +195,13 @@
         <nav class="flex-1 min-h-0 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-1.5 text-[15px]">
           <a href="/dashboard/" class="menu-item {% if request.path == '/dashboard/' %}menu-item-active{% endif %}">
             <span class="menu-link">
-              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 12a8.5 8.5 0 1 0 17 0 8.5 8.5 0 0 0-17 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></svg>
+              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h7v7H4z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4h7v4h-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 10h7v10h-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 13h7v7H4z"/></svg>
               <span class="menu-label">Dashboard</span>
             </span>
           </a>
           <a href="/app/planejamento/" class="menu-item {% if '/app/planejamento/' in request.path %}menu-item-active{% endif %}">
             <span class="menu-link">
-              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+              <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 8h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h4"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 16 1.6 1.6L14 14.2"/></svg>
               <span class="menu-label">Planejamentos</span>
             </span>
           </a>
@@ -252,7 +252,7 @@
             <details class="rounded-lg collapsed-icons" {% if '/app/safras/' in request.path or '/app/culturas/' in request.path or '/app/custos/' in request.path or '/app/categorias/' in request.path or '/app/unidades/' in request.path or '/app/formas-pagamento/' in request.path or '/app/operacoes/' in request.path or '/app/fornecedores/' in request.path or '/app/clientes/' in request.path or '/app/produtores/' in request.path or '/app/propriedades/' in request.path or '/app/produtos/' in request.path %}open{% endif %}>
               <summary class="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 hover:bg-white/10">
                 <span class="menu-link">
-                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 17h16"/></svg>
+                  <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 6.5h17v11h-17z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 14h5"/><path stroke-linecap="round" stroke-linejoin="round" d="M15.5 3.5v6"/><path stroke-linecap="round" stroke-linejoin="round" d="M12.5 6.5h6"/></svg>
                   <span class="menu-label">Cadastros</span>
                 </span>
                 <span class="caret text-base font-semibold leading-none text-emerald-200">&#9662;</span>
@@ -447,6 +447,18 @@
         <main class="flex-1 overflow-y-auto px-6 py-3 lg:px-8 lg:py-3">
     {% endif %}
 
+    {% if user.is_authenticated and embed != '1' %}
+      <div id="update-banner" class="mb-4 hidden rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div id="update-banner-title" class="font-bold">Atualizacao disponivel</div>
+            <div id="update-banner-text" class="text-sky-800"></div>
+          </div>
+          <a id="update-banner-action" href="#" target="_blank" rel="noopener" class="inline-flex items-center rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm font-bold text-sky-800 hover:bg-sky-100">Aplicar</a>
+        </div>
+      </div>
+    {% endif %}
+
     {% if messages %}
       <div class="mb-6 space-y-3" id="flash-messages">
         {% for message in messages %}
@@ -525,6 +537,39 @@
         btn.addEventListener('click', function(){
           setCollapsed(!document.body.classList.contains('sidebar-collapsed'));
         });
+      })();
+    </script>
+
+    <script>
+      (function () {
+        {% if user.is_authenticated and embed != '1' %}
+        var box = document.getElementById('update-banner');
+        var title = document.getElementById('update-banner-title');
+        var text = document.getElementById('update-banner-text');
+        var action = document.getElementById('update-banner-action');
+        if (!box || !title || !text || !action) return;
+
+        fetch('/licencas/atualizacao/verificar/', { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (!data || !data.tem_atualizacao) return;
+
+            title.textContent = data.titulo || ('Atualizacao v' + (data.versao_disponivel || ''));
+            text.textContent = data.mensagem || '';
+
+            if (data.pode_aplicar && data.url_aplicar) {
+              action.textContent = 'Aplicar atualizacao';
+              action.href = data.url_aplicar;
+            } else {
+              action.textContent = 'Regularizar assinatura';
+              action.href = data.url_regularizar || '/app/licencas/';
+              action.removeAttribute('target');
+              action.removeAttribute('rel');
+            }
+            box.classList.remove('hidden');
+          })
+          .catch(function () {});
+        {% endif %}
       })();
     </script>
 

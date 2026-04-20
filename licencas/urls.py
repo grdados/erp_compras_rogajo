@@ -11,6 +11,7 @@ from .views import (
     registrar,
     renovar_licenca,
     stripe_webhook,
+    verificar_atualizacao,
 )
 
 app_name = 'licencas'
@@ -22,6 +23,7 @@ urlpatterns = [
     path('politica-privacidade/', politica_privacidade, name='politica_privacidade'),
     path('primeiro-acesso/', primeiro_acesso, name='primeiro_acesso'),
     path('renovar/', renovar_licenca, name='renovar'),
+    path('atualizacao/verificar/', verificar_atualizacao, name='verificar_atualizacao'),
     path('checkout/sucesso/', checkout_sucesso, name='checkout_sucesso'),
     path('checkout/cancelado/', checkout_cancelado, name='checkout_cancelado'),
     path('webhook/stripe/', stripe_webhook, name='stripe_webhook'),

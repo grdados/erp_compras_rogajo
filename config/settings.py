@@ -115,6 +115,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+APP_VERSION = os.getenv('APP_VERSION', '1.0.0').strip()
 
 # Allow embedding internal CRUD pages in same-origin iframes (used by "+" quick-create modal).
 X_FRAME_OPTIONS = 'SAMEORIGIN'

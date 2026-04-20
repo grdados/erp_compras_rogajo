@@ -16,6 +16,7 @@ class LicencaAtivaMiddleware:
         '/licencas/registrar/',
         '/licencas/confirmar-email/',
         '/licencas/politica-privacidade/',
+        '/licencas/atualizacao/',
         '/licencas/renovar',
         '/licencas/checkout/',
         '/licencas/webhook/',

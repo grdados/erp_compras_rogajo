@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ConfirmacaoEmailCadastro, Licenca
+from .models import AtualizacaoSistema, ConfirmacaoEmailCadastro, Licenca
 
 
 @admin.register(Licenca)
@@ -26,3 +26,10 @@ class LicencaAdmin(admin.ModelAdmin):
 class ConfirmacaoEmailCadastroAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'token', 'expira_em', 'usado_em', 'created_at')
     search_fields = ('usuario__username', 'usuario__email', 'token')
+
+
+@admin.register(AtualizacaoSistema)
+class AtualizacaoSistemaAdmin(admin.ModelAdmin):
+    list_display = ('versao', 'titulo', 'obrigatoria', 'ativa', 'publicada_em', 'updated_at')
+    list_filter = ('ativa', 'obrigatoria')
+    search_fields = ('versao', 'titulo', 'descricao')

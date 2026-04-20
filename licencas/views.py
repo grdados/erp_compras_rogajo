@@ -22,7 +22,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .forms import CompletarCadastroLicencaForm, RegistroContaForm
-from .models import ConfirmacaoEmailCadastro, Licenca, PerfilUsuarioLicenca
+from .models import AtualizacaoSistema, ConfirmacaoEmailCadastro, Licenca, PerfilUsuarioLicenca
 from .services import excluir_licenca_sincronizada
 from .pricing import (
     horas_minimas_melhoria,
@@ -36,6 +36,25 @@ from .pricing import (
 )
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def _version_tuple(text):
+    raw = (text or '').strip().lower().lstrip('v')
+    parts = []
+    for p in raw.split('.'):
+        p = ''.join(ch for ch in p if ch.isdigit())
+        parts.append(int(p) if p else 0)
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts[:3])
+
+
+def _latest_update():
+    updates = list(AtualizacaoSistema.objects.filter(ativa=True))
+    if not updates:
+        return None
+    updates.sort(key=lambda u: (_version_tuple(u.versao), u.publicada_em, u.updated_at), reverse=True)
+    return updates[0]
 
 
 def _periodo_para_valor(periodo):
@@ -222,6 +241,63 @@ def _enviar_email_pagamento_manual(request, licenca, vencimento, chave_pix):
     if politica_path.exists():
         email.attach_file(str(politica_path))
     email.send(fail_silently=False)
+
+
+@login_required
+def verificar_atualizacao(request):
+    versao_atual = (getattr(settings, 'APP_VERSION', '') or '1.0.0').strip()
+    latest = _latest_update()
+    if not latest:
+        return JsonResponse(
+            {
+                'versao_atual': versao_atual,
+                'tem_atualizacao': False,
+                'pode_aplicar': False,
+                'mensagem': 'Sistema atualizado.',
+            }
+        )
+
+    tem_atualizacao = _version_tuple(latest.versao) > _version_tuple(versao_atual)
+    if not tem_atualizacao:
+        return JsonResponse(
+            {
+                'versao_atual': versao_atual,
+                'versao_disponivel': latest.versao,
+                'tem_atualizacao': False,
+                'pode_aplicar': False,
+                'mensagem': 'Sistema atualizado.',
+            }
+        )
+
+    if getattr(request.user, 'effective_role', '') == 'ADMIN':
+        licenca_ativa = True
+    else:
+        perfil = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=request.user).first()
+        lic = perfil.licenca if perfil else None
+        licenca_ativa = bool(lic and lic.esta_vigente)
+
+    pode_aplicar = licenca_ativa
+    mensagem = (
+        'Atualizacao disponivel e liberada para aplicacao.'
+        if pode_aplicar
+        else 'Atualizacao disponivel, mas a assinatura precisa ser regularizada para aplicar.'
+    )
+
+    return JsonResponse(
+        {
+            'versao_atual': versao_atual,
+            'versao_disponivel': latest.versao,
+            'titulo': latest.titulo or f'Atualizacao v{latest.versao}',
+            'descricao': latest.descricao or '',
+            'obrigatoria': bool(latest.obrigatoria),
+            'tem_atualizacao': True,
+            'licenca_ativa': licenca_ativa,
+            'pode_aplicar': pode_aplicar,
+            'url_aplicar': latest.url_download or '',
+            'url_regularizar': '/app/licencas/',
+            'mensagem': mensagem,
+        }
+    )
 
 
 def registrar(request):

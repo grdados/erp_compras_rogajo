@@ -122,3 +122,22 @@ class ConfirmacaoEmailCadastro(TimestampedModel):
     @property
     def esta_valida(self):
         return self.usado_em is None and self.expira_em >= timezone.now()
+
+
+class AtualizacaoSistema(TimestampedModel):
+    versao = models.CharField(max_length=30, unique=True)
+    titulo = models.CharField(max_length=120, blank=True, default='')
+    descricao = models.TextField(blank=True, default='')
+    url_download = models.URLField(blank=True, default='')
+    hash_arquivo = models.CharField(max_length=120, blank=True, default='')
+    obrigatoria = models.BooleanField(default=False)
+    ativa = models.BooleanField(default=True)
+    publicada_em = models.DateField(default=timezone.localdate)
+
+    class Meta:
+        ordering = ['-publicada_em', '-created_at']
+        verbose_name = 'Atualizacao do Sistema'
+        verbose_name_plural = 'Atualizacoes do Sistema'
+
+    def __str__(self):
+        return f'v{self.versao}'
