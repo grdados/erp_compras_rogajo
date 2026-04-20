@@ -58,9 +58,22 @@
         body.sidebar-collapsed .cad-expanded { display: none !important; }
         body.sidebar-collapsed .cad-collapsed { display: block !important; }
         body.sidebar-collapsed #sidebar-logo-wrap { justify-content: center; }
-        body.sidebar-collapsed #sidebar-toggle { transform: rotate(180deg); }
-        /* When collapsed, place the toggle "tab" outside the sidebar edge */
-        body.sidebar-collapsed #sidebar-toggle { right: -14px !important; }
+        /* Django-admin like collapse tab on the LEFT edge */
+        #sidebar-toggle {
+          left: -10px !important;
+          right: auto !important;
+          width: 14px !important;
+          height: 94px !important;
+          border-left: 0 !important;
+          border-radius: 0 8px 8px 0 !important;
+          background: rgba(2, 20, 14, 0.78) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+        }
+        #sidebar-toggle:hover { background: rgba(7, 39, 28, 0.92) !important; }
+        body.sidebar-collapsed #sidebar-toggle { left: -10px !important; }
+        body.sidebar-collapsed #sidebar-toggle .toggle-icon-open { display: none !important; }
+        body:not(.sidebar-collapsed) #sidebar-toggle .toggle-icon-collapsed { display: none !important; }
         body.sidebar-collapsed #sidebar-user-card { text-align: center; }
         body.sidebar-collapsed #sidebar-user-card .user-role { font-size: 12px; }
         body.sidebar-collapsed #sidebar-user-card .user-name { font-size: 12px; }
@@ -169,12 +182,10 @@
           </a>
         </div>
 
-        <!-- Toggle button: stuck on the right border of the menu (as requested) -->
-        <button id="sidebar-toggle" type="button" class="hidden lg:inline-flex absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent shadow-none hover:bg-white/10" title="Recolher/Expandir menu" aria-label="Recolher/Expandir menu">
-          <!-- Chevron icon (requested: remove the hamburger icon) -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M14.5 18 8.5 12l6-6"/>
-          </svg>
+        <!-- Toggle button: Django-admin style left edge tab -->
+        <button id="sidebar-toggle" type="button" class="hidden lg:inline-flex absolute top-1/2 -translate-y-1/2 items-center justify-center border bg-transparent shadow-none" title="Recolher/Expandir menu" aria-label="Recolher/Expandir menu">
+          <span class="toggle-icon-open text-[12px] font-bold leading-none text-white/90">&laquo;</span>
+          <span class="toggle-icon-collapsed text-[12px] font-bold leading-none text-white/90">&raquo;</span>
         </button>
 
         <!-- Only the nav scrolls; keep the user card always visible (prevents it from being cut off) -->

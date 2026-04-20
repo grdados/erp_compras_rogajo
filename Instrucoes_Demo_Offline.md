@@ -14,6 +14,10 @@
 ## Acesso
 - Sistema: `http://127.0.0.1:8000/accounts/login/`
 
+## Usuario demo (automatico no pacote)
+- Usuario: `usuario_demo`
+- Senha: `Demo@1234`
+
 ## Observacoes
 - Esta versao e para demonstracao local/offline.
 - O banco (`db.sqlite3`) ja vem com os dados atuais da maquina que gerou o pacote.

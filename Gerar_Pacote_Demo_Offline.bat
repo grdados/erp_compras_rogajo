@@ -33,6 +33,14 @@ copy /Y ".env.demo" "%PKG_DIR%\.env" >nul
 echo [3/4] Incluindo base SQLite atual (demo pronta)...
 if exist "db.sqlite3" (
   copy /Y "db.sqlite3" "%PKG_DIR%\db.sqlite3" >nul
+  echo [3.1/4] Garantindo usuario_demo no banco da DEMO...
+  powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$dbPath = '%PKG_DIR%\db.sqlite3'.Replace('\','/');" ^
+    "$env:DATABASE_URL = 'sqlite:///' + $dbPath;" ^
+    "& '.\.venv\Scripts\python.exe' manage.py shell -c \"from django.contrib.auth import get_user_model; U=get_user_model(); u,created=U.objects.get_or_create(username='usuario_demo', defaults={'email':'demo@grdados.local','role':'SUPERVISOR','is_active':True}); u.set_password('Demo@1234'); u.is_active=True; u.role='SUPERVISOR'; u.save(); print('usuario_demo_ok',created)\""
+  if errorlevel 1 (
+    echo [ALERTA] Nao foi possivel criar usuario_demo automaticamente.
+  )
 ) else (
   echo [ALERTA] db.sqlite3 nao encontrado. Pacote seguira sem base pre-carregada.
 )
