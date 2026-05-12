@@ -3,6 +3,19 @@
 {% block top_title %}Planejamento{% endblock %}
 {% block content %}
 <style>
+  .plan-form .has-inner-btn .inner-btn,
+  .plan-form .has-inner-btn-sm .inner-btn {
+    display: none !important;
+  }
+  .plan-form .has-inner-btn select,
+  .plan-form .has-inner-btn input,
+  .plan-form .has-inner-btn-sm select,
+  .plan-form .has-inner-btn-sm input {
+    padding-left: 10px !important;
+    border-top-left-radius: 12px !important;
+    border-bottom-left-radius: 12px !important;
+  }
+
   .plan-itens-table td[data-label='Produto'],
   .plan-itens-table td[data-label='Unidade'] {
     text-align: left;
@@ -125,6 +138,12 @@
     background: transparent;
     border-right: 0;
   }
+  .plan-itens-table select[size] {
+    height: auto !important;
+    min-height: 140px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
 
   /* Slightly tighter for specific narrow columns */
   .plan-itens-table tbody td[data-label="Area HA"] input { padding-left: 2px !important; padding-right: 2px !important; }
@@ -180,13 +199,53 @@
 </style>
 
 <section class="space-y-5 text-[14px] font-normal">
-  <div>
-    <h2 class="text-[18px] font-bold text-slate-900">{% if modo_edicao %}Editar Planejamento{% else %}Novo Planejamento{% endif %}</h2>
-    <p class="text-slate-600">Dados do planejamento e itens</p>
+  <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <h2 class="text-[18px] font-bold text-slate-900">{% if modo_edicao %}Editar Planejamento{% else %}Novo Planejamento{% endif %}</h2>
+      <p class="text-slate-600">Dados do planejamento e itens</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <a
+        id="planejamento-new-btn"
+        href="{% url 'core:planejamento_create' %}"
+        title="Novo Planejamento"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#56d741] text-[#0d2f19] shadow-sm hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[#56d741]/50 focus:ring-offset-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-5 w-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+        </svg>
+      </a>
+      {% if form.instance.pk %}
+        <a id="planejamento-print-btn" target="_blank" href="{% url 'core:planejamento_report_resumo' form.instance.pk %}" class="inline-flex items-center gap-2 rounded-lg border border-[#56d741] bg-[#56d741] px-5 py-2 text-[14px] font-semibold text-[#0d2f19] hover:brightness-95">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V9"/>
+            <rect x="4" y="9" width="16" height="8" rx="2" ry="2"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 14h8v7H8z"/>
+          </svg>
+          <span>Imprimir Planejamento</span>
+        </a>
+      {% else %}
+        <button id="planejamento-print-btn" type="button" disabled class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-100 px-5 py-2 text-[14px] font-semibold text-slate-400 disabled:cursor-not-allowed">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V9"/>
+            <rect x="4" y="9" width="16" height="8" rx="2" ry="2"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 14h8v7H8z"/>
+          </svg>
+          <span>Imprimir Planejamento</span>
+        </button>
+      {% endif %}
+      <a id="planejamento-close-btn" href="{% url 'core:planejamento_list' %}" class="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-5 py-2 text-[14px] font-semibold text-red-700 hover:bg-red-100">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6 6 18"/>
+        </svg>
+        <span>Fechar</span>
+      </a>
+    </div>
   </div>
 
-  <form method="post" class="space-y-5" novalidate>
+  <form method="post" class="plan-form space-y-5" novalidate id="planejamento-form">
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next_url|default:'' }}">
 
     <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <h3 class="mb-3 text-[18px] font-bold text-slate-900">Dados do Planejamento</h3>
@@ -355,12 +414,40 @@
       <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formset.non_form_errors|join:', ' }}</div>
     {% endif %}
 
-    <div class="flex gap-3">
-      <button type="submit" class="rounded-lg bg-[#56d741] px-5 py-2 text-[14px] text-[#0d2f19]">Salvar</button>
-      <a href="{% url 'core:planejamento_list' %}" class="rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">Cancelar</a>
+    <div class="sticky bottom-3 z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="planejamento-submit-btn" type="submit" class="inline-flex items-center gap-2 rounded-lg bg-[#56d741] px-5 py-2 text-[14px] text-[#0d2f19] disabled:cursor-not-allowed disabled:opacity-50">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12.5 9.2 16.7 19 7.5"/>
+            </svg>
+            <span>Salvar</span>
+          </button>
+          <a id="planejamento-cancel-btn" href="{% if next_url %}{{ next_url }}{% else %}{% url 'core:planejamento_list' %}{% endif %}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2 text-[14px] text-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 18 9 12l6-6"/>
+            </svg>
+            <span>Cancelar</span>
+          </a>
+        </div>
+      </div>
     </div>
   </form>
 </section>
+
+<div id="planejamento-save-modal" class="fixed inset-0 z-[1000] hidden">
+  <div class="absolute inset-0 bg-black/60"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-xl rounded-xl bg-white p-5 shadow-2xl">
+      <h3 class="text-[18px] font-bold text-slate-900">Confirmar salvamento</h3>
+      <p class="mt-1 text-[14px] text-slate-600">Deseja salvar agora ou voltar para edicao?</p>
+      <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button type="button" id="planejamento-save-cancel" class="inline-flex h-12 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 font-semibold text-slate-700 hover:bg-slate-100">Voltar para edicao</button>
+        <button type="button" id="planejamento-save-confirm" class="inline-flex h-12 items-center justify-center rounded-lg border border-[#56d741] bg-[#56d741] px-4 font-semibold text-[#0d2f19] hover:brightness-95">Confirmar e salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <template id="empty-form-template">
   <tr class="item-row">
@@ -581,9 +668,20 @@
     }
 
     recalcRow(row);
+    bindProdutoTypeahead(row);
+    row.querySelectorAll('select[name$="-produto_cadastro"], select[name$="-unidade"]').forEach((sel)=>{
+      const isProduto = /-produto_cadastro$/.test(sel.name || '');
+      enableContainsFilter(sel, isProduto ? 12 : 8);
+    });
     if (window.initInputMasks) window.initInputMasks(row);
     if (window.initInputNormalizers) window.initInputNormalizers(row);
     if (window.initDecimalMasks) window.initDecimalMasks(row);
+  }
+
+  function bindProdutoTypeahead(row){
+    const selectProduto = row.querySelector('select[name$="-produto_cadastro"]');
+    if(!selectProduto) return;
+    enableContainsFilter(selectProduto, 12);
   }
 
   async function refreshSelectOptions(select, url){
@@ -607,6 +705,7 @@
       opt.textContent = it.label || it.nome || String(it.id);
       select.appendChild(opt);
     });
+    syncContainsFilterSource(select);
 
     // restore selection if still exists
     if(current){
@@ -636,6 +735,8 @@
         const uni = row.querySelector('select[name$=\"-unidade\"]');
         if(prod) await refreshSelectOptions(prod, "{% url 'core:options_produtos' %}");
         if(uni) await refreshSelectOptions(uni, "{% url 'core:options_unidades' %}");
+        if(prod) enableContainsFilter(prod, 12);
+        if(uni) enableContainsFilter(uni, 8);
       }
     }catch(e){
       // ignore refresh errors; user can still reload page if needed
@@ -675,6 +776,126 @@
   window.addEventListener('focus', refreshAllSelects);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAllSelects(); });
 
+  function syncContainsFilterSource(select){
+    if(!select) return;
+    const src = Array.from(select.options).map((o)=>({ value: o.value, text: o.textContent }));
+    select.dataset.liveFilterSource = JSON.stringify(src);
+  }
+
+  function enableContainsFilter(select, preferredSize){
+    if(!select || select.dataset.liveFilterBound === '1') return;
+    select.dataset.liveFilterBound = '1';
+    syncContainsFilterSource(select);
+
+    let typed = '';
+    let resetTimer = null;
+    const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
+
+    function openList(){
+      if (!isDesktop()) return;
+      const target = Number(preferredSize || 8);
+      const visibleCount = Math.min(target, Math.max(4, select.options.length));
+      select.setAttribute('size', String(visibleCount));
+      select.dataset.listOpened = '1';
+    }
+
+    function closeList(){
+      if (select.dataset.listOpened === '1') {
+        select.removeAttribute('size');
+        select.dataset.listOpened = '0';
+      }
+    }
+
+    function rebuild(term){
+      let sourceOptions = [];
+      try{
+        sourceOptions = JSON.parse(select.dataset.liveFilterSource || '[]');
+      }catch(_e){
+        sourceOptions = Array.from(select.options).map((o)=>({ value: o.value, text: o.textContent }));
+      }
+      const current = select.value;
+      const q = (term || '').toLowerCase().trim();
+      const filtered = sourceOptions.filter((o, idx)=>{
+        if (idx === 0 && o.value === '') return true;
+        return !q || (o.text || '').toLowerCase().includes(q);
+      });
+
+      select.innerHTML = '';
+      filtered.forEach((o)=>{
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.text;
+        select.appendChild(opt);
+      });
+
+      if (current && Array.from(select.options).some((o)=>o.value === current)) {
+        select.value = current;
+      } else if (filtered.length > 1) {
+        select.selectedIndex = 1;
+      } else {
+        select.selectedIndex = 0;
+      }
+    }
+
+    function resetFilter(){
+      typed = '';
+      rebuild('');
+      closeList();
+    }
+
+    select.addEventListener('keydown', (ev)=>{
+      if (ev.key === 'Escape') {
+        resetFilter();
+        return;
+      }
+      if (ev.key === 'Enter' || ev.key === 'Tab') {
+        closeList();
+        return;
+      }
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        openList();
+      }
+      if (ev.key === 'Backspace') {
+        typed = typed.slice(0, -1);
+        rebuild(typed);
+        openList();
+        ev.preventDefault();
+      } else if (ev.key && ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        typed += ev.key;
+        rebuild(typed);
+        openList();
+        ev.preventDefault();
+      }
+
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(()=>{ typed = ''; }, 1200);
+    });
+
+    select.addEventListener('blur', ()=>{
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(resetFilter, 150);
+    });
+
+    select.addEventListener('focus', ()=>{
+      openList();
+    });
+
+    select.addEventListener('mousedown', ()=>{
+      openList();
+    });
+
+    select.addEventListener('dblclick', ()=>{
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeList();
+    });
+  }
+
+  [
+    document.getElementById('id_safra'),
+    document.getElementById('id_custo'),
+    document.getElementById('id_cliente'),
+  ].forEach((sel)=>enableContainsFilter(sel));
+
   addBtn.addEventListener('click', ()=>{
     const index = parseInt(totalForms.value || '0', 10);
     const prefix = `itens-${index}`;
@@ -707,9 +928,89 @@
     const row = wrapper.firstElementChild;
     tbody.appendChild(row);
     totalForms.value = String(index + 1);
+
+    // Nova linha sempre inicia vazia
+    row.querySelectorAll('input, select, textarea').forEach((el) => {
+      const name = el.getAttribute('name') || '';
+      const type = (el.getAttribute('type') || '').toLowerCase();
+      if (name.endsWith('-id')) return;
+      if (name.endsWith('-DELETE')) {
+        if (type === 'checkbox') el.checked = false;
+        return;
+      }
+      if (el.tagName === 'SELECT') {
+        el.value = '';
+      } else if (type === 'checkbox' || type === 'radio') {
+        el.checked = false;
+      } else {
+        el.value = '';
+      }
+      if (el.dataset && typeof el.dataset.raw !== 'undefined') {
+        el.dataset.raw = '';
+      }
+    });
+
     bindRow(row);
     recalcTotal();
   });
+})();
+</script>
+<script>
+(function(){
+  const form = document.getElementById('planejamento-form');
+  const submitBtn = document.getElementById('planejamento-submit-btn');
+  const modal = document.getElementById('planejamento-save-modal');
+  const btnCancel = document.getElementById('planejamento-save-cancel');
+  const btnConfirm = document.getElementById('planejamento-save-confirm');
+  if(!form || !modal || !btnCancel || !btnConfirm) return;
+
+  let allowSubmit = false;
+  function hasAtLeastOneItemFilled(){
+    const rows = Array.from(document.querySelectorAll('#itens-body .item-row'));
+    return rows.some((row)=>{
+      const del = row.querySelector('input[name$="-DELETE"]');
+      if (del && del.checked) return false;
+      const prod = row.querySelector('select[name$="-produto_cadastro"]');
+      const qtd = row.querySelector('input[name$="-quantidade"]');
+      return !!(prod && prod.value && parseFloat((qtd?.value || '0').replace(/\./g,'').replace(',','.')) > 0);
+    });
+  }
+  function refreshSubmitState(){
+    if (!submitBtn) return;
+    const ok = form.checkValidity() && hasAtLeastOneItemFilled();
+    submitBtn.disabled = !ok;
+  }
+  function openModal(){
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(() => btnConfirm.focus(), 40);
+  }
+  function closeModal(){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+
+  form.addEventListener('submit', function(e){
+    if(allowSubmit) return;
+    if (submitBtn && submitBtn.disabled) {
+      e.preventDefault();
+      return;
+    }
+    e.preventDefault();
+    openModal();
+  });
+
+  btnCancel.addEventListener('click', closeModal);
+  btnConfirm.addEventListener('click', function(){
+    allowSubmit = true;
+    closeModal();
+    form.requestSubmit();
+  });
+
+  modal.addEventListener('click', function(e){
+    if(e.target === modal || e.target === modal.firstElementChild) closeModal();
+  });
+
+  form.addEventListener('input', refreshSubmitState);
+  form.addEventListener('change', refreshSubmitState);
+  refreshSubmitState();
 })();
 </script>
 {% endblock %}
