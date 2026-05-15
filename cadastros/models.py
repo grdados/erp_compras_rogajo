@@ -97,20 +97,27 @@ class Safra(TimestampedModel):
 
 class Fornecedor(TimestampedModel):
     fornecedor = models.CharField(max_length=150)
+    fantasia = models.CharField(max_length=150, blank=True)
     cnpj = models.CharField(max_length=18, unique=True)
     ie = models.CharField('IE', max_length=30, blank=True)
-    endereco = models.CharField(max_length=200)
-    numero = models.CharField(max_length=15)
-    cep = models.CharField(max_length=9)
-    cidade = models.CharField(max_length=80)
-    uf = models.CharField(max_length=2)
+    endereco = models.CharField(max_length=200, blank=True)
+    numero = models.CharField(max_length=15, blank=True)
+    cep = models.CharField(max_length=9, blank=True)
+    cidade = models.CharField(max_length=80, blank=True)
+    uf = models.CharField(max_length=2, blank=True)
     status = models.CharField(max_length=10, choices=StatusAtivoInativo.choices, default=StatusAtivoInativo.ATIVO)
 
     class Meta:
         ordering = ['fornecedor']
+        verbose_name = 'Fornecedor'
+        verbose_name_plural = 'Fornecedores'
+
+    @property
+    def display_name(self):
+        return self.fantasia or self.fornecedor
 
     def __str__(self):
-        return self.fornecedor
+        return self.display_name
 
 
 class Cliente(TimestampedModel):
@@ -130,6 +137,7 @@ class Cliente(TimestampedModel):
 class Produtor(TimestampedModel):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='produtores', null=True)
     produtor = models.CharField(max_length=150)
+    apelido = models.CharField(max_length=80, blank=True)
     ie = models.CharField('IE', max_length=30, blank=True)
     cpf = models.CharField(max_length=14)
     fazenda = models.CharField(max_length=150)
@@ -142,7 +150,8 @@ class Produtor(TimestampedModel):
         ordering = ['produtor']
 
     def __str__(self):
-        return f'{self.produtor} - {self.fazenda}' if self.fazenda else self.produtor
+        base = (self.apelido or self.produtor or '').strip()
+        return f'{base} - {self.fazenda}' if self.fazenda else base
 
 
 class Propriedade(TimestampedModel):

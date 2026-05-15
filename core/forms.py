@@ -186,13 +186,19 @@ class ClienteForm(StyledModelForm):
 class FornecedorForm(StyledModelForm):
     class Meta:
         model = Fornecedor
-        fields = ['fornecedor', 'cnpj', 'ie', 'endereco', 'numero', 'cep', 'cidade', 'uf', 'status']
+        fields = ['fornecedor', 'fantasia', 'cnpj', 'ie', 'endereco', 'numero', 'cep', 'cidade', 'uf', 'status']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for fname in ('cidade', 'uf', 'endereco', 'cep', 'numero'):
+            if fname in self.fields:
+                self.fields[fname].required = False
 
 
 class ProdutorForm(StyledModelForm):
     class Meta:
         model = Produtor
-        fields = ['cliente', 'produtor', 'ie', 'cpf', 'fazenda', 'cidade', 'uf', 'ha', 'status']
+        fields = ['cliente', 'produtor', 'apelido', 'ie', 'cpf', 'fazenda', 'cidade', 'uf', 'ha', 'status']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -290,7 +296,7 @@ class PedidoCompraForm(StyledModelForm):
             cliente_id = self.instance.cliente_id
 
         self.fields['safra'].label_from_instance = lambda obj: obj.safra
-        self.fields['produtor'].label_from_instance = lambda obj: f'{obj.produtor} - {obj.fazenda}'
+        self.fields['produtor'].label_from_instance = lambda obj: f'{(obj.apelido or obj.produtor)} - {obj.fazenda}' if obj.fazenda else (obj.apelido or obj.produtor)
 
         if cliente_id:
             self.fields['produtor'].queryset = Produtor.objects.filter(cliente_id=cliente_id).order_by('produtor', 'fazenda')
@@ -317,7 +323,7 @@ class PedidoCompraItemForm(StyledModelForm):
         self.fields['total_item'].disabled = True
         self.fields['total_item'].widget.attrs.update({'readonly': 'readonly'})
 
-        self.fields['quantidade'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '0', 'placeholder': '0'})
+        self.fields['quantidade'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
         self.fields['preco'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '5', 'placeholder': '0,00000'})
         self.fields['desconto'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
         self.fields['total_item'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2', 'placeholder': '0,00'})
@@ -362,7 +368,7 @@ class FaturamentoForm(StyledModelForm):
         self.fields['valor_total'].widget.attrs.update({'readonly': 'readonly'})
 
         self.fields['safra'].label_from_instance = lambda obj: obj.safra
-        self.fields['produtor'].label_from_instance = lambda obj: f'{obj.produtor} - {obj.fazenda}'
+        self.fields['produtor'].label_from_instance = lambda obj: f'{(obj.apelido or obj.produtor)} - {obj.fazenda}' if obj.fazenda else (obj.apelido or obj.produtor)
 
         self.fields['valor_total'].widget.attrs.update({'data-decimal-br': '1', 'data-decimals': '2'})
 
@@ -429,6 +435,37 @@ class FaturamentoItemForm(StyledModelForm):
         self.fields['desconto'].widget.attrs.pop('disabled', None)
 
 class ContaPagarForm(StyledModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if 'pedido' in self.fields:
+            self.fields['pedido'].queryset = self.fields['pedido'].queryset.select_related('produtor', 'fornecedor')
+
+            def _pedido_label(obj):
+                produtor = str(obj.produtor) if getattr(obj, 'produtor', None) else '-'
+                fornecedor = getattr(obj, 'fornecedor', None)
+                fantasia = ''
+                if fornecedor:
+                    fantasia = (getattr(fornecedor, 'fantasia', '') or getattr(fornecedor, 'fornecedor', '') or '').strip()
+                fantasia = fantasia or '-'
+                return f'{obj.pedido} - {produtor} - {fantasia}'
+
+            self.fields['pedido'].label_from_instance = _pedido_label
+
+        if 'faturamento' in self.fields:
+            self.fields['faturamento'].queryset = self.fields['faturamento'].queryset.select_related('produtor', 'fornecedor')
+
+            def _faturamento_label(obj):
+                produtor = str(obj.produtor) if getattr(obj, 'produtor', None) else '-'
+                fornecedor = getattr(obj, 'fornecedor', None)
+                fantasia = ''
+                if fornecedor:
+                    fantasia = (getattr(fornecedor, 'fantasia', '') or getattr(fornecedor, 'fornecedor', '') or '').strip()
+                fantasia = fantasia or '-'
+                return f'{obj.nota_fiscal} - {produtor} - {fantasia}'
+
+            self.fields['faturamento'].label_from_instance = _faturamento_label
+
     class Meta:
         model = ContaPagar
         fields = [

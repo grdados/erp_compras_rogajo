@@ -20,6 +20,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView, FormView
 from urllib.parse import quote, unquote
+import unicodedata
 
 from cadastros.models import (
     Categoria,
@@ -164,6 +165,15 @@ def _normalize_filter_value(value) -> str:
     if raw.lower() in {'todos', 'todas', 'all'}:
         return ''
     return raw
+
+
+def _normalize_multi_values(values) -> list[str]:
+    normalized = []
+    for value in values or []:
+        v = _normalize_filter_value(value)
+        if v and v not in normalized:
+            normalized.append(v)
+    return normalized
 
 
 def _filters_active(request, keys) -> bool:
@@ -1057,9 +1067,16 @@ class CrudCreateView(CreateView):
     form_class = None
     success_url = None
 
+    def get_success_url(self):
+        raw_next = (self.request.POST.get('next') or self.request.GET.get('next') or '').strip()
+        if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={self.request.get_host()}):
+            return raw_next
+        return str(self.success_url or '/')
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['titulo'] = getattr(self, 'context_title', None) or f'Novo {self.model._meta.verbose_name.title()}'
+        ctx['next_url'] = (self.request.GET.get('next') or self.request.POST.get('next') or '').strip()
         return ctx
 
 
@@ -1069,9 +1086,16 @@ class CrudUpdateView(UpdateView):
     form_class = None
     success_url = None
 
+    def get_success_url(self):
+        raw_next = (self.request.POST.get('next') or self.request.GET.get('next') or '').strip()
+        if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={self.request.get_host()}):
+            return raw_next
+        return str(self.success_url or '/')
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['titulo'] = getattr(self, 'context_title', None) or f'Editar {self.model._meta.verbose_name.title()}'
+        ctx['next_url'] = (self.request.GET.get('next') or self.request.POST.get('next') or '').strip()
         return ctx
 
 
@@ -1363,6 +1387,7 @@ def backup_page(request):
 
             try:
                 restore_backup_from_zip(uploaded)
+                messages.info(request, "Restauracao executada em modo seguro (normalizacao de codificacao e protecao contra conflito de usuario).")
                 messages.success(request, "Backup restaurado. Faca login novamente.")
                 return redirect('/accounts/logout/')
             except Exception as e:
@@ -1421,7 +1446,7 @@ def produtores_por_cliente(request):
             return JsonResponse({'items': []})
     items = []
     for p in qs:
-        produtor_nome = (p.produtor or '').strip()
+        produtor_nome = ((p.apelido or p.produtor) or '').strip()
         fazenda_nome = (p.fazenda or '').strip()
         label = f'{produtor_nome} - {fazenda_nome}' if fazenda_nome else produtor_nome
         items.append(
@@ -1557,7 +1582,7 @@ SafraListView, SafraCreateView, SafraUpdateView, SafraDeleteView = _make_simple_
     'safra',
     Safra,
     SafraForm,
-    list_template='core/crud/safra_modal_list.html',
+    list_template='core/crud/list.html',
     search_fields=['safra', 'cultura__nome'],
     ordering='-ano',
 )
@@ -1571,48 +1596,80 @@ SafraListView.columns = [
 ]
 SafraListView.modal_form_context_name = 'safra_form'
 SafraListView.paginate_by = 10
+SafraListView.context_title = 'Safras'
 
 CulturaListView, CulturaCreateView, CulturaUpdateView, CulturaDeleteView = _make_simple_crud(
     'cultura',
     Cultura,
     CulturaForm,
-    list_template='core/crud/cultura_modal_list.html',
+    list_template='core/crud/list.html',
     search_fields=['nome'],
     ordering='nome',
 )
 CulturaListView.columns = [('Cultura', 'nome')]
 CulturaListView.modal_form_context_name = 'cultura_form'
 CulturaListView.paginate_by = 10
+CulturaListView.context_title = 'Culturas'
 
 CustoListView, CustoCreateView, CustoUpdateView, CustoDeleteView = _make_simple_crud(
-    'custo', Custo, CustoForm, search_fields=['nome'], ordering='nome'
+    'custo',
+    Custo,
+    CustoForm,
+    list_template='core/crud/list.html',
+    search_fields=['nome'],
+    ordering='nome',
 )
 CustoListView.columns = [('Custo', 'nome')]
 CustoListView.paginate_by = 10
+CustoListView.context_title = 'Custos'
 
 CategoriaListView, CategoriaCreateView, CategoriaUpdateView, CategoriaDeleteView = _make_simple_crud(
-    'categoria', Categoria, CategoriaForm, search_fields=['nome'], ordering='nome'
+    'categoria',
+    Categoria,
+    CategoriaForm,
+    list_template='core/crud/list.html',
+    search_fields=['nome'],
+    ordering='nome',
 )
 CategoriaListView.columns = [('Categoria', 'nome')]
 CategoriaListView.paginate_by = 10
+CategoriaListView.context_title = 'Categorias'
 
 UnidadeListView, UnidadeCreateView, UnidadeUpdateView, UnidadeDeleteView = _make_simple_crud(
-    'unidade', Unidade, UnidadeForm, search_fields=['nome', 'unidade_abreviado'], ordering='nome'
+    'unidade',
+    Unidade,
+    UnidadeForm,
+    list_template='core/crud/list.html',
+    search_fields=['nome', 'unidade_abreviado'],
+    ordering='nome',
 )
 UnidadeListView.columns = [('Unidade', 'nome'), ('Volume', 'volume'), ('Abrev', 'unidade_abreviado')]
 UnidadeListView.paginate_by = 10
+UnidadeListView.context_title = 'Unidades'
 
 FormaPagamentoListView, FormaPagamentoCreateView, FormaPagamentoUpdateView, FormaPagamentoDeleteView = _make_simple_crud(
-    'forma_pagamento', FormaPagamento, FormaPagamentoForm, search_fields=['pagamento'], ordering='pagamento'
+    'forma_pagamento',
+    FormaPagamento,
+    FormaPagamentoForm,
+    list_template='core/crud/list.html',
+    search_fields=['pagamento'],
+    ordering='pagamento',
 )
 FormaPagamentoListView.columns = [('Pagamento', 'pagamento'), ('Parcelas', 'parcelas'), ('Prazo', 'prazo')]
 FormaPagamentoListView.paginate_by = 10
+FormaPagamentoListView.context_title = 'Formas de Pagamento'
 
 OperacaoListView, OperacaoCreateView, OperacaoUpdateView, OperacaoDeleteView = _make_simple_crud(
-    'operacao', Operacao, OperacaoForm, search_fields=['operacao'], ordering='operacao'
+    'operacao',
+    Operacao,
+    OperacaoForm,
+    list_template='core/crud/list.html',
+    search_fields=['operacao'],
+    ordering='operacao',
 )
 OperacaoListView.columns = [('Operacao', 'operacao'), ('Tipo', 'tipo')]
 OperacaoListView.paginate_by = 10
+OperacaoListView.context_title = 'Operacoes'
 
 FornecedorListView, FornecedorCreateView, FornecedorUpdateView, FornecedorDeleteView = _make_simple_crud(
     'fornecedor',
@@ -1633,7 +1690,12 @@ FornecedorListView.columns = [
 FornecedorListView.paginate_by = 10
 FornecedorListView.context_title = 'Fornecedores'
 ClienteListView, ClienteCreateView, ClienteUpdateView, ClienteDeleteView = _make_simple_crud(
-    'cliente', Cliente, ClienteForm, search_fields=['cliente', 'apelido', 'cpf_cnpj'], ordering='cliente'
+    'cliente',
+    Cliente,
+    ClienteForm,
+    list_template='core/crud/list.html',
+    search_fields=['cliente', 'apelido', 'cpf_cnpj'],
+    ordering='cliente',
 )
 ClienteListView.columns = [
     ('Cliente', 'cliente'),
@@ -1643,11 +1705,18 @@ ClienteListView.columns = [
     ('Limite', 'limite_compra'),
 ]
 ClienteListView.paginate_by = 10
+ClienteListView.context_title = 'Clientes'
 ProdutorListView, ProdutorCreateView, ProdutorUpdateView, ProdutorDeleteView = _make_simple_crud(
-    'produtor', Produtor, ProdutorForm, search_fields=['produtor', 'cpf', 'fazenda', 'cidade'], ordering='produtor'
+    'produtor',
+    Produtor,
+    ProdutorForm,
+    list_template='core/crud/list.html',
+    search_fields=['produtor', 'apelido', 'cpf', 'fazenda', 'cidade'],
+    ordering='produtor',
 )
 ProdutorListView.columns = [
     ('Produtor', 'produtor'),
+    ('Apelido', 'apelido'),
     ('Fazenda', 'fazenda'),
     ('Inscricao', 'ie'),
     ('CPF', 'cpf'),
@@ -1656,8 +1725,14 @@ ProdutorListView.columns = [
     ('Status', 'status'),
 ]
 ProdutorListView.paginate_by = 10
+ProdutorListView.context_title = 'Produtores'
 PropriedadeListView, PropriedadeCreateView, PropriedadeUpdateView, PropriedadeDeleteView = _make_simple_crud(
-    'propriedade', Propriedade, PropriedadeForm, search_fields=['propriedade', 'matricula', 'sicar'], ordering='propriedade'
+    'propriedade',
+    Propriedade,
+    PropriedadeForm,
+    list_template='core/crud/list.html',
+    search_fields=['propriedade', 'matricula', 'sicar'],
+    ordering='propriedade',
 )
 PropriedadeListView.columns = [
     ('Propriedade', 'propriedade'),
@@ -1684,14 +1759,19 @@ ProdutoListView.columns = [
     ('Categoria', 'categoria'),
     ('Status', 'status'),
 ]
+PropriedadeListView.context_title = 'Propriedades'
 ProdutoListView.paginate_by = 10
 
 def _produto_get_queryset(self):
     qs = ModalCrudListView.get_queryset(self).select_related('custo', 'categoria')
 
-    filtro_custo = _normalize_filter_value(self.request.GET.get('custo'))
-    filtro_categoria = _normalize_filter_value(self.request.GET.get('categoria'))
-    filtro_status = _normalize_filter_value(self.request.GET.get('status'))
+    raw_custo = (self.request.GET.get('custo') or '').strip()
+    raw_categoria = (self.request.GET.get('categoria') or '').strip()
+    raw_status = (self.request.GET.get('status') or '').strip()
+
+    filtro_custo = '' if raw_custo in {'', '__all__'} else _normalize_filter_value(raw_custo)
+    filtro_categoria = '' if raw_categoria in {'', '__all__'} else _normalize_filter_value(raw_categoria)
+    filtro_status = '' if raw_status in {'', '__all__'} else _normalize_filter_value(raw_status)
 
     if filtro_custo:
         qs = qs.filter(custo_id=filtro_custo)
@@ -1706,9 +1786,12 @@ def _produto_get_context_data(self, **kwargs):
     ctx = ModalCrudListView.get_context_data(self, **kwargs)
     ctx['custos'] = Custo.objects.all().order_by('nome')
     ctx['categorias'] = Categoria.objects.all().order_by('nome')
-    ctx['filtro_custo'] = _normalize_filter_value(self.request.GET.get('custo'))
-    ctx['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
-    ctx['filtro_status'] = _normalize_filter_value(self.request.GET.get('status'))
+    raw_custo = (self.request.GET.get('custo') or '').strip()
+    raw_categoria = (self.request.GET.get('categoria') or '').strip()
+    raw_status = (self.request.GET.get('status') or '').strip()
+    ctx['filtro_custo'] = '' if raw_custo in {'', '__all__'} else _normalize_filter_value(raw_custo)
+    ctx['filtro_categoria'] = '' if raw_categoria in {'', '__all__'} else _normalize_filter_value(raw_categoria)
+    ctx['filtro_status'] = '' if raw_status in {'', '__all__'} else _normalize_filter_value(raw_status)
     return ctx
 
 ProdutoListView.get_queryset = _produto_get_queryset
@@ -1722,9 +1805,9 @@ def _produto_get(self, request, *args, **kwargs):
     # reaproveitamento visual de selecao anterior pelo navegador.
     if not any(k in request.GET for k in ('custo', 'categoria', 'status')):
         base_qs = request.GET.copy()
-        base_qs['custo'] = ''
-        base_qs['categoria'] = ''
-        base_qs['status'] = ''
+        base_qs['custo'] = '__all__'
+        base_qs['categoria'] = '__all__'
+        base_qs['status'] = '__all__'
         return redirect(f'{request.path}?{base_qs.urlencode()}')
 
     # A manutencao de filtros ocorre na propria URL apos "Filtrar"/paginacao.
@@ -2302,7 +2385,7 @@ class PlanejamentoReportResumidoView(GestorRequiredMixin, ListView):
             ['q', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'venc_ini', 'venc_fim'],
         )
         if not filtros_ativos:
-            return qs
+            return qs.order_by(*order_by)
 
         q = _normalize_filter_value(self.request.GET.get('q'))
         cultura_id = _selected_get_value(self.request, 'cultura')
@@ -2333,7 +2416,7 @@ class PlanejamentoReportResumidoView(GestorRequiredMixin, ListView):
             qs = qs.filter(vencimento__gte=venc_ini)
         if venc_fim:
             qs = qs.filter(vencimento__lte=venc_fim)
-        return qs
+        return qs.order_by(*order_by)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -2567,7 +2650,20 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        group_order = [
+        def _normalize_multi_values(values):
+            out = []
+            seen = set()
+            for value in values or []:
+                v = _normalize_filter_value(value)
+                if not v:
+                    continue
+                if v in seen:
+                    continue
+                seen.add(v)
+                out.append(v)
+            return out
+
+        default_order = [
             'cliente__cliente',
             'safra__safra',
             'produtor__produtor',
@@ -2580,7 +2676,7 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             super()
             .get_queryset()
             .select_related('safra', 'cliente', 'produtor', 'fornecedor')
-            .order_by(*group_order)
+            .order_by(*default_order)
         )
 
         topbar = _get_topbar_state(self.request, scope='pedidos', default_cultura=_default_cultura_soja_id())
@@ -2596,10 +2692,29 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         # Os filtros so entram em vigor quando o usuario clica em "Aplicar filtros" (apply=1).
         filtros_ativos = _filters_active(
             self.request,
-            ['q', 'pedido', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'produtor', 'fornecedor', 'status', 'venc_ini', 'venc_fim'],
+            ['q', 'pedido', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'produtor', 'fornecedor', 'status', 'venc_ini', 'venc_fim', 'produto', 'data_ini', 'data_fim'],
         )
+        sort_value = (self.request.GET.get('o') or '').strip()
+        sort_map = {
+            'status': 'status',
+            'data': 'data',
+            'pedido': 'pedido',
+            'safra': 'safra__safra',
+            'vencimento': 'vencimento',
+            'produtor': 'produtor__produtor',
+            'fornecedor': 'fornecedor__fantasia',
+            'valor_total': 'valor_total',
+            'a_faturar': 'saldo_faturar',
+        }
+        order_fields = list(default_order)
+        if sort_value:
+            desc = sort_value.startswith('-')
+            key = sort_value[1:] if desc else sort_value
+            field = sort_map.get(key)
+            if field:
+                order_fields = [f"-{field}" if desc else field, 'id']
         if not filtros_ativos:
-            return qs.order_by(*group_order)
+            return qs.order_by(*order_fields)
 
         q = _normalize_filter_value(self.request.GET.get('q'))
         pedido_num = _normalize_filter_value(self.request.GET.get('pedido'))
@@ -2608,11 +2723,18 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
         cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
         custo_id = _normalize_filter_value(self.request.GET.get('custo'))
-        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        produtor_ids = _normalize_multi_values(self.request.GET.getlist('produtor'))
+        if not produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                produtor_ids = [single_produtor]
         fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        produto_id = _normalize_filter_value(self.request.GET.get('produto'))
         status = _normalize_filter_value(self.request.GET.get('status'))
         venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
         venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
+        data_ini = _normalize_filter_value(self.request.GET.get('data_ini'))
+        data_fim = _normalize_filter_value(self.request.GET.get('data_fim'))
 
         if q:
             qs = qs.filter(
@@ -2633,25 +2755,44 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             qs = qs.filter(cliente_id=cliente_id)
         if custo_id:
             qs = qs.filter(custo_id=custo_id)
-        if produtor_id:
-            qs = qs.filter(produtor_id=produtor_id)
+        if produtor_ids:
+            qs = qs.filter(produtor_id__in=produtor_ids)
         if fornecedor_id:
             qs = qs.filter(fornecedor_id=fornecedor_id)
+        if produto_id:
+            qs = qs.filter(itens__produto_cadastro_id=produto_id).distinct()
         if status:
             qs = qs.filter(status=status)
         if venc_ini:
             qs = qs.filter(vencimento__gte=venc_ini)
         if venc_fim:
             qs = qs.filter(vencimento__lte=venc_fim)
-        return qs
+        if data_ini:
+            qs = qs.filter(data__gte=data_ini)
+        if data_fim:
+            qs = qs.filter(data__lte=data_fim)
+        return qs.order_by(*order_fields)
 
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        def _normalize_multi_values(values):
+            out = []
+            seen = set()
+            for value in values or []:
+                v = _normalize_filter_value(value)
+                if not v:
+                    continue
+                if v in seen:
+                    continue
+                seen.add(v)
+                out.append(v)
+            return out
+
         topbar = _get_topbar_state(self.request, scope='pedidos', default_cultura=_default_cultura_soja_id())
         filtros_ativos = _filters_active(
             self.request,
-            ['q', 'pedido', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'produtor', 'fornecedor', 'status', 'venc_ini', 'venc_fim'],
+            ['q', 'pedido', 'cultura', 'safra', 'categoria', 'cliente', 'custo', 'produtor', 'fornecedor', 'status', 'venc_ini', 'venc_fim', 'produto', 'data_ini', 'data_fim'],
         )
         qs = self.get_queryset()
 
@@ -2667,6 +2808,7 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             .get('total')
             or Decimal('0')
         )
+        total_a_faturar = qs.aggregate(total=Sum('saldo_faturar'))['total'] or Decimal('0')
 
         try:
             qtd_total = Decimal(qtd_total)
@@ -2680,6 +2822,10 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             total_pedidos = Decimal(total_pedidos)
         except Exception:
             total_pedidos = Decimal('0')
+        try:
+            total_a_faturar = Decimal(total_a_faturar)
+        except Exception:
+            total_a_faturar = Decimal('0')
 
         preco_medio = Decimal('0')
         if qtd_total > 0:
@@ -2773,7 +2919,7 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['delete_url_name'] = 'core:pedido_delete'
 
         ctx['current_q'] = _normalize_filter_value(self.request.GET.get('q'))
-        ctx['current_sort'] = self.request.GET.get('sort', '')
+        ctx['current_sort'] = (self.request.GET.get('o') or '').strip()
 
         # Filtros (igual Faturamento)
         ctx['culturas'] = topbar['culturas']
@@ -2782,8 +2928,11 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['categorias'] = Categoria.objects.all().order_by('nome')
         ctx['clientes'] = Cliente.objects.all().order_by('cliente')
         ctx['custos'] = Custo.objects.all().order_by('nome')
+        # Mantemos todos os produtores no drawer e filtramos no frontend por cliente.
+        # Isso evita lista vazia quando o usuario troca cliente dentro do proprio drawer.
         ctx['produtores'] = Produtor.objects.all().order_by('produtor', 'fazenda')
         ctx['fornecedores'] = Fornecedor.objects.all().order_by('fornecedor')
+        ctx['produtos'] = Produto.objects.all().order_by('nome')
         ctx['status_choices'] = StatusPedidoCompra.choices
 
         ctx['filtro_cultura'] = _selected_get_value(self.request, 'cultura') or topbar['filtro_cultura']
@@ -2791,12 +2940,51 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
         ctx['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente'))
         ctx['filtro_custo'] = _normalize_filter_value(self.request.GET.get('custo'))
-        ctx['filtro_produtor'] = _normalize_filter_value(self.request.GET.get('produtor'))
+        filtro_produtor_ids = _normalize_multi_values(self.request.GET.getlist('produtor'))
+        if not filtro_produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                filtro_produtor_ids = [single_produtor]
+        ctx['filtro_produtor_ids'] = filtro_produtor_ids
+        ctx['filtro_produtor'] = filtro_produtor_ids[0] if len(filtro_produtor_ids) == 1 else ''
         ctx['filtro_fornecedor'] = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        ctx['filtro_produto'] = _normalize_filter_value(self.request.GET.get('produto'))
         ctx['filtro_status'] = _normalize_filter_value(self.request.GET.get('status'))
         ctx['filtro_pedido'] = _normalize_filter_value(self.request.GET.get('pedido'))
         ctx['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini'))
         ctx['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim'))
+        ctx['filtro_data_ini'] = _normalize_filter_value(self.request.GET.get('data_ini'))
+        ctx['filtro_data_fim'] = _normalize_filter_value(self.request.GET.get('data_fim'))
+        # Labels resolvidos para exibir "Filtro: valor" no topo da tela
+        try:
+            ctx['filtro_categoria_label'] = (
+                Categoria.objects.filter(pk=ctx['filtro_categoria']).values_list('nome', flat=True).first()
+                if ctx['filtro_categoria'] else ''
+            ) or ''
+            ctx['filtro_cliente_label'] = (
+                Cliente.objects.filter(pk=ctx['filtro_cliente']).values_list('cliente', flat=True).first()
+                if ctx['filtro_cliente'] else ''
+            ) or ''
+            produtores_sel = list(
+                Produtor.objects.filter(pk__in=filtro_produtor_ids).order_by('produtor', 'fazenda')
+            ) if filtro_produtor_ids else []
+            ctx['filtro_produtor_labels'] = [str(p) for p in produtores_sel if str(p).strip()]
+            ctx['filtro_produtor_label'] = ', '.join(ctx['filtro_produtor_labels'])
+            ctx['filtro_fornecedor_label'] = (
+                Fornecedor.objects.filter(pk=ctx['filtro_fornecedor']).values_list('fornecedor', flat=True).first()
+                if ctx['filtro_fornecedor'] else ''
+            ) or ''
+            ctx['filtro_produto_label'] = (
+                Produto.objects.filter(pk=ctx['filtro_produto']).values_list('nome', flat=True).first()
+                if ctx['filtro_produto'] else ''
+            ) or ''
+        except Exception:
+            ctx['filtro_categoria_label'] = ''
+            ctx['filtro_cliente_label'] = ''
+            ctx['filtro_produtor_labels'] = []
+            ctx['filtro_produtor_label'] = ''
+            ctx['filtro_fornecedor_label'] = ''
+            ctx['filtro_produto_label'] = ''
         try:
             palette = [
                 'emerald', 'sky', 'amber', 'violet', 'rose', 'indigo', 'teal', 'orange',
@@ -2820,8 +3008,10 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                     }
                 )
             ctx['pedido_chart_safra_legend'] = legend
+            ctx['pedido_chart_safra_tone_map'] = {str(l.get('label') or ''): (l.get('tone') or 'slate') for l in legend}
         except Exception:
             ctx['pedido_chart_safra_legend'] = []
+            ctx['pedido_chart_safra_tone_map'] = {}
 
         # Para paginacao / relatorios manter filtros sem page
         params = self.request.GET.copy()
@@ -2864,13 +3054,29 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                     'pedido_compra__produtor_id',
                 ).annotate(total=Sum('total_item'))
             }
+            fornecedor_totais_map = {
+                (
+                    (r.get('pedido_compra__safra_id') or 0),
+                    (r.get('pedido_compra__cliente_id') or 0),
+                    (r.get('pedido_compra__produtor_id') or 0),
+                    (r.get('pedido_compra__fornecedor_id') or 0),
+                ): (r.get('total') or Decimal('0'))
+                for r in base_itens.values(
+                    'pedido_compra__safra_id',
+                    'pedido_compra__cliente_id',
+                    'pedido_compra__produtor_id',
+                    'pedido_compra__fornecedor_id',
+                ).annotate(total=Sum('total_item'))
+            }
             for o in list(ctx.get('object_list') or []):
                 sid = getattr(o, 'safra_id', None) or 0
                 cid = getattr(o, 'cliente_id', None) or 0
                 pid = getattr(o, 'produtor_id', None) or 0
+                fid = getattr(o, 'fornecedor_id', None) or 0
                 setattr(o, 'grupo_safra_total', safra_totais_map.get(sid, Decimal('0')))
                 setattr(o, 'grupo_cliente_total', cliente_totais_map.get((sid, cid), Decimal('0')))
                 setattr(o, 'grupo_produtor_total', produtor_totais_map.get((sid, cid, pid), Decimal('0')))
+                setattr(o, 'grupo_fornecedor_total', fornecedor_totais_map.get((sid, cid, pid, fid), Decimal('0')))
         except Exception:
             pass
 
@@ -2879,6 +3085,117 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['card_preco_medio'] = preco_medio
         ctx['card_a_pagar'] = card_a_pagar
         ctx['card_total_pedidos'] = total_pedidos
+        card_valor_faturado = total_pedidos - total_a_faturar
+        if card_valor_faturado < 0:
+            card_valor_faturado = Decimal('0')
+        ctx['card_valor_faturado'] = card_valor_faturado
+        ctx['card_valor_a_faturar'] = total_a_faturar
+        try:
+            cultura_label = 'Todas'
+            fc = ctx.get('filtro_cultura')
+            if fc:
+                cultura_obj = Cultura.objects.filter(pk=fc).only('cultura').first()
+                if cultura_obj and cultura_obj.cultura:
+                    cultura_label = cultura_obj.cultura
+            pedido_safra_rows_qs = (
+                PedidoCompraItem.objects.filter(pedido_compra__in=qs)
+                .values('pedido_compra__safra__safra')
+                .annotate(total=Sum('total_item'))
+                .order_by('pedido_compra__safra__safra')
+            )
+            pedido_safra_rows = []
+            max_safra_v = Decimal('0')
+            for r in pedido_safra_rows_qs:
+                label = (r.get('pedido_compra__safra__safra') or 'Sem safra').strip() or 'Sem safra'
+                valor = r.get('total') or Decimal('0')
+                if valor <= 0:
+                    continue
+                pedido_safra_rows.append({'label': label, 'valor': valor})
+                if valor > max_safra_v:
+                    max_safra_v = valor
+
+            # Fallback: quando itens nao retornarem (ex.: dados antigos/importados incompletos),
+            # usa total dos pedidos filtrados por safra.
+            if not pedido_safra_rows:
+                pedido_safra_rows_qs = (
+                    qs.values('safra__safra')
+                    .annotate(total=Sum('saldo_faturar'))
+                    .order_by('safra__safra')
+                )
+                for r in pedido_safra_rows_qs:
+                    label = (r.get('safra__safra') or 'Sem safra').strip() or 'Sem safra'
+                    valor = r.get('total') or Decimal('0')
+                    if valor <= 0:
+                        continue
+                    pedido_safra_rows.append({'label': label, 'valor': valor})
+                    if valor > max_safra_v:
+                        max_safra_v = valor
+            for r in pedido_safra_rows:
+                r['pct'] = int((r['valor'] * Decimal('100') / max_safra_v).quantize(Decimal('1'))) if max_safra_v > 0 else 0
+
+            # Serie para grafico de area (SVG)
+            area_chart = None
+            if pedido_safra_rows:
+                chart_w = 1200
+                chart_h = 320
+                pad_l = 64
+                pad_r = 28
+                pad_t = 18
+                pad_b = 48
+                plot_w = chart_w - pad_l - pad_r
+                plot_h = chart_h - pad_t - pad_b
+                n = len(pedido_safra_rows)
+                max_v = max((r['valor'] for r in pedido_safra_rows), default=Decimal('0'))
+                if max_v <= 0:
+                    max_v = Decimal('1')
+
+                def _x(i: int) -> float:
+                    if n <= 1:
+                        return float(pad_l + (plot_w / 2))
+                    return float(pad_l + (plot_w * i / (n - 1)))
+
+                def _y(v: Decimal) -> float:
+                    ratio = float(v / max_v) if max_v > 0 else 0.0
+                    return float(pad_t + (plot_h * (1 - ratio)))
+
+                pts = []
+                for i, row in enumerate(pedido_safra_rows):
+                    x = _x(i)
+                    y = _y(row['valor'])
+                    pts.append(
+                        {
+                            'x': round(x, 2),
+                            'y': round(y, 2),
+                            'label': row['label'],
+                            'valor': row['valor'],
+                        }
+                    )
+                polyline = " ".join([f"{p['x']},{p['y']}" for p in pts])
+                area_path = (
+                    f"M {pts[0]['x']} {pad_t + plot_h} "
+                    + " ".join([f"L {p['x']} {p['y']}" for p in pts])
+                    + f" L {pts[-1]['x']} {pad_t + plot_h} Z"
+                )
+                grid_lines = []
+                for i in range(1, 5):
+                    gy = pad_t + (plot_h * i / 5)
+                    grid_lines.append(round(float(gy), 2))
+                area_chart = {
+                    'w': chart_w,
+                    'h': chart_h,
+                    'base_y': round(float(pad_t + plot_h), 2),
+                    'points': pts,
+                    'polyline': polyline,
+                    'area_path': area_path,
+                    'grid_lines': grid_lines,
+                }
+            ctx['pedido_chart_safra'] = pedido_safra_rows
+            ctx['pedido_chart_safra_cultura'] = cultura_label
+            ctx['pedido_chart_safra_area'] = area_chart
+        except Exception:
+            ctx['pedido_chart_safra'] = []
+            ctx['pedido_chart_safra_cultura'] = 'Todas'
+            ctx['pedido_chart_safra_area'] = None
 
         # Graficos "A Faturar" (Quantidade ou Valor), por Categoria / Produto / Produtor
         chart_mode = (self.request.GET.get('chart_mode') or 'valor').strip().lower()
@@ -2891,6 +3208,19 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         chart_produtor = defaultdict(lambda: Decimal('0'))
         chart_fornecedor = defaultdict(lambda: Decimal('0'))
         chart_produto = defaultdict(lambda: Decimal('0'))
+        chart_categoria_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
+        chart_produtor_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
+        chart_fornecedor_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
+        chart_produto_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
+
+        def _produtor_label(produtor_obj):
+            if not produtor_obj:
+                return 'Sem produtor'
+            nome = (getattr(produtor_obj, 'apelido', '') or getattr(produtor_obj, 'produtor', '') or '').strip()
+            fazenda = (getattr(produtor_obj, 'fazenda', '') or '').strip()
+            if nome and fazenda:
+                return f"{nome} - {fazenda}"
+            return nome or 'Sem produtor'
 
         if pedido_ids:
             # Saldo de quantidade por pedido (itens - faturado)
@@ -2925,9 +3255,12 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             }
             itens_cat_qs = (
                 PedidoCompraItem.objects.filter(pedido_compra_id__in=pedido_ids)
-                .select_related('produto_cadastro__categoria')
+                .select_related('produto_cadastro__categoria', 'pedido_compra__safra')
             )
             for it in itens_cat_qs:
+                safra_nome = 'Sem safra'
+                if getattr(it, 'pedido_compra', None) and getattr(it.pedido_compra, 'safra', None):
+                    safra_nome = it.pedido_compra.safra.safra
                 cat_nome = 'Sem categoria'
                 if it.produto_cadastro_id and getattr(it.produto_cadastro, 'categoria', None):
                     cat_nome = it.produto_cadastro.categoria.nome
@@ -2947,6 +3280,8 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                 if chart_mode == 'quantidade':
                     chart_categoria[cat_nome] += saldo_qtd_item
                     chart_produto[prod_nome] += saldo_qtd_item
+                    chart_categoria_safra[cat_nome][safra_nome] += saldo_qtd_item
+                    chart_produto_safra[prod_nome][safra_nome] += saldo_qtd_item
                 else:
                     unit_value = Decimal('0')
                     if (it.quantidade or Decimal('0')) > 0:
@@ -2957,10 +3292,15 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                     saldo_valor_item = (saldo_qtd_item * unit_value)
                     chart_categoria[cat_nome] += saldo_valor_item
                     chart_produto[prod_nome] += saldo_valor_item
+                    chart_categoria_safra[cat_nome][safra_nome] += saldo_valor_item
+                    chart_produto_safra[prod_nome][safra_nome] += saldo_valor_item
 
             # Produtor por pedido
             for p in qs:
-                prod_nome = p.produtor.produtor if p.produtor_id else 'Sem produtor'
+                safra_nome = 'Sem safra'
+                if getattr(p, 'safra', None):
+                    safra_nome = p.safra.safra
+                prod_nome = _produtor_label(getattr(p, 'produtor', None))
                 forn_nome = str(p.fornecedor) if p.fornecedor_id else 'Sem fornecedor'
                 if chart_mode == 'quantidade':
                     v = saldo_qtd_by_pedido.get(p.id) or Decimal('0')
@@ -2968,11 +3308,13 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                     v = p.saldo_faturar or Decimal('0')
                 chart_produtor[prod_nome] += v
                 chart_fornecedor[forn_nome] += v
+                chart_produtor_safra[prod_nome][safra_nome] += v
+                chart_fornecedor_safra[forn_nome][safra_nome] += v
 
         def _to_rows(dct):
             rows = [{'label': k, 'valor': (v or Decimal('0'))} for k, v in dct.items() if (v or Decimal('0')) > 0]
             rows.sort(key=lambda x: x['valor'], reverse=True)
-            rows = rows[:12]
+            rows = rows[:6]
             max_v = max([r['valor'] for r in rows], default=Decimal('0'))
             for r in rows:
                 r['pct'] = int((r['valor'] * Decimal('100') / max_v).quantize(Decimal('1'))) if max_v > 0 else 0
@@ -2993,7 +3335,12 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             if pedido_ids:
                 fat_items = (
                     FaturamentoItem.objects.filter(faturamento__pedido_id__in=pedido_ids)
-                    .select_related('produto_cadastro__categoria', 'faturamento__pedido__fornecedor', 'faturamento__pedido__produtor')
+                    .select_related(
+                        'produto_cadastro__categoria',
+                        'faturamento__pedido__fornecedor',
+                        'faturamento__pedido__produtor',
+                        'faturamento__pedido__safra',
+                    )
                 )
                 for it in fat_items:
                     cat_nome = 'Sem categoria'
@@ -3008,10 +3355,13 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                     fornecedor_nome = 'Sem fornecedor'
                     if getattr(it.faturamento, 'pedido', None):
                         p = it.faturamento.pedido
+                        safra_nome = p.safra.safra if getattr(p, 'safra', None) else 'Sem safra'
                         if getattr(p, 'produtor', None):
                             produtor_nome = p.produtor.produtor
                         if getattr(p, 'fornecedor', None):
                             fornecedor_nome = str(p.fornecedor)
+                    else:
+                        safra_nome = 'Sem safra'
 
                     if chart_mode == 'quantidade':
                         v = it.quantidade or Decimal('0')
@@ -3023,6 +3373,10 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
                     fat_produtor[produtor_nome] += v
                     fat_fornecedor[fornecedor_nome] += v
                     fat_produto[prod_nome] += v
+                    chart_categoria_safra[cat_nome][safra_nome] += v
+                    chart_produtor_safra[produtor_nome][safra_nome] += v
+                    chart_fornecedor_safra[fornecedor_nome][safra_nome] += v
+                    chart_produto_safra[prod_nome][safra_nome] += v
 
             rows_categoria = _to_rows(fat_categoria)
             rows_produtor = _to_rows(fat_produtor)
@@ -3037,6 +3391,177 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
         ctx['pedido_chart_fornecedor'] = rows_fornecedor
         ctx['pedido_chart_produto'] = rows_produto
 
+        # Novos graficos triplos (Valor Pedido, Valor Faturado, Valor Faturar)
+        try:
+            cat_pedido = defaultdict(lambda: Decimal('0'))
+            cat_faturado = defaultdict(lambda: Decimal('0'))
+            cat_faturar = defaultdict(lambda: Decimal('0'))
+            prod_pedido = defaultdict(lambda: Decimal('0'))
+            prod_faturado = defaultdict(lambda: Decimal('0'))
+            prod_faturar = defaultdict(lambda: Decimal('0'))
+            produtor_pedido = defaultdict(lambda: Decimal('0'))
+            produtor_faturado = defaultdict(lambda: Decimal('0'))
+            produtor_faturar = defaultdict(lambda: Decimal('0'))
+
+            if pedido_ids:
+                pedido_itens = (
+                    PedidoCompraItem.objects.filter(pedido_compra_id__in=pedido_ids)
+                    .select_related('produto_cadastro__categoria', 'pedido_compra__produtor')
+                )
+                for it in pedido_itens:
+                    cat_nome = 'Sem categoria'
+                    if it.produto_cadastro_id and getattr(it.produto_cadastro, 'categoria', None):
+                        cat_nome = it.produto_cadastro.categoria.nome
+                    prod_nome = ''
+                    if it.produto_cadastro_id:
+                        prod_nome = (it.produto_cadastro.nome or '').strip()
+                    if not prod_nome:
+                        prod_nome = (it.produto or '').strip() or 'Sem produto'
+                    valor = it.total_item or Decimal('0')
+                    if valor <= 0:
+                        continue
+                    cat_pedido[cat_nome] += valor
+                    prod_pedido[prod_nome] += valor
+                    produtor_nome = 'Sem produtor'
+                    try:
+                        if it.pedido_compra_id:
+                            pcomp = getattr(it, 'pedido_compra', None)
+                        if pcomp and getattr(pcomp, 'produtor', None):
+                            produtor_nome = _produtor_label(pcomp.produtor)
+                    except Exception:
+                        pass
+                    produtor_pedido[produtor_nome] += valor
+
+                    # "A faturar/Faturado" por dimensão segue o saldo real do pedido.
+                    # Faz rateio proporcional do saldo do pedido entre os itens para evitar
+                    # distorções quando categoria do faturamento difere da categoria do pedido.
+                    pend_valor = Decimal('0')
+                    try:
+                        pedido_ref = getattr(it, 'pedido_compra', None)
+                        if pedido_ref:
+                            pedido_total = Decimal(getattr(pedido_ref, 'valor_total', 0) or 0)
+                            pedido_saldo = Decimal(getattr(pedido_ref, 'saldo_faturar', 0) or 0)
+                            if pedido_total > 0 and pedido_saldo > 0:
+                                if pedido_saldo >= pedido_total:
+                                    pend_valor = valor
+                                else:
+                                    pend_valor = (valor * pedido_saldo / pedido_total)
+                    except Exception:
+                        pend_valor = Decimal('0')
+                    if pend_valor < 0:
+                        pend_valor = Decimal('0')
+                    fat_valor = valor - pend_valor
+                    if fat_valor < 0:
+                        fat_valor = Decimal('0')
+
+                    cat_faturado[cat_nome] += fat_valor
+                    prod_faturado[prod_nome] += fat_valor
+                    produtor_faturado[produtor_nome] += fat_valor
+
+                    if pend_valor > 0:
+                        cat_faturar[cat_nome] += pend_valor
+                        prod_faturar[prod_nome] += pend_valor
+                        produtor_faturar[produtor_nome] += pend_valor
+
+            def _build_triplo_rows(base_pedido, base_faturado, base_faturar=None):
+                labels = set(list(base_pedido.keys()) + list(base_faturado.keys()))
+                if base_faturar:
+                    labels.update(list(base_faturar.keys()))
+                labels = sorted(labels)
+                rows = []
+                for lbl in labels:
+                    vp = base_pedido.get(lbl) or Decimal('0')
+                    vf = base_faturado.get(lbl) or Decimal('0')
+                    if base_faturar is not None:
+                        vr = base_faturar.get(lbl) or Decimal('0')
+                    else:
+                        vr = vp - vf
+                        if vr < 0:
+                            vr = Decimal('0')
+                    if (vp <= 0) and (vf <= 0) and (vr <= 0):
+                        continue
+                    rows.append({
+                        'label': lbl,
+                        'valor_pedido': vp,
+                        'valor_faturado': vf,
+                        'valor_faturar': vr,
+                    })
+                rows.sort(key=lambda x: x['valor_pedido'], reverse=True)
+                max_v = max(
+                    [r['valor_pedido'] for r in rows] + [r['valor_faturado'] for r in rows] + [r['valor_faturar'] for r in rows],
+                    default=Decimal('0'),
+                )
+                for r in rows:
+                    r['pct_pedido'] = int((r['valor_pedido'] * Decimal('100') / max_v).quantize(Decimal('1'))) if max_v > 0 else 0
+                    r['pct_faturado'] = int((r['valor_faturado'] * Decimal('100') / max_v).quantize(Decimal('1'))) if max_v > 0 else 0
+                    r['pct_faturar'] = int((r['valor_faturar'] * Decimal('100') / max_v).quantize(Decimal('1'))) if max_v > 0 else 0
+                return rows
+
+            ctx['pedido_chart_categoria_triplo'] = _build_triplo_rows(cat_pedido, cat_faturado, cat_faturar)
+            ctx['pedido_chart_produto_triplo'] = _build_triplo_rows(prod_pedido, prod_faturado, prod_faturar)
+            ctx['pedido_chart_produtor_triplo'] = _build_triplo_rows(produtor_pedido, produtor_faturado, produtor_faturar)
+        except Exception:
+            ctx['pedido_chart_categoria_triplo'] = []
+            ctx['pedido_chart_produto_triplo'] = []
+            ctx['pedido_chart_produtor_triplo'] = []
+
+        def _matrix_from_safra(dim_map):
+            tone_map = ctx.get('pedido_chart_safra_tone_map') or {}
+            safra_order = []
+            try:
+                for s in qs.values_list('safra__safra', flat=True).distinct():
+                    if s and s not in safra_order:
+                        safra_order.append(s)
+            except Exception:
+                pass
+            if not safra_order:
+                safra_order = sorted(
+                    {sk for v in dim_map.values() for sk in v.keys() if sk},
+                    key=lambda x: x or '',
+                )
+            rows = []
+            for label, sval in dim_map.items():
+                total = sum((sval.get(s, Decimal('0')) for s in safra_order), Decimal('0'))
+                if total <= 0:
+                    continue
+                values = [sval.get(s, Decimal('0')) for s in safra_order]
+                rows.append({'label': label, 'values': values, 'total': total})
+            rows.sort(key=lambda x: x['total'], reverse=True)
+            rows = rows[:12]
+            col_totals = []
+            for i, _s in enumerate(safra_order):
+                col_totals.append(sum((r['values'][i] for r in rows), Decimal('0')))
+            # Exibe somente safras que realmente tenham dados no resultado atual
+            keep_idx = [i for i, t in enumerate(col_totals) if (t or Decimal('0')) > 0]
+            if keep_idx:
+                safra_order = [safra_order[i] for i in keep_idx]
+                col_totals = [col_totals[i] for i in keep_idx]
+                for r in rows:
+                    r['values'] = [r['values'][i] for i in keep_idx]
+            grand_total = sum(col_totals, Decimal('0'))
+            max_cell = max(col_totals + [v for r in rows for v in r['values']], default=Decimal('0'))
+            for r in rows:
+                heat = []
+                for v in r['values']:
+                    pct = int((v * Decimal('100') / max_cell).quantize(Decimal('1'))) if max_cell > 0 else 0
+                    heat.append(pct)
+                r['heat'] = heat
+            return {
+                'safras': safra_order,
+                'rows': rows,
+                'totais': col_totals,
+                'grand_total': grand_total,
+                'tones': [tone_map.get(str(s), 'slate') for s in safra_order],
+            }
+
+        show_multi = not bool(ctx.get('filtro_safra'))
+        ctx['pedido_chart_multi_safra'] = show_multi
+        if show_multi:
+            ctx['pedido_chart_categoria_matrix'] = _matrix_from_safra(chart_categoria_safra)
+            ctx['pedido_chart_produto_matrix'] = _matrix_from_safra(chart_produto_safra)
+            ctx['pedido_chart_produtor_matrix'] = _matrix_from_safra(chart_produtor_safra)
+            ctx['pedido_chart_fornecedor_matrix'] = _matrix_from_safra(chart_fornecedor_safra)
+
         # Subtitulo com resumo dos filtros ativos
         filtros_resumo = []
         try:
@@ -3046,7 +3571,7 @@ class PedidoCompraListView(GestorRequiredMixin, ListView):
             if ctx.get('filtro_produtor'):
                 p = Produtor.objects.filter(pk=ctx['filtro_produtor']).only('produtor', 'fazenda').first()
                 if p:
-                    nome = p.produtor + (f" - {p.fazenda}" if p.fazenda else '')
+                    nome = (p.apelido or p.produtor) + (f" - {p.fazenda}" if p.fazenda else '')
                 else:
                     nome = ctx['filtro_produtor']
                 filtros_resumo.append(f"Produtor: {nome}")
@@ -3178,7 +3703,11 @@ class PedidoCompraReportAnaliticoView(GestorRequiredMixin, ListView):
         categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
         cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
         custo_id = _normalize_filter_value(self.request.GET.get('custo'))
-        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        produtor_ids = [v for v in (_normalize_filter_value(x) for x in self.request.GET.getlist('produtor')) if v]
+        if not produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                produtor_ids = [single_produtor]
         fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
         status = _normalize_filter_value(self.request.GET.get('status'))
         venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
@@ -3202,8 +3731,8 @@ class PedidoCompraReportAnaliticoView(GestorRequiredMixin, ListView):
             qs = qs.filter(cliente_id=cliente_id)
         if custo_id:
             qs = qs.filter(custo_id=custo_id)
-        if produtor_id:
-            qs = qs.filter(produtor_id=produtor_id)
+        if produtor_ids:
+            qs = qs.filter(produtor_id__in=produtor_ids)
         if fornecedor_id:
             qs = qs.filter(fornecedor_id=fornecedor_id)
         if status:
@@ -3226,7 +3755,7 @@ class PedidoCompraReportAnaliticoView(GestorRequiredMixin, ListView):
         if not produtor:
             return '-'
         try:
-            base = produtor.produtor
+            base = (produtor.apelido or produtor.produtor)
         except Exception:
             base = str(produtor)
         faz = ''
@@ -3535,15 +4064,19 @@ class PedidoCompraReportResumidoView(GestorRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('safra', 'cliente', 'produtor', 'fornecedor')
-        q = (self.request.GET.get('q') or '').strip()
-        pedido_num = (self.request.GET.get('pedido') or '').strip()
+        q = _normalize_filter_value(self.request.GET.get('q'))
+        pedido_num = _normalize_filter_value(self.request.GET.get('pedido'))
         safra_id = _selected_get_value(self.request, 'safra')
-        cliente_id = (self.request.GET.get('cliente') or '').strip()
-        produtor_id = (self.request.GET.get('produtor') or '').strip()
-        fornecedor_id = (self.request.GET.get('fornecedor') or '').strip()
-        status = (self.request.GET.get('status') or '').strip()
-        venc_ini = (self.request.GET.get('venc_ini') or '').strip()
-        venc_fim = (self.request.GET.get('venc_fim') or '').strip()
+        cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
+        produtor_ids = _normalize_multi_values(self.request.GET.getlist('produtor'))
+        if not produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                produtor_ids = [single_produtor]
+        fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        status = _normalize_filter_value(self.request.GET.get('status'))
+        venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
         if q:
             qs = qs.filter(
                 Q(pedido__icontains=q)
@@ -3557,8 +4090,8 @@ class PedidoCompraReportResumidoView(GestorRequiredMixin, ListView):
             qs = qs.filter(safra_id=safra_id)
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
-        if produtor_id:
-            qs = qs.filter(produtor_id=produtor_id)
+        if produtor_ids:
+            qs = qs.filter(produtor_id__in=produtor_ids)
         if fornecedor_id:
             qs = qs.filter(fornecedor_id=fornecedor_id)
         if status:
@@ -3681,6 +4214,158 @@ class PedidoCompraReportResumidoView(GestorRequiredMixin, ListView):
         return ctx
 
 
+class PedidoCompraReportPendentesView(GestorRequiredMixin, ListView):
+    model = PedidoCompraItem
+    template_name = 'core/relatorios/pedido_pendentes.html'
+    context_object_name = 'rows'
+
+    def get_queryset(self):
+        qs = (
+            PedidoCompraItem.objects.select_related(
+                'pedido_compra',
+                'pedido_compra__cliente',
+                'pedido_compra__safra',
+                'pedido_compra__produtor',
+                'produto_cadastro',
+            )
+            .order_by(
+                'pedido_compra__cliente__cliente',
+                'pedido_compra__safra__safra',
+                'pedido_compra__produtor__produtor',
+                'pedido_compra__pedido',
+                'pedido_compra__data',
+                'id',
+            )
+        )
+
+        topbar = _get_topbar_state(self.request, scope='pedidos', default_cultura=_default_cultura_soja_id())
+        topbar_cultura = topbar['filtro_cultura']
+        topbar_safra = topbar['filtro_safra']
+        if topbar_cultura:
+            qs = qs.filter(pedido_compra__safra__cultura_id=topbar_cultura)
+        if topbar_safra:
+            qs = qs.filter(pedido_compra__safra_id=topbar_safra)
+
+        categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
+        cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
+        produtor_ids = [v for v in (_normalize_filter_value(x) for x in self.request.GET.getlist('produtor')) if v]
+        if not produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                produtor_ids = [single_produtor]
+        fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
+        pedido_num = _normalize_filter_value(self.request.GET.get('pedido'))
+        status = _normalize_filter_value(self.request.GET.get('status'))
+        venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
+        venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
+        data_ini = _normalize_filter_value(self.request.GET.get('data_ini'))
+        data_fim = _normalize_filter_value(self.request.GET.get('data_fim'))
+        produto_txt = _normalize_filter_value(self.request.GET.get('produto'))
+
+        if categoria_id:
+            qs = qs.filter(produto_cadastro__categoria_id=categoria_id)
+        if cliente_id:
+            qs = qs.filter(pedido_compra__cliente_id=cliente_id)
+        if produtor_id:
+            qs = qs.filter(pedido_compra__produtor_id=produtor_id)
+        if fornecedor_id:
+            qs = qs.filter(pedido_compra__fornecedor_id=fornecedor_id)
+        if pedido_num:
+            qs = qs.filter(pedido_compra__pedido__icontains=pedido_num)
+        if status:
+            qs = qs.filter(pedido_compra__status=status)
+        if venc_ini:
+            qs = qs.filter(pedido_compra__vencimento__gte=venc_ini)
+        if venc_fim:
+            qs = qs.filter(pedido_compra__vencimento__lte=venc_fim)
+        if data_ini:
+            qs = qs.filter(pedido_compra__data__gte=data_ini)
+        if data_fim:
+            qs = qs.filter(pedido_compra__data__lte=data_fim)
+        if produto_txt:
+            qs = qs.filter(
+                Q(produto__icontains=produto_txt)
+                | Q(produto_cadastro__nome__icontains=produto_txt)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['back_fallback_url'] = '/app/pedidos/'
+
+        lic = None
+        try:
+            lic = PerfilUsuarioLicenca.objects.select_related('licenca').filter(usuario=self.request.user).first()
+        except Exception:
+            lic = None
+        ctx['licenca'] = lic.licenca if lic else None
+
+        items = list(ctx.get('rows') or [])
+        pedido_ids = [it.pedido_compra_id for it in items if getattr(it, 'pedido_compra_id', None)]
+
+        entregue_map = defaultdict(lambda: Decimal('0'))
+        if pedido_ids:
+            fat_itens = (
+                FaturamentoItem.objects.filter(faturamento__pedido_id__in=pedido_ids)
+                .select_related('faturamento', 'produto_cadastro', 'unidade')
+            )
+            for fi in fat_itens:
+                if fi.produto_cadastro_id:
+                    pkey = f'cad:{fi.produto_cadastro_id}'
+                else:
+                    pkey = f'txt:{(fi.produto or "").strip().upper()}'
+                ukey = fi.unidade_id or 0
+                key = (fi.faturamento.pedido_id, pkey, ukey)
+                entregue_map[key] += (fi.quantidade or Decimal('0'))
+
+        report_rows = []
+        total_pendente = Decimal('0')
+        for it in items:
+            ped = it.pedido_compra
+            if it.produto_cadastro_id:
+                pkey = f'cad:{it.produto_cadastro_id}'
+            else:
+                pkey = f'txt:{(it.produto or "").strip().upper()}'
+            ukey = it.unidade_id or 0
+            key = (ped.id, pkey, ukey)
+
+            qtd = it.quantidade or Decimal('0')
+            entregue = entregue_map.get(key, Decimal('0'))
+            pendente = qtd - entregue
+            if pendente < 0:
+                pendente = Decimal('0')
+            if pendente <= 0:
+                continue
+
+            produto_nome = ''
+            try:
+                produto_nome = it.produto_cadastro.nome if it.produto_cadastro else (it.produto or '')
+            except Exception:
+                produto_nome = it.produto or ''
+
+            report_rows.append(
+                {
+                    'cliente': getattr(ped.cliente, 'cliente', '-') if getattr(ped, 'cliente_id', None) else '-',
+                    'safra': getattr(ped.safra, 'safra', '-') if getattr(ped, 'safra_id', None) else '-',
+                    'produtor': str(ped.produtor) if getattr(ped, 'produtor_id', None) else '-',
+                    'pedido': ped.pedido,
+                    'data': ped.data,
+                    'vencimento': ped.vencimento,
+                    'produto': produto_nome or '-',
+                    'quantidade': qtd,
+                    'preco': it.preco or Decimal('0'),
+                    'entregue': entregue,
+                    'pendente': pendente,
+                }
+            )
+            total_pendente += pendente
+
+        ctx['rows'] = report_rows
+        ctx['total_rows'] = len(report_rows)
+        ctx['total_pendente'] = total_pendente
+        return ctx
+
+
 class FaturamentoReportResumoView(GestorRequiredMixin, DetailView):
     model = Faturamento
     template_name = 'core/relatorios/faturamento_resumo.html'
@@ -3728,7 +4413,16 @@ class FaturamentoReportAnaliticoView(GestorRequiredMixin, ListView):
         cultura_id = _selected_get_value(self.request, 'cultura') or topbar_cultura
         safra_id = _selected_get_value(self.request, 'safra') or topbar_safra
         cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
-        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        produtor_ids = []
+        for raw_val in self.request.GET.getlist('produtor'):
+            for part in str(raw_val or '').split(','):
+                v = _normalize_filter_value(part)
+                if v and v not in produtor_ids:
+                    produtor_ids.append(v)
+        if not produtor_ids:
+            produtor_single = _normalize_filter_value(self.request.GET.get('produtor'))
+            if produtor_single:
+                produtor_ids = [produtor_single]
         fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
         categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
         custo_id = _normalize_filter_value(self.request.GET.get('custo'))
@@ -3754,8 +4448,8 @@ class FaturamentoReportAnaliticoView(GestorRequiredMixin, ListView):
             qs = _apply_safra_period_filter(qs, safra_id, 'data')
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
-        if produtor_id:
-            qs = qs.filter(produtor_id=produtor_id)
+        if produtor_ids:
+            qs = qs.filter(produtor_id__in=produtor_ids)
         if fornecedor_id:
             qs = qs.filter(fornecedor_id=fornecedor_id)
         if categoria_id:
@@ -3806,7 +4500,7 @@ class FaturamentoReportAnaliticoView(GestorRequiredMixin, ListView):
             try:
                 if not nf.produtor_id:
                     return 'Sem produtor'
-                base = nf.produtor.produtor or ''
+                base = (nf.produtor.apelido or nf.produtor.produtor or '')
                 faz = nf.produtor.fazenda or ''
                 return f"{base} - {faz}" if faz else base
             except Exception:
@@ -4367,21 +5061,31 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        group_order = [
-            'safra__safra',
-            'cliente__cliente',
-            'produtor__produtor',
-            'produtor__fazenda',
-            'fornecedor__fornecedor',
-            '-data',
-            '-id',
-        ]
+        default_order = ['-data', '-id']
+        sort_map = {
+            'data': 'data',
+            'pedido': 'pedido__pedido',
+            'safra': 'safra__safra',
+            'vencimento': 'vencimento',
+            'produtor': 'produtor__produtor',
+            'fornecedor': 'fornecedor__fornecedor',
+            'valor_total': 'valor_total',
+            'saldo': 'conta_pagar__saldo_aberto',
+        }
+        current_sort = (self.request.GET.get('o') or '').strip()
+        sort_field = current_sort[1:] if current_sort.startswith('-') else current_sort
+        sort_desc = current_sort.startswith('-')
+        if sort_field in sort_map:
+            ord_field = sort_map[sort_field]
+            order_by = [f'-{ord_field}' if sort_desc else ord_field, '-id']
+        else:
+            order_by = default_order
         qs = (
             super()
             .get_queryset()
             .select_related('safra', 'cliente', 'produtor', 'fornecedor', 'pedido')
             .prefetch_related('itens__produto_cadastro')
-            .order_by(*group_order)
+            .order_by(*order_by)
         )
 
         topbar = _get_topbar_state(self.request, scope='faturamentos', default_cultura=_default_cultura_soja_id())
@@ -4402,10 +5106,10 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         # Padrao: filtros somente quando clicar em "Aplicar filtros" (apply=1)
         filtros_ativos = _filters_active(
             self.request,
-            ['q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo', 'pedido', 'nota_fiscal', 'produto', 'status', 'venc_ini', 'venc_fim'],
+            ['q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo', 'pedido', 'nota_fiscal', 'produto', 'status', 'data_ini', 'data_fim', 'venc_ini', 'venc_fim'],
         )
         if not filtros_ativos:
-            return qs.order_by(*group_order)
+            return qs.order_by(*order_by)
 
         q = _normalize_filter_value(self.request.GET.get('q'))
         cultura_id = _selected_get_value(self.request, 'cultura') or topbar_cultura
@@ -4418,7 +5122,16 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             except Exception:
                 pass
         cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
-        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        produtor_ids = []
+        for raw_val in self.request.GET.getlist('produtor'):
+            for part in str(raw_val or '').split(','):
+                v = _normalize_filter_value(part)
+                if v and v not in produtor_ids:
+                    produtor_ids.append(v)
+        if not produtor_ids:
+            produtor_single = _normalize_filter_value(self.request.GET.get('produtor'))
+            if produtor_single:
+                produtor_ids = [produtor_single]
         fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
         categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
         custo_id = _normalize_filter_value(self.request.GET.get('custo'))
@@ -4426,6 +5139,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         nota_fiscal = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
         produto_txt = _normalize_filter_value(self.request.GET.get('produto'))
         status = _normalize_filter_value(self.request.GET.get('status'))
+        data_ini = _normalize_filter_value(self.request.GET.get('data_ini'))
+        data_fim = _normalize_filter_value(self.request.GET.get('data_fim'))
         venc_ini = _normalize_filter_value(self.request.GET.get('venc_ini'))
         venc_fim = _normalize_filter_value(self.request.GET.get('venc_fim'))
 
@@ -4443,8 +5158,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             qs = qs.filter(safra_id=safra_id)
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
-        if produtor_id:
-            qs = qs.filter(produtor_id=produtor_id)
+        if produtor_ids:
+            qs = qs.filter(produtor_id__in=produtor_ids)
         if fornecedor_id:
             qs = qs.filter(fornecedor_id=fornecedor_id)
         if categoria_id:
@@ -4462,11 +5177,15 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                 Q(itens__produto_cadastro__nome__icontains=produto_txt)
                 | Q(itens__produto__icontains=produto_txt)
             ).distinct()
+        if data_ini:
+            qs = qs.filter(data__gte=data_ini)
+        if data_fim:
+            qs = qs.filter(data__lte=data_fim)
         if venc_ini:
             qs = qs.filter(vencimento__gte=venc_ini)
         if venc_fim:
             qs = qs.filter(vencimento__lte=venc_fim)
-        return qs.order_by(*group_order)
+        return qs.order_by(*order_by)
 
     def _build_columns(self):
         cols = []
@@ -4509,7 +5228,7 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         topbar = _get_topbar_state(self.request, scope='faturamentos', default_cultura=_default_cultura_soja_id())
         filtros_ativos = _filters_active(
             self.request,
-            ['q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo', 'pedido', 'nota_fiscal', 'produto', 'status', 'venc_ini', 'venc_fim'],
+            ['q', 'cultura', 'safra', 'cliente', 'produtor', 'fornecedor', 'categoria', 'custo', 'pedido', 'nota_fiscal', 'produto', 'status', 'data_ini', 'data_fim', 'venc_ini', 'venc_fim'],
         )
         qs = self.get_queryset()
         fat_ids_base = list(qs.values_list('id', flat=True).distinct())
@@ -4536,6 +5255,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         context['delete_url_name'] = 'core:faturamento_delete'
 
         context['current_q'] = _normalize_filter_value(self.request.GET.get('q'))
+        context['current_sort'] = (self.request.GET.get('o') or '').strip()
+        context['current_sort'] = (self.request.GET.get('o') or '').strip()
         context['filtro_cultura'] = _selected_get_value(self.request, 'cultura') or topbar['filtro_cultura']
         context['filtro_safra'] = _selected_get_value(self.request, 'safra') or topbar['filtro_safra']
         if context['filtro_safra']:
@@ -4546,7 +5267,18 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             except Exception:
                 pass
         context['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente'))
-        context['filtro_produtor'] = _normalize_filter_value(self.request.GET.get('produtor'))
+        filtro_produtor_ids = []
+        for raw_val in self.request.GET.getlist('produtor'):
+            for part in str(raw_val or '').split(','):
+                v = _normalize_filter_value(part)
+                if v and v not in filtro_produtor_ids:
+                    filtro_produtor_ids.append(v)
+        if not filtro_produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                filtro_produtor_ids = [single_produtor]
+        context['filtro_produtor_ids'] = filtro_produtor_ids
+        context['filtro_produtor'] = filtro_produtor_ids[0] if len(filtro_produtor_ids) == 1 else ''
         context['filtro_fornecedor'] = _normalize_filter_value(self.request.GET.get('fornecedor'))
         context['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
         context['filtro_custo'] = _normalize_filter_value(self.request.GET.get('custo'))
@@ -4554,8 +5286,31 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         context['filtro_nota_fiscal'] = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
         context['filtro_produto'] = _normalize_filter_value(self.request.GET.get('produto'))
         context['filtro_status'] = _normalize_filter_value(self.request.GET.get('status'))
+        context['filtro_data_ini'] = _normalize_filter_value(self.request.GET.get('data_ini'))
+        context['filtro_data_fim'] = _normalize_filter_value(self.request.GET.get('data_fim'))
         context['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini'))
         context['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim'))
+        try:
+            context['filtro_cliente_label'] = (
+                Cliente.objects.filter(pk=context['filtro_cliente']).values_list('cliente', flat=True).first()
+                if context.get('filtro_cliente') else ''
+            ) or ''
+            context['filtro_fornecedor_label'] = (
+                Fornecedor.objects.filter(pk=context['filtro_fornecedor']).values_list('fornecedor', flat=True).first()
+                if context.get('filtro_fornecedor') else ''
+            ) or ''
+            produtores_sel = list(
+                Produtor.objects.filter(pk__in=filtro_produtor_ids).only('produtor', 'fazenda').order_by('produtor', 'fazenda')
+            ) if filtro_produtor_ids else []
+            context['filtro_produtor_labels'] = [
+                ((p.apelido or p.produtor) + (f" - {p.fazenda}" if p.fazenda else '')).strip()
+                for p in produtores_sel
+                if (p.produtor or '').strip()
+            ]
+        except Exception:
+            context['filtro_cliente_label'] = ''
+            context['filtro_fornecedor_label'] = ''
+            context['filtro_produtor_labels'] = []
         context['culturas'] = topbar['culturas']
         context['safras'] = topbar['safras']
         context['safras_topbar'] = topbar['safras_topbar']
@@ -4575,6 +5330,7 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
         params.pop('page', None)
         context['pagination_query'] = params.urlencode()
         context['report_query'] = params.urlencode()
+        context['current_sort'] = (self.request.GET.get('o') or '').strip()
 
         context['card_notas'] = qs.count()
         context['card_quantidade'] = qtd_total
@@ -4595,12 +5351,14 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             safra_id_ctx = context.get('filtro_safra')
             q_ctx = context.get('current_q')
             cliente_id_ctx = context.get('filtro_cliente')
-            produtor_id_ctx = context.get('filtro_produtor')
+            produtor_ids_ctx = context.get('filtro_produtor_ids') or []
             fornecedor_id_ctx = context.get('filtro_fornecedor')
             categoria_id_ctx = context.get('filtro_categoria')
             custo_id_ctx = context.get('filtro_custo')
             pedido_txt_ctx = context.get('filtro_pedido')
             produto_txt_ctx = context.get('filtro_produto')
+            data_ini_ctx = context.get('filtro_data_ini')
+            data_fim_ctx = context.get('filtro_data_fim')
             venc_ini_ctx = context.get('filtro_venc_ini')
             venc_fim_ctx = context.get('filtro_venc_fim')
 
@@ -4617,8 +5375,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                 )
             if cliente_id_ctx:
                 pedidos_ctx_qs = pedidos_ctx_qs.filter(cliente_id=cliente_id_ctx)
-            if produtor_id_ctx:
-                pedidos_ctx_qs = pedidos_ctx_qs.filter(produtor_id=produtor_id_ctx)
+            if produtor_ids_ctx:
+                pedidos_ctx_qs = pedidos_ctx_qs.filter(produtor_id__in=produtor_ids_ctx)
             if fornecedor_id_ctx:
                 pedidos_ctx_qs = pedidos_ctx_qs.filter(fornecedor_id=fornecedor_id_ctx)
             if categoria_id_ctx:
@@ -4632,6 +5390,10 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                     Q(itens__produto_cadastro__nome__icontains=produto_txt_ctx)
                     | Q(itens__produto__icontains=produto_txt_ctx)
                 )
+            if data_ini_ctx:
+                pedidos_ctx_qs = pedidos_ctx_qs.filter(data__gte=data_ini_ctx)
+            if data_fim_ctx:
+                pedidos_ctx_qs = pedidos_ctx_qs.filter(data__lte=data_fim_ctx)
             if venc_ini_ctx:
                 pedidos_ctx_qs = pedidos_ctx_qs.filter(vencimento__gte=venc_ini_ctx)
             if venc_fim_ctx:
@@ -4691,42 +5453,167 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                     r['pct_pf'] = Decimal('0.0')
             return rows
 
+        def _norm_chart_key(val: str) -> str:
+            txt = str(val or '').strip().lower()
+            if not txt:
+                return ''
+            txt = ''.join(ch for ch in unicodedata.normalize('NFKD', txt) if not unicodedata.combining(ch))
+            return ' '.join(txt.split())
+
+        def _norm_chart_key_loose(val: str) -> str:
+            base = _norm_chart_key(val)
+            if not base:
+                return ''
+            return ''.join(ch for ch in base if ch.isalnum())
+
+        def _canon_categoria_nome(val: str) -> str:
+            nk = _norm_chart_key(val)
+            if not nk:
+                return 'Sem categoria'
+            alias = {
+                'adubo': 'adubos',
+                'adubos': 'adubos',
+            }
+            nk = alias.get(nk, nk)
+            return ' '.join(p.capitalize() for p in nk.split()) or 'Sem categoria'
+
         chart_categoria = defaultdict(lambda: Decimal('0'))
+        chart_categoria_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
+        pedido_item_categoria_por_nome = defaultdict(dict)
+        pedido_item_categoria_single = {}
+        pedido_categoria_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
         try:
+            produto_categoria_por_nome = {}
+            produto_categoria_por_nome_loose = {}
+            for p in (
+                Produto.objects
+                .select_related('categoria')
+                .only('nome', 'categoria__nome')
+            ):
+                if not getattr(p, 'categoria', None):
+                    continue
+                nk = _norm_chart_key(getattr(p, 'nome', ''))
+                if nk:
+                    produto_categoria_por_nome[nk] = p.categoria.nome
+                nk_loose = _norm_chart_key_loose(getattr(p, 'nome', ''))
+                if nk_loose:
+                    produto_categoria_por_nome_loose[nk_loose] = p.categoria.nome
+
+            pedido_item_categoria_set = defaultdict(set)
+            for pi in (
+                PedidoCompraItem.objects
+                .filter(pedido_compra_id__in=pedido_ids_qs)
+                .select_related('produto_cadastro__categoria')
+                .only('pedido_compra_id', 'produto', 'produto_cadastro__categoria__nome')
+            ):
+                cat_pi = ''
+                if pi.produto_cadastro_id and getattr(pi.produto_cadastro, 'categoria', None):
+                    cat_pi = pi.produto_cadastro.categoria.nome
+                if not cat_pi:
+                    cat_pi = produto_categoria_por_nome.get(_norm_chart_key(getattr(pi, 'produto', '')), '')
+                if not cat_pi:
+                    cat_pi = produto_categoria_por_nome_loose.get(_norm_chart_key_loose(getattr(pi, 'produto', '')), '')
+                nk_pi = _norm_chart_key(getattr(pi, 'produto', ''))
+                nk_pi_loose = _norm_chart_key_loose(getattr(pi, 'produto', ''))
+                if nk_pi and cat_pi:
+                    pedido_item_categoria_por_nome[pi.pedido_compra_id][nk_pi] = cat_pi
+                if nk_pi_loose and cat_pi:
+                    pedido_item_categoria_por_nome[pi.pedido_compra_id][nk_pi_loose] = cat_pi
+                if cat_pi:
+                    pedido_item_categoria_set[pi.pedido_compra_id].add(cat_pi)
+
+            for pedido_id, cats in pedido_item_categoria_set.items():
+                if len(cats) == 1:
+                    pedido_item_categoria_single[pedido_id] = next(iter(cats))
+
             for it in (
                 FaturamentoItem.objects
                 .filter(faturamento__in=qs)
-                .select_related('produto_cadastro__categoria')
+                .select_related('produto_cadastro__categoria', 'faturamento__safra', 'faturamento__pedido')
             ):
-                cat_nome = 'Sem categoria'
-                if it.produto_cadastro_id and getattr(it.produto_cadastro, 'categoria', None):
+                cat_nome = ''
+                # Prioriza a categoria do item no pedido relacionado para manter
+                # consistencia entre Pedido x Faturamento no dashboard.
+                if getattr(it, 'faturamento', None) and getattr(it.faturamento, 'pedido_id', None):
+                    cat_nome = pedido_item_categoria_por_nome.get(it.faturamento.pedido_id, {}).get(
+                        _norm_chart_key(getattr(it, 'produto', '')),
+                        ''
+                    )
+                if not cat_nome and getattr(it, 'faturamento', None) and getattr(it.faturamento, 'pedido_id', None):
+                    cat_nome = pedido_item_categoria_por_nome.get(it.faturamento.pedido_id, {}).get(
+                        _norm_chart_key_loose(getattr(it, 'produto', '')),
+                        ''
+                    )
+                if not cat_nome and getattr(it, 'faturamento', None) and getattr(it.faturamento, 'pedido_id', None):
+                    cat_nome = pedido_item_categoria_single.get(it.faturamento.pedido_id, '')
+                if not cat_nome and it.produto_cadastro_id and getattr(it.produto_cadastro, 'categoria', None):
                     cat_nome = it.produto_cadastro.categoria.nome
-                chart_categoria[cat_nome] += (it.total_item or Decimal('0'))
+                if not cat_nome:
+                    cat_nome = produto_categoria_por_nome.get(_norm_chart_key(getattr(it, 'produto', '')), '')
+                if not cat_nome:
+                    cat_nome = produto_categoria_por_nome_loose.get(_norm_chart_key_loose(getattr(it, 'produto', '')), '')
+                cat_label = _canon_categoria_nome(cat_nome)
+                chart_categoria[cat_label] += (it.total_item or Decimal('0'))
+                safra_lbl = getattr(getattr(it, 'faturamento', None), 'safra', None)
+                safra_nome = (getattr(safra_lbl, 'safra', '') or '').strip() or 'Sem safra'
+                chart_categoria_safra[cat_label][safra_nome] += (it.total_item or Decimal('0'))
         except Exception:
             pass
         pedido_categoria = defaultdict(lambda: Decimal('0'))
         try:
-            for r in (
+            for pi in (
                 PedidoCompraItem.objects
                 .filter(pedido_compra_id__in=pedido_ids_qs)
-                .values('produto_cadastro__categoria__nome')
-                .annotate(total=Sum('total_item'))
+                .select_related('produto_cadastro__categoria', 'pedido_compra__safra')
             ):
-                label = r.get('produto_cadastro__categoria__nome') or 'Sem categoria'
-                pedido_categoria[label] += (r.get('total') or Decimal('0'))
+                cat_pi = ''
+                if pi.produto_cadastro_id and getattr(pi.produto_cadastro, 'categoria', None):
+                    cat_pi = pi.produto_cadastro.categoria.nome
+                if not cat_pi:
+                    cat_pi = produto_categoria_por_nome.get(_norm_chart_key(getattr(pi, 'produto', '')), '')
+                if not cat_pi:
+                    cat_pi = produto_categoria_por_nome_loose.get(_norm_chart_key_loose(getattr(pi, 'produto', '')), '')
+                label = _canon_categoria_nome(cat_pi)
+                val_total = (pi.total_item or Decimal('0'))
+                pedido_categoria[label] += val_total
+                safra_nome = (getattr(getattr(pi, 'pedido_compra', None), 'safra', None) and getattr(pi.pedido_compra.safra, 'safra', '')) or 'Sem safra'
+                pedido_categoria_safra[label][safra_nome] += val_total
         except Exception:
             pass
-        context['chart_faturamento_categoria'] = _build_dual_rows(chart_categoria, pedido_categoria)
+        rows_categoria = _build_dual_rows(chart_categoria, pedido_categoria)
+        for r in rows_categoria:
+            safra_map = chart_categoria_safra.get(r['label'], {})
+            ped_safra_map = pedido_categoria_safra.get(r['label'], {})
+            fat_safras = [
+                {'safra': sn, 'valor': (sv or Decimal('0'))}
+                for sn, sv in safra_map.items()
+                if (sv or Decimal('0')) > 0
+            ]
+            ped_safras = [
+                {'safra': sn, 'valor': (sv or Decimal('0'))}
+                for sn, sv in ped_safra_map.items()
+                if (sv or Decimal('0')) > 0
+            ]
+            fat_safras.sort(key=lambda x: x['valor'], reverse=True)
+            ped_safras.sort(key=lambda x: x['valor'], reverse=True)
+            r['fat_safras'] = fat_safras
+            r['ped_safras'] = ped_safras
+        context['chart_faturamento_categoria'] = rows_categoria
 
         chart_fornecedor = defaultdict(lambda: Decimal('0'))
+        chart_fornecedor_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
+        pedido_fornecedor_safra = defaultdict(lambda: defaultdict(lambda: Decimal('0')))
         try:
             for r in (
-                qs.values('fornecedor__fantasia', 'fornecedor__fornecedor')
+                qs.values('fornecedor__fantasia', 'fornecedor__fornecedor', 'safra__safra')
                 .annotate(total=Sum('valor_total'))
                 .order_by('-total')
             ):
                 label = (r.get('fornecedor__fantasia') or '').strip() or (r.get('fornecedor__fornecedor') or 'Sem fornecedor')
-                chart_fornecedor[label] += (r.get('total') or Decimal('0'))
+                total_r = (r.get('total') or Decimal('0'))
+                chart_fornecedor[label] += total_r
+                safra_nome = (r.get('safra__safra') or '').strip() or 'Sem safra'
+                chart_fornecedor_safra[label][safra_nome] += total_r
         except Exception:
             pass
         pedido_fornecedor = defaultdict(lambda: Decimal('0'))
@@ -4734,11 +5621,14 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             for r in (
                 PedidoCompra.objects
                 .filter(pk__in=pedido_ids_qs)
-                .values('fornecedor__fantasia', 'fornecedor__fornecedor')
+                .values('fornecedor__fantasia', 'fornecedor__fornecedor', 'safra__safra')
                 .annotate(total=Sum('valor_total'))
             ):
                 label = (r.get('fornecedor__fantasia') or '').strip() or (r.get('fornecedor__fornecedor') or 'Sem fornecedor')
-                pedido_fornecedor[label] += (r.get('total') or Decimal('0'))
+                total_r = (r.get('total') or Decimal('0'))
+                pedido_fornecedor[label] += total_r
+                safra_nome = (r.get('safra__safra') or '').strip() or 'Sem safra'
+                pedido_fornecedor_safra[label][safra_nome] += total_r
         except Exception:
             pass
         rows_fornecedor = _build_dual_rows(chart_fornecedor, pedido_fornecedor)
@@ -4748,6 +5638,22 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                 r['pct_total'] = (Decimal(r['faturado_valor']) * Decimal('100') / total_faturado_base).quantize(Decimal('0.1'))
             else:
                 r['pct_total'] = Decimal('0.0')
+            safra_map = chart_fornecedor_safra.get(r['label'], {})
+            fat_safras = [
+                {'safra': sn, 'valor': (sv or Decimal('0'))}
+                for sn, sv in safra_map.items()
+                if (sv or Decimal('0')) > 0
+            ]
+            ped_safra_map = pedido_fornecedor_safra.get(r['label'], {})
+            ped_safras = [
+                {'safra': sn, 'valor': (sv or Decimal('0'))}
+                for sn, sv in ped_safra_map.items()
+                if (sv or Decimal('0')) > 0
+            ]
+            fat_safras.sort(key=lambda x: x['valor'], reverse=True)
+            ped_safras.sort(key=lambda x: x['valor'], reverse=True)
+            r['fat_safras'] = fat_safras
+            r['ped_safras'] = ped_safras
         context['chart_faturamento_fornecedor'] = rows_fornecedor
 
         chart_safra_cultura = defaultdict(lambda: Decimal('0'))
@@ -4766,7 +5672,7 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
 
             q = context.get('current_q')
             cliente_id = context.get('filtro_cliente')
-            produtor_id = context.get('filtro_produtor')
+            produtor_ids = context.get('filtro_produtor_ids') or []
             fornecedor_id = context.get('filtro_fornecedor')
             categoria_id = context.get('filtro_categoria')
             custo_id = context.get('filtro_custo')
@@ -4774,6 +5680,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             nota_fiscal = context.get('filtro_nota_fiscal')
             produto_txt = context.get('filtro_produto')
             status = context.get('filtro_status')
+            data_ini = context.get('filtro_data_ini')
+            data_fim = context.get('filtro_data_fim')
             venc_ini = context.get('filtro_venc_ini')
             venc_fim = context.get('filtro_venc_fim')
 
@@ -4787,8 +5695,8 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                 )
             if cliente_id:
                 base_qs = base_qs.filter(cliente_id=cliente_id)
-            if produtor_id:
-                base_qs = base_qs.filter(produtor_id=produtor_id)
+            if produtor_ids:
+                base_qs = base_qs.filter(produtor_id__in=produtor_ids)
             if fornecedor_id:
                 base_qs = base_qs.filter(fornecedor_id=fornecedor_id)
             if categoria_id:
@@ -4813,6 +5721,10 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                     Q(itens__produto_cadastro__nome__icontains=produto_txt)
                     | Q(itens__produto__icontains=produto_txt)
                 ).distinct()
+            if data_ini:
+                base_qs = base_qs.filter(data__gte=data_ini)
+            if data_fim:
+                base_qs = base_qs.filter(data__lte=data_fim)
             if venc_ini:
                 base_qs = base_qs.filter(vencimento__gte=venc_ini)
             if venc_fim:
@@ -4873,13 +5785,15 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
             if context.get('filtro_cliente'):
                 c = Cliente.objects.filter(pk=context['filtro_cliente']).only('cliente').first()
                 filtros_resumo.append(f"Cliente: {c.cliente if c else context['filtro_cliente']}")
-            if context.get('filtro_produtor'):
-                p = Produtor.objects.filter(pk=context['filtro_produtor']).only('produtor', 'fazenda').first()
-                if p:
-                    nome = p.produtor + (f" - {p.fazenda}" if p.fazenda else '')
-                else:
-                    nome = context['filtro_produtor']
-                filtros_resumo.append(f"Produtor: {nome}")
+            if context.get('filtro_produtor_ids'):
+                produtores_sel = list(
+                    Produtor.objects.filter(pk__in=context['filtro_produtor_ids']).only('produtor', 'fazenda').order_by('produtor', 'fazenda')
+                )
+                nomes = [
+                    ((p.apelido or p.produtor) + (f" - {p.fazenda}" if p.fazenda else ''))
+                    for p in produtores_sel
+                ]
+                filtros_resumo.append(f"Produtor: {', '.join(nomes)}")
             if context.get('filtro_fornecedor'):
                 f = Fornecedor.objects.filter(pk=context['filtro_fornecedor']).only('fornecedor').first()
                 filtros_resumo.append(f"Fornecedor: {str(f) if f else context['filtro_fornecedor']}")
@@ -4891,6 +5805,10 @@ class FaturamentoListView(GestorRequiredMixin, ListView):
                 filtros_resumo.append(f"Produto: {context['filtro_produto']}")
             if context.get('filtro_status'):
                 filtros_resumo.append(f"Status: {context['filtro_status']}")
+            if context.get('filtro_data_ini') or context.get('filtro_data_fim'):
+                de = context.get('filtro_data_ini') or '-'
+                ate = context.get('filtro_data_fim') or '-'
+                filtros_resumo.append(f"Periodo Data: {de} ate {ate}")
             if context.get('filtro_venc_ini') or context.get('filtro_venc_fim'):
                 de = context.get('filtro_venc_ini') or '-'
                 ate = context.get('filtro_venc_fim') or '-'
@@ -5589,7 +6507,35 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         # Isso evita manter o documento do pedido quando ele ja foi totalmente substituido por notas fiscais.
         ContaPagar.objects.filter(origem=ContaPagar.Origem.PEDIDO, saldo_aberto__lte=0).delete()
 
-        qs = super().get_queryset().select_related('cliente', 'produtor', 'pedido', 'safra', 'fornecedor', 'custo')
+        sort_map = {
+            'status': 'status',
+            'data': 'data',
+            'nota_fiscal': 'nota_fiscal',
+            'pedido': 'pedido__pedido',
+            'safra': 'safra__safra',
+            'atraso': 'vencimento',
+            'produtor': 'produtor__produtor',
+            'fornecedor': 'fornecedor__fornecedor',
+            'quantidade': 'quantidade',
+            'preco': 'preco',
+            'valor_total': 'valor_total',
+        }
+        current_sort = (self.request.GET.get('o') or '').strip()
+        sort_field = current_sort[1:] if current_sort.startswith('-') else current_sort
+        sort_desc = current_sort.startswith('-')
+        if sort_field in sort_map:
+            _ord = sort_map[sort_field]
+            order_by = [f'-{_ord}' if sort_desc else _ord, '-id']
+        else:
+            order_by = ['vencimento', 'id']
+
+        qs = (
+            super()
+            .get_queryset()
+            .select_related('cliente', 'produtor', 'pedido', 'safra', 'fornecedor', 'custo', 'faturamento')
+            .prefetch_related('faturamento__itens__produto_cadastro')
+            .order_by(*order_by)
+        )
         topbar = _get_topbar_state(self.request, scope='contas', default_cultura=_default_cultura_soja_id())
         topbar_cultura = topbar['filtro_cultura']
         topbar_safra = topbar['filtro_safra']
@@ -5610,7 +6556,15 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         cultura_id = _selected_get_value(self.request, 'cultura') or topbar_cultura
         categoria_id = _normalize_filter_value(self.request.GET.get('categoria'))
         cliente_id = _normalize_filter_value(self.request.GET.get('cliente'))
-        produtor_id = _normalize_filter_value(self.request.GET.get('produtor'))
+        produtor_ids = []
+        for raw_val in self.request.GET.getlist('produtor'):
+            v = _normalize_filter_value(raw_val)
+            if v and v not in produtor_ids:
+                produtor_ids.append(v)
+        if not produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                produtor_ids = [single_produtor]
         fornecedor_id = _normalize_filter_value(self.request.GET.get('fornecedor'))
         pedido_txt = _normalize_filter_value(self.request.GET.get('pedido'))
         nota_fiscal = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
@@ -5648,8 +6602,8 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
             ).distinct()
         if cliente_id:
             qs = qs.filter(cliente_id=cliente_id)
-        if produtor_id:
-            qs = qs.filter(produtor_id=produtor_id)
+        if produtor_ids:
+            qs = qs.filter(produtor_id__in=produtor_ids)
         if fornecedor_id:
             qs = qs.filter(fornecedor_id=fornecedor_id)
         if pedido_txt:
@@ -5719,14 +6673,46 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         context['filtro_safra'] = _selected_get_value(self.request, 'safra') or topbar['filtro_safra']
         context['filtro_categoria'] = _normalize_filter_value(self.request.GET.get('categoria'))
         context['filtro_cliente'] = _normalize_filter_value(self.request.GET.get('cliente'))
-        context['filtro_produtor'] = _normalize_filter_value(self.request.GET.get('produtor'))
+        filtro_produtor_ids = []
+        for raw_val in self.request.GET.getlist('produtor'):
+            v = _normalize_filter_value(raw_val)
+            if v and v not in filtro_produtor_ids:
+                filtro_produtor_ids.append(v)
+        if not filtro_produtor_ids:
+            single_produtor = _normalize_filter_value(self.request.GET.get('produtor'))
+            if single_produtor:
+                filtro_produtor_ids = [single_produtor]
+        context['filtro_produtor_ids'] = filtro_produtor_ids
+        context['filtro_produtor'] = filtro_produtor_ids[0] if len(filtro_produtor_ids) == 1 else ''
         context['filtro_fornecedor'] = _normalize_filter_value(self.request.GET.get('fornecedor'))
         context['filtro_pedido'] = _normalize_filter_value(self.request.GET.get('pedido'))
         context['filtro_nota_fiscal'] = _normalize_filter_value(self.request.GET.get('nota_fiscal'))
         context['filtro_venc_ini'] = _normalize_filter_value(self.request.GET.get('venc_ini'))
         context['filtro_venc_fim'] = _normalize_filter_value(self.request.GET.get('venc_fim'))
+        try:
+            context['filtro_cliente_label'] = (
+                Cliente.objects.filter(pk=context['filtro_cliente']).values_list('cliente', flat=True).first()
+                if context.get('filtro_cliente') else ''
+            ) or ''
+            context['filtro_fornecedor_label'] = (
+                Fornecedor.objects.filter(pk=context['filtro_fornecedor']).values_list('fornecedor', flat=True).first()
+                if context.get('filtro_fornecedor') else ''
+            ) or ''
+            produtores_sel = list(
+                Produtor.objects.filter(pk__in=filtro_produtor_ids).only('produtor', 'fazenda').order_by('produtor', 'fazenda')
+            ) if filtro_produtor_ids else []
+            context['filtro_produtor_labels'] = [
+                ((p.apelido or p.produtor) + (f" - {p.fazenda}" if p.fazenda else '')).strip()
+                for p in produtores_sel
+                if (p.produtor or '').strip()
+            ]
+        except Exception:
+            context['filtro_cliente_label'] = ''
+            context['filtro_fornecedor_label'] = ''
+            context['filtro_produtor_labels'] = []
 
         context['current_q'] = _normalize_filter_value(self.request.GET.get('q'))
+        context['current_sort'] = (self.request.GET.get('o') or '').strip()
 
         params = self.request.GET.copy()
         params.pop('page', None)
@@ -5744,7 +6730,7 @@ class ContaPagarListView(GestorRequiredMixin, CrudListView):
         context['safras'] = topbar['safras']
         context['safras_topbar'] = topbar['safras_topbar']
         context['clientes'] = Cliente.objects.all().order_by('cliente')
-        context['produtores'] = Produtor.objects.all().order_by('produtor', 'fazenda')
+        context['produtores'] = Produtor.objects.select_related('cliente').all().order_by('produtor', 'fazenda')
         context['fornecedores'] = Fornecedor.objects.all().order_by('fornecedor')
         context['categorias'] = Categoria.objects.all().order_by('nome')
 
@@ -6128,12 +7114,14 @@ class ContaPagarDetailView(GestorRequiredMixin, DetailView):
 class ContaPagarCreateView(GestorRequiredMixin, CrudCreateView):
     model = ContaPagar
     form_class = ContaPagarForm
+    template_name = 'core/contas/form.html'
     success_url = reverse_lazy('core:conta_list')
 
 
 class ContaPagarUpdateView(GestorRequiredMixin, CrudUpdateView):
     model = ContaPagar
     form_class = ContaPagarForm
+    template_name = 'core/contas/form.html'
     success_url = reverse_lazy('core:conta_list')
 
 
